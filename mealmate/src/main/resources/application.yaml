@@ -1,3 +1,30 @@
 spring:
   application:
     name: mealmate
+  datasource:
+    url: jdbc:postgresql://localhost:5432/mealmate
+    username: postgres
+    password: Duy080205
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: duongducduy825@gmail.com
+    password: twdn oduj mvwq gkeu
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+
+jwt:
+  secret: ${JWT_SECRET:dGhpcy1pcy1hLXNlY3VyZS1rZXktZm9yLW1lYWxtYXRlLWp3dC0yNTY=}
+  expiration: 3600000  # 1 hour in milliseconds
+
+app:
+  base-url: ${APP_BASE_URL:http://localhost:8080}

@@ -1,157 +1,282 @@
 -- ==========================================
--- 1. NGƯỜI DÙNG & GIA ĐÌNH
+-- CƠ SỞ DỮ LIỆU MEALMATE (PostgreSQL)
+-- Tên bảng và cột bằng tiếng Anh
+-- Phân quyền RBAC: roles, permissions
 -- ==========================================
 
--- Tạo bảng NguoiDung trước (chưa set Foreign Key đến GiaDinh để tránh lỗi vòng lặp)
-CREATE TABLE NguoiDung (
-    MaNguoiDung SERIAL PRIMARY KEY,
-    MaGiaDinh INT, -- Khóa ngoại sẽ được thêm sau
-    HoTen VARCHAR(255) NOT NULL,
-    SDT VARCHAR(20),
-    Email VARCHAR(255),
-    MatKhau VARCHAR(255) NOT NULL,
-    VaiTro VARCHAR(50) DEFAULT 'Thành viên' -- Quản trị viên, Nội trợ, Thành viên
-);
-
--- Tạo bảng GiaDinh
-CREATE TABLE GiaDinh (
-    MaGiaDinh SERIAL PRIMARY KEY,
-    MaNguoiNoiTro INT,
-    TenGiaDinh VARCHAR(255) NOT NULL,
-    CONSTRAINT fk_giadinh_noitro FOREIGN KEY (MaNguoiNoiTro) REFERENCES NguoiDung(MaNguoiDung) ON DELETE SET NULL
-);
-
--- Cập nhật lại khóa ngoại cho bảng NguoiDung trỏ về GiaDinh
-ALTER TABLE NguoiDung
-ADD CONSTRAINT fk_nguoidung_giadinh 
-FOREIGN KEY (MaGiaDinh) REFERENCES GiaDinh(MaGiaDinh) ON DELETE SET NULL;
-
 -- ==========================================
--- 2. THỰC PHẨM & CHỦNG LOẠI
+-- 1. PHÂN QUYỀN (RBAC)
 -- ==========================================
 
-CREATE TABLE ChungLoai (
-    MaChungLoai SERIAL PRIMARY KEY,
-    TenChungLoai VARCHAR(255) NOT NULL
+CREATE TABLE permissions (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,              -- Tên quyền, ví dụ: "Xem danh sách thực phẩm"
+    api_path VARCHAR(255) NOT NULL,          -- Đường dẫn API, ví dụ: /api/foods
+    method VARCHAR(10) NOT NULL,             -- Phương thức HTTP: GET, POST, PUT, DELETE, PATCH
+    module VARCHAR(100) NOT NULL,            -- Module: AUTH, USER, FOOD, FRIDGE, RECIPE, SHOPPING, MEAL
+    created_by_id BIGINT,
+    created_by_email VARCHAR(255),
+    updated_by_id BIGINT,
+    updated_by_email VARCHAR(255),
+    deleted_by_id BIGINT,
+    deleted_by_email VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE ThucPham (
-    MaThucPham SERIAL PRIMARY KEY,
-    MaChungLoai INT,
-    TenThucPham VARCHAR(255) NOT NULL,
-    DonViDo VARCHAR(50),
-    TuDongNghia VARCHAR(500),
-    CONSTRAINT fk_thucpham_chungloai FOREIGN KEY (MaChungLoai) REFERENCES ChungLoai(MaChungLoai) ON DELETE SET NULL
+CREATE TABLE roles (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,       -- Tên vai trò: ADMIN, CUSTOMER
+    description VARCHAR(500),                -- Mô tả vai trò
+    is_active BOOLEAN DEFAULT TRUE,          -- Trạng thái hoạt động
+    created_by_id BIGINT,
+    created_by_email VARCHAR(255),
+    updated_by_id BIGINT,
+    updated_by_email VARCHAR(255),
+    deleted_by_id BIGINT,
+    deleted_by_email VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE BienPhapBaoQuan (
-    MaBienPhap SERIAL PRIMARY KEY,
-    MaThucPham INT NOT NULL,
-    NoiDung TEXT NOT NULL,
-    NguonThamKhao VARCHAR(500),
-    CONSTRAINT fk_baoquan_thucpham FOREIGN KEY (MaThucPham) REFERENCES ThucPham(MaThucPham) ON DELETE CASCADE
+-- Bảng trung gian liên kết vai trò với quyền (N-N)
+CREATE TABLE role_permissions (
+    role_id INT NOT NULL,
+    permission_id INT NOT NULL,
+    PRIMARY KEY (role_id, permission_id),
+    CONSTRAINT fk_rp_role FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
+    CONSTRAINT fk_rp_permission FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE
 );
 
 -- ==========================================
--- 3. QUẢN LÝ TỦ LẠNH
+-- 2. NGƯỜI DÙNG & GIA ĐÌNH
 -- ==========================================
 
-CREATE TABLE DoTrongTuLanh (
-    MaDo SERIAL PRIMARY KEY,
-    MaGiaDinh INT NOT NULL,
-    MaThucPham INT NOT NULL,
-    SoLuong NUMERIC(10, 2) NOT NULL DEFAULT 0,
-    ViTriLuuTru VARCHAR(100), -- Ngăn mát, ngăn đông, ngăn rau
-    NgayNhapVao DATE DEFAULT CURRENT_DATE,
-    HanSuDung DATE,
-    TrangThai VARCHAR(50) DEFAULT 'Đang lưu trữ', -- Đang lưu trữ, Hết hạn, Đã sử dụng
-    CONSTRAINT fk_tulanh_giadinh FOREIGN KEY (MaGiaDinh) REFERENCES GiaDinh(MaGiaDinh) ON DELETE CASCADE,
-    CONSTRAINT fk_tulanh_thucpham FOREIGN KEY (MaThucPham) REFERENCES ThucPham(MaThucPham) ON DELETE CASCADE
+-- Tạo bảng users trước (family_id sẽ thêm FK sau để tránh lỗi vòng lặp)
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    family_id INT,                           -- Mã gia đình (FK thêm sau)
+    role_id INT,                             -- Vai trò người dùng
+    email VARCHAR(255) UNIQUE,               -- Email đăng nhập (duy nhất)
+    password_hash VARCHAR(255) NOT NULL,     -- Mật khẩu đã mã hóa BCrypt
+    full_name VARCHAR(255) NOT NULL,         -- Họ và tên
+    phone VARCHAR(20),                       -- Số điện thoại
+    gender VARCHAR(10),                      -- Giới tính: MALE, FEMALE, OTHER
+    avatar_url VARCHAR(500),                 -- Đường dẫn ảnh đại diện
+    email_verified BOOLEAN DEFAULT FALSE,    -- Đã xác thực email chưa
+    verification_token VARCHAR(255),         -- Token xác thực email
+    verification_token_expiry TIMESTAMP,     -- Thời hạn token xác thực
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_user_role FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE SET NULL
+);
+
+-- Bảng gia đình
+CREATE TABLE families (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,              -- Tên gia đình
+    housekeeper_id INT,                      -- Người nội trợ (quản lý gia đình)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_family_housekeeper FOREIGN KEY (housekeeper_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Thêm FK từ users → families (thêm sau để tránh phụ thuộc vòng)
+ALTER TABLE users
+ADD CONSTRAINT fk_user_family
+FOREIGN KEY (family_id) REFERENCES families(id) ON DELETE SET NULL;
+
+-- ==========================================
+-- 3. DANH MỤC THỰC PHẨM
+-- ==========================================
+
+-- Bảng chủng loại thực phẩm
+CREATE TABLE categories (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,              -- Tên chủng loại: Rau củ, Thịt, Hải sản...
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Bảng thực phẩm
+CREATE TABLE foods (
+    id SERIAL PRIMARY KEY,
+    category_id INT,                         -- Thuộc chủng loại nào
+    name VARCHAR(255) NOT NULL,              -- Tên thực phẩm
+    unit VARCHAR(50),                        -- Đơn vị đo: kg, g, lít, quả...
+    synonyms VARCHAR(500),                   -- Từ đồng nghĩa (phân cách bằng dấu phẩy, dùng để tối ưu tìm kiếm)
+    image_url VARCHAR(500),                  -- Đường dẫn ảnh minh họa
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_food_category FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
+);
+
+-- Bảng biện pháp bảo quản thực phẩm
+CREATE TABLE preservation_methods (
+    id SERIAL PRIMARY KEY,
+    food_id INT NOT NULL,                    -- Thực phẩm cần bảo quản
+    content TEXT NOT NULL,                   -- Nội dung hướng dẫn bảo quản
+    reference_source VARCHAR(500),           -- Nguồn tham khảo
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_preservation_food FOREIGN KEY (food_id) REFERENCES foods(id) ON DELETE CASCADE
 );
 
 -- ==========================================
--- 4. KẾ HOẠCH MUA SẮM
+-- 4. QUẢN LÝ TỦ LẠNH
 -- ==========================================
 
-CREATE TABLE BanKeHoach (
-    MaBanKeHoach SERIAL PRIMARY KEY,
-    MaNguoiTao INT NOT NULL,
-    MaGiaDinh INT NOT NULL,
-    NgayTao DATE DEFAULT CURRENT_DATE,
-    NgayThucHien DATE,
-    GhiChu TEXT,
-    CONSTRAINT fk_kehoach_nguoitao FOREIGN KEY (MaNguoiTao) REFERENCES NguoiDung(MaNguoiDung) ON DELETE CASCADE,
-    CONSTRAINT fk_kehoach_giadinh FOREIGN KEY (MaGiaDinh) REFERENCES GiaDinh(MaGiaDinh) ON DELETE CASCADE
-);
-
-CREATE TABLE ChiTietKeHoach (
-    MaBanKeHoach INT NOT NULL,
-    MaThucPham INT NOT NULL,
-    STT INT,
-    SoLuong NUMERIC(10, 2) NOT NULL,
-    DonViTinh VARCHAR(50),
-    GhiChu TEXT,
-    NguoiDuocGiao INT,
-    TrangThaiMua BOOLEAN DEFAULT FALSE,
-    PRIMARY KEY (MaBanKeHoach, MaThucPham),
-    CONSTRAINT fk_chitietkh_kehoach FOREIGN KEY (MaBanKeHoach) REFERENCES BanKeHoach(MaBanKeHoach) ON DELETE CASCADE,
-    CONSTRAINT fk_chitietkh_thucpham FOREIGN KEY (MaThucPham) REFERENCES ThucPham(MaThucPham) ON DELETE CASCADE,
-    CONSTRAINT fk_chitietkh_nguoigiao FOREIGN KEY (NguoiDuocGiao) REFERENCES NguoiDung(MaNguoiDung) ON DELETE SET NULL
+-- Bảng đồ trong tủ lạnh của gia đình
+CREATE TABLE fridge_items (
+    id SERIAL PRIMARY KEY,
+    family_id INT NOT NULL,                  -- Thuộc gia đình nào
+    food_id INT NOT NULL,                    -- Thực phẩm gì
+    quantity NUMERIC(10, 2) NOT NULL DEFAULT 0, -- Số lượng
+    storage_location VARCHAR(100),           -- Vị trí lưu trữ: COOL (ngăn mát), FREEZER (ngăn đông), VEGETABLE (ngăn rau)
+    added_date DATE DEFAULT CURRENT_DATE,    -- Ngày nhập vào tủ
+    expiry_date DATE,                        -- Hạn sử dụng
+    status VARCHAR(50) DEFAULT 'STORED',     -- Trạng thái: STORED (đang lưu), EXPIRED (hết hạn), USED (đã dùng)
+    image_url VARCHAR(500),                  -- Ảnh chụp thực phẩm trong tủ (tùy chọn)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_fridge_family FOREIGN KEY (family_id) REFERENCES families(id) ON DELETE CASCADE,
+    CONSTRAINT fk_fridge_food FOREIGN KEY (food_id) REFERENCES foods(id) ON DELETE CASCADE
 );
 
 -- ==========================================
--- 5. MÓN ĂN & THỰC ĐƠN
+-- 5. KẾ HOẠCH MUA SẮM
 -- ==========================================
 
-CREATE TABLE MonAn (
-    MaMon SERIAL PRIMARY KEY,
-    TenMon VARCHAR(255) NOT NULL,
-    HuongDanCheBien TEXT,
-    LinkThamKhao VARCHAR(500),
-    TacGia VARCHAR(255),
-    BuaAnUuTien VARCHAR(50), -- Sáng, Trưa, Tối
-    TrangThaiHienThi VARCHAR(50) DEFAULT 'Món hệ thống' -- Món hệ thống, Món tự tạo
+-- Bảng danh sách mua sắm
+CREATE TABLE shopping_lists (
+    id SERIAL PRIMARY KEY,
+    created_by INT NOT NULL,                 -- Người tạo danh sách
+    family_id INT NOT NULL,                  -- Thuộc gia đình nào
+    created_date DATE DEFAULT CURRENT_DATE,  -- Ngày tạo
+    planned_date DATE,                       -- Ngày dự kiến đi mua
+    note TEXT,                               -- Ghi chú
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_shopping_creator FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_shopping_family FOREIGN KEY (family_id) REFERENCES families(id) ON DELETE CASCADE
 );
 
-CREATE TABLE NguyenLieuMonAn (
-    MaMon INT NOT NULL,
-    MaThucPham INT NOT NULL,
-    SoLuong NUMERIC(10, 2) NOT NULL,
-    DonVi VARCHAR(50),
-    PRIMARY KEY (MaMon, MaThucPham),
-    CONSTRAINT fk_nguyenlieu_mon FOREIGN KEY (MaMon) REFERENCES MonAn(MaMon) ON DELETE CASCADE,
-    CONSTRAINT fk_nguyenlieu_thucpham FOREIGN KEY (MaThucPham) REFERENCES ThucPham(MaThucPham) ON DELETE CASCADE
+-- Bảng chi tiết từng mục trong danh sách mua sắm
+CREATE TABLE shopping_list_items (
+    id SERIAL PRIMARY KEY,
+    shopping_list_id INT NOT NULL,           -- Thuộc danh sách nào
+    food_id INT NOT NULL,                    -- Thực phẩm cần mua
+    order_number INT,                        -- Số thứ tự
+    quantity NUMERIC(10, 2) NOT NULL,        -- Số lượng cần mua
+    unit VARCHAR(50),                        -- Đơn vị tính
+    note TEXT,                               -- Ghi chú thêm
+    assigned_to INT,                         -- Người được giao mua
+    is_purchased BOOLEAN DEFAULT FALSE,      -- Đã mua chưa
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_sli_list FOREIGN KEY (shopping_list_id) REFERENCES shopping_lists(id) ON DELETE CASCADE,
+    CONSTRAINT fk_sli_food FOREIGN KEY (food_id) REFERENCES foods(id) ON DELETE CASCADE,
+    CONSTRAINT fk_sli_assignee FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL
 );
 
-CREATE TABLE MonTu (
-    MaNguoiDung INT NOT NULL,
-    MaMon INT NOT NULL,
-    PRIMARY KEY (MaNguoiDung, MaMon),
-    CONSTRAINT fk_montu_nguoidung FOREIGN KEY (MaNguoiDung) REFERENCES NguoiDung(MaNguoiDung) ON DELETE CASCADE,
-    CONSTRAINT fk_montu_mon FOREIGN KEY (MaMon) REFERENCES MonAn(MaMon) ON DELETE CASCADE
+-- ==========================================
+-- 6. MÓN ĂN & CÔNG THỨC
+-- ==========================================
+
+-- Bảng công thức / món ăn
+CREATE TABLE recipes (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,              -- Tên món ăn
+    instructions TEXT,                       -- Hướng dẫn chế biến
+    reference_link VARCHAR(500),             -- Link tham khảo (video, blog...)
+    author VARCHAR(255),                     -- Tác giả công thức
+    preferred_meal_time VARCHAR(50),         -- Bữa ưu tiên: BREAKFAST (sáng), LUNCH (trưa), DINNER (tối)
+    display_status VARCHAR(50) DEFAULT 'SYSTEM', -- Loại: SYSTEM (món hệ thống), CUSTOM (món tự tạo)
+    image_url VARCHAR(500),                  -- Ảnh minh họa món ăn
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE ThucDon (
-    MaThucDon SERIAL PRIMARY KEY,
-    MaGiaDinh INT NOT NULL,
-    NgayBatDau DATE NOT NULL,
-    NgayKetThuc DATE NOT NULL,
-    CONSTRAINT fk_thucdon_giadinh FOREIGN KEY (MaGiaDinh) REFERENCES GiaDinh(MaGiaDinh) ON DELETE CASCADE
+-- Bảng nguyên liệu của món ăn
+CREATE TABLE recipe_ingredients (
+    id SERIAL PRIMARY KEY,
+    recipe_id INT NOT NULL,                  -- Thuộc món ăn nào
+    food_id INT NOT NULL,                    -- Nguyên liệu (thực phẩm)
+    quantity NUMERIC(10, 2) NOT NULL,        -- Số lượng cần
+    unit VARCHAR(50),                        -- Đơn vị
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_recipe_food UNIQUE (recipe_id, food_id),
+    CONSTRAINT fk_ri_recipe FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE CASCADE,
+    CONSTRAINT fk_ri_food FOREIGN KEY (food_id) REFERENCES foods(id) ON DELETE CASCADE
 );
 
-CREATE TABLE BuaAn (
-    MaBuaAn SERIAL PRIMARY KEY,
-    MaThucDon INT NOT NULL,
-    NgayAn DATE NOT NULL,
-    LoaiBua VARCHAR(50) NOT NULL, -- Sáng, Trưa, Tối
-    CONSTRAINT fk_buaan_thucdon FOREIGN KEY (MaThucDon) REFERENCES ThucDon(MaThucDon) ON DELETE CASCADE
+-- Bảng món ăn tự tạo của người dùng (liên kết user → recipe)
+CREATE TABLE custom_recipes (
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL,                    -- Người tạo
+    recipe_id INT NOT NULL,                  -- Món ăn
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_custom_recipe UNIQUE (user_id, recipe_id),
+    CONSTRAINT fk_cr_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_cr_recipe FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE CASCADE
 );
 
-CREATE TABLE ChiTietBuaAn (
-    MaBuaAn INT NOT NULL,
-    MaMon INT NOT NULL,
-    TrangThai VARCHAR(50) DEFAULT 'Gợi ý', -- Gợi ý, Đã chốt
-    PRIMARY KEY (MaBuaAn, MaMon),
-    CONSTRAINT fk_chitietbuaan_buaan FOREIGN KEY (MaBuaAn) REFERENCES BuaAn(MaBuaAn) ON DELETE CASCADE,
-    CONSTRAINT fk_chitietbuaan_mon FOREIGN KEY (MaMon) REFERENCES MonAn(MaMon) ON DELETE CASCADE
+-- Bảng yêu thích / nổi bật (liên kết N-N giữa người dùng và món ăn) — theo yêu cầu mục 4.3
+CREATE TABLE user_favorite_recipes (
+    user_id INT NOT NULL,                    -- Người dùng
+    recipe_id INT NOT NULL,                  -- Món ăn yêu thích
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, recipe_id),
+    CONSTRAINT fk_ufr_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_ufr_recipe FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE CASCADE
 );
+
+-- ==========================================
+-- 7. THỰC ĐƠN & BỮA ĂN
+-- ==========================================
+
+-- Bảng thực đơn (kế hoạch ăn theo tuần)
+CREATE TABLE menus (
+    id SERIAL PRIMARY KEY,
+    family_id INT NOT NULL,                  -- Thuộc gia đình nào
+    start_date DATE NOT NULL,                -- Ngày bắt đầu
+    end_date DATE NOT NULL,                  -- Ngày kết thúc
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_menu_family FOREIGN KEY (family_id) REFERENCES families(id) ON DELETE CASCADE
+);
+
+-- Bảng bữa ăn (mỗi ngày có thể có nhiều bữa)
+CREATE TABLE meals (
+    id SERIAL PRIMARY KEY,
+    menu_id INT NOT NULL,                    -- Thuộc thực đơn nào
+    meal_date DATE NOT NULL,                 -- Ngày ăn
+    meal_type VARCHAR(50) NOT NULL,          -- Loại bữa: BREAKFAST (sáng), LUNCH (trưa), DINNER (tối)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_meal_menu FOREIGN KEY (menu_id) REFERENCES menus(id) ON DELETE CASCADE
+);
+
+-- Bảng chi tiết bữa ăn (món ăn trong mỗi bữa)
+CREATE TABLE meal_items (
+    id SERIAL PRIMARY KEY,
+    meal_id INT NOT NULL,                    -- Thuộc bữa ăn nào
+    recipe_id INT NOT NULL,                  -- Món ăn
+    status VARCHAR(50) DEFAULT 'SUGGESTED',  -- Trạng thái: SUGGESTED (gợi ý), CONFIRMED (đã chốt)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_meal_recipe UNIQUE (meal_id, recipe_id),
+    CONSTRAINT fk_mi_meal FOREIGN KEY (meal_id) REFERENCES meals(id) ON DELETE CASCADE,
+    CONSTRAINT fk_mi_recipe FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE CASCADE
+);
+
+-- ==========================================
+-- 8. DỮ LIỆU MẶC ĐỊNH
+-- ==========================================
+
+-- Tạo 2 vai trò mặc định
+INSERT INTO roles (name, description) VALUES
+('ADMIN', 'Quản trị viên hệ thống - toàn quyền truy cập'),
+('CUSTOMER', 'Khách hàng / thành viên gia đình');
