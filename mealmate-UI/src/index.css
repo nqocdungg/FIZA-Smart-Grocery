@@ -1,0 +1,60 @@
+/* ==========================================
+   FIZA - Global Styles
+   Primary Color: #0B735F
+   ========================================== */
+
+:root {
+  /* Primary Palette */
+  --fiza-primary: #0B735F;
+  --fiza-primary-light: #0E9A7E;
+  --fiza-primary-dark: #085C4B;
+  --fiza-primary-bg: #E8F5F1;
+
+  /* Neutral */
+  --fiza-white: #FFFFFF;
+  --fiza-gray-50: #F9FAFB;
+  --fiza-gray-100: #F3F4F6;
+  --fiza-gray-200: #E5E7EB;
+  --fiza-gray-300: #D1D5DB;
+  --fiza-gray-400: #9CA3AF;
+  --fiza-gray-500: #6B7280;
+  --fiza-gray-600: #4B5563;
+  --fiza-gray-700: #374151;
+  --fiza-gray-800: #1F2937;
+  --fiza-gray-900: #111827;
+
+  /* Status Colors */
+  --fiza-success: #10B981;
+  --fiza-warning: #F59E0B;
+  --fiza-danger: #EF4444;
+  --fiza-info: #3B82F6;
+
+  /* Typography */
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--fiza-gray-800);
+  background-color: var(--fiza-gray-50);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--fiza-primary);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--fiza-primary-dark);
+}
+
+/* TODO: Thêm các utility classes và responsive breakpoints */
