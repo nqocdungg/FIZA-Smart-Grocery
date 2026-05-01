@@ -5,10 +5,14 @@
 
 :root {
   /* Primary Palette */
-  --fiza-primary: #0B735F;
-  --fiza-primary-light: #0E9A7E;
-  --fiza-primary-dark: #085C4B;
-  --fiza-primary-bg: #E8F5F1;
+  --fiza-bg: #F1F5F9;
+
+  --fiza-green-dark: #006B55;
+  --fiza-green-main: #4D9A80;
+  --fiza-green-light: #6ED4B4;
+  --fiza-green-soft: #B2EBD9;
+
+  --fiza-icon-muted: #8192AB;
 
   /* Neutral */
   --fiza-white: #FFFFFF;
@@ -34,7 +38,12 @@
   font-size: 16px;
   line-height: 1.5;
   color: var(--fiza-gray-800);
-  background-color: var(--fiza-gray-50);
+
+  /* Alias */
+  --fiza-primary: var(--fiza-green-main);
+  --fiza-primary-light: var(--fiza-green-light);
+  --fiza-primary-dark: var(--fiza-green-dark);
+  --fiza-background: var(--fiza-bg);
 }
 
 * {
