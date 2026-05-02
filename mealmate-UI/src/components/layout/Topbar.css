@@ -1,0 +1,161 @@
+.topbar {
+  align-self: stretch;
+  height: 80px;
+  padding-left: 48px;
+  padding-right: 48px;
+  background: var(--fiza-background);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.topbar-title-wrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+}
+
+.topbar-title {
+  width: 240px;
+  height: 32px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  color: var(--fiza-primary);
+  font-size: 32px;
+  font-family: "Plus Jakarta Sans", "Inter", "Segoe UI", sans-serif;
+  font-weight: 700;
+  line-height: 32px;
+  word-wrap: break-word;
+}
+
+.topbar-actions {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 24px;
+}
+
+.topbar-search {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+}
+
+.topbar-search-input {
+  width: 256px;
+  padding-top: 11px;
+  padding-bottom: 11px;
+  padding-left: 48px;
+  padding-right: 16px;
+  background: var(--fiza-gray-200);
+  overflow: hidden;
+  border-radius: 9999px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.topbar-search-text {
+  flex: 1 1 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  color: var(--fiza-gray-500);
+  font-size: 14px;
+  font-family: "Plus Jakarta Sans", "Inter", "Segoe UI", sans-serif;
+  font-weight: 400;
+  word-wrap: break-word;
+}
+
+.topbar-search-icon-wrapper {
+  height: 40px;
+  left: 16px;
+  top: 0;
+  position: absolute;
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.topbar-search-icon {
+  width: 15px;
+  height: 15px;
+  object-fit: contain;
+}
+
+.topbar-notification {
+  width: 40px;
+  height: 40px;
+  position: relative;
+  border-radius: 9999px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.topbar-bell-icon {
+  width: 16px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.topbar-notification-badge {
+  width: 16px;
+  height: 19px;
+  left: 16px;
+  top: 6px;
+  position: absolute;
+  background: #ba1a1a;
+  border-radius: 9999px;
+  outline: 2px var(--fiza-background) solid;
+  outline-offset: -2px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.topbar-notification-badge div {
+  width: 6.13px;
+  height: 15px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  color: var(--fiza-white);
+  font-size: 10px;
+  font-family: "Plus Jakarta Sans", "Inter", "Segoe UI", sans-serif;
+  font-weight: 700;
+  line-height: 15px;
+  word-wrap: break-word;
+}
+
+.topbar-family-button {
+  padding-left: 24px;
+  padding-right: 24px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  background: var(--fiza-primary);
+  border-radius: 9999px;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.topbar-family-button div {
+  width: 119.2px;
+  height: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  color: var(--fiza-white);
+  font-size: 14px;
+  font-family: "Plus Jakarta Sans", "Inter", "Segoe UI", sans-serif;
+  font-weight: 600;
+  line-height: 20px;
+  word-wrap: break-word;
+}
