@@ -1,0 +1,152 @@
+.register-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2vh 20px;
+  overflow-y: auto;
+  background-color: #101413;
+}
+
+.register-bg-layer {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: linear-gradient(0deg, rgba(11, 115, 95, 0.7), rgba(11, 115, 95, 0.7)), 
+                    url('https://lh3.googleusercontent.com/aida-public/AB6AXuA4-TInmSLAoMB_Ym4eqE7Ft-QgMTj0q2rY2uwxPu20LWKOOEJuX0CzOefxNglmMiH8U8BRZhMotVuMj-UYwLs9UPCcuB-KW_19t9ZFpzC3nqDwd86H5zojBENic6bBd__htuBYx_iQ3i-jMA2w-qbRHWNiDgzadKt9BD6egbChYYiev2HmkV6Q4XL6S_9KfYuy3DPVKpJtM30jViVkU6I5wy0JbOoFRjJ2CPj-TPJNf63_t32y5bDUwivG3Zzkgnipo73bAd1748PF');
+  background-size: cover;
+  background-position: center;
+}
+
+.register-modal {
+  background-color: white;
+  width: 95%;
+  max-width: 550px;
+  border-radius: 32px;
+  padding: 4vh 5%;
+  position: relative;
+  box-shadow: 0px 25px 50px -12px rgba(0, 0, 0, 0.5);
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.close-btn {
+  position: absolute;
+  top: 2.5vh;
+  right: 2.5vh;
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #0B735F;
+  cursor: pointer;
+  z-index: 10;
+}
+
+.register-header {
+  text-align: center;
+  margin-bottom: 3vh;
+}
+
+.logo-text {
+  font-size: 32px;
+  font-weight: 800;
+  color: #0B735F;
+  letter-spacing: 3px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  display: block;
+  margin-bottom: 1vh;
+}
+
+.register-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #0B735F;
+  margin-bottom: 0.5vh;
+}
+
+.register-subtitle {
+  font-size: 14px;
+  color: #718096;
+}
+
+.register-form {
+  display: flex;
+  flex-direction: column;
+  gap: 2vh;
+}
+
+.label-caps {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0B735F;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.gender-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1vh;
+}
+
+.radio-container {
+  display: flex;
+  gap: 2vw;
+  padding-left: 8px;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #4A5568;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.radio-input {
+  accent-color: #0B735F;
+  width: 18px;
+  height: 18px;
+}
+
+.register-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.submit-btn {
+  margin-top: 1vh;
+  padding: 18px;
+  font-size: 16px;
+  box-shadow: 0px 10px 15px -3px rgba(11, 115, 95, 0.2);
+}
+
+.register-footer {
+  margin-top: 3vh;
+  text-align: center;
+  font-size: 14px;
+}
+
+.login-link {
+  color: #0B735F;
+  font-weight: 700;
+  cursor: pointer;
+  margin-left: 4px;
+}
+
+/* Error states */
+.input-error {
+  border: 1px solid #EF4444 !important;
+}
+
+.error-text {
+  color: #EF4444;
+  font-size: 12px;
+  margin-top: -1.5vh;
+  margin-left: 4px;
+}
