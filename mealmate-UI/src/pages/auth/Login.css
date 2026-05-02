@@ -1,0 +1,43 @@
+.login-container .login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.login-container .input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.login-container .input-error {
+  border: 1px solid #EF4444 !important;
+}
+
+.login-container .error-text {
+  color: #EF4444;
+  font-size: 12px;
+  margin-left: 4px;
+}
+
+.login-container .forgot-pass {
+  font-size: 13px;
+  color: #4D9A80;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.login-container .login-footer {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #F0F4F2;
+  text-align: center;
+  font-size: 14px;
+}
+
+.login-container .register-link {
+  color: #4D9A80;
+  font-weight: 700;
+  margin-left: 8px;
+  cursor: pointer;
+}

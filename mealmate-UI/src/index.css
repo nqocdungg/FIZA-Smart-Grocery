@@ -1,9 +1,15 @@
 /* ==========================================
    FIZA - Global Styles
-   Primary Color: #0B735F
    ========================================== */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
 
 :root {
+  /* Brand Colors */
+  --fiza-primary: #0B735F;
+  --fiza-primary-light: #0E9A7E;
+  --fiza-primary-dark: #085C4B;
+  --fiza-secondary: #4D9A80;
+  --fiza-bg-light: #F0F4F2;
   /* Primary Palette */
   --fiza-bg: #F1F5F9;
 
@@ -16,25 +22,12 @@
 
   /* Neutral */
   --fiza-white: #FFFFFF;
-  --fiza-gray-50: #F9FAFB;
-  --fiza-gray-100: #F3F4F6;
-  --fiza-gray-200: #E5E7EB;
-  --fiza-gray-300: #D1D5DB;
-  --fiza-gray-400: #9CA3AF;
-  --fiza-gray-500: #6B7280;
-  --fiza-gray-600: #4B5563;
-  --fiza-gray-700: #374151;
-  --fiza-gray-800: #1F2937;
-  --fiza-gray-900: #111827;
-
-  /* Status Colors */
-  --fiza-success: #10B981;
-  --fiza-warning: #F59E0B;
-  --fiza-danger: #EF4444;
-  --fiza-info: #3B82F6;
+  --fiza-gray-text: #88938E;
+  --fiza-input-bg: #F7FAFC;
 
   /* Typography */
-  font-family: 'Inter', 'Segoe UI', sans-serif;
+  --fiza-font-main: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--fiza-font-main);
   font-size: 16px;
   line-height: 1.5;
   color: var(--fiza-gray-800);
@@ -50,20 +43,23 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  /* Đảm bảo mọi phần tử đều dùng font thiết kế */
+  font-family: inherit; 
 }
 
 body {
   min-height: 100vh;
+  background-color: var(--fiza-secondary);
   -webkit-font-smoothing: antialiased;
+  font-family: var(--fiza-font-main);
 }
 
 a {
   color: var(--fiza-primary);
   text-decoration: none;
+  transition: 0.2s;
 }
 
 a:hover {
   color: var(--fiza-primary-dark);
 }
-
-/* TODO: Thêm các utility classes và responsive breakpoints */
