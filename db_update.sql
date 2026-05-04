@@ -75,10 +75,8 @@ CREATE TABLE users (
 CREATE TABLE families (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,              -- Tên gia đình
-    housekeeper_id INT,                      -- Người nội trợ (quản lý gia đình)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_family_housekeeper FOREIGN KEY (housekeeper_id) REFERENCES users(id) ON DELETE SET NULL
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Thêm FK từ users → families (thêm sau để tránh phụ thuộc vòng)
@@ -191,7 +189,6 @@ CREATE TABLE recipes (
     reference_link VARCHAR(500),             -- Link tham khảo (video, blog...)
     author VARCHAR(255),                     -- Tác giả công thức
     preferred_meal_time VARCHAR(50),         -- Bữa ưu tiên: BREAKFAST (sáng), LUNCH (trưa), DINNER (tối)
-    display_status VARCHAR(50) DEFAULT 'SYSTEM', -- Loại: SYSTEM (món hệ thống), CUSTOM (món tự tạo)
     image_url VARCHAR(500),                  -- Ảnh minh họa món ăn
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -211,17 +208,6 @@ CREATE TABLE recipe_ingredients (
     CONSTRAINT fk_ri_food FOREIGN KEY (food_id) REFERENCES foods(id) ON DELETE CASCADE
 );
 
--- Bảng món ăn tự tạo của người dùng (liên kết user → recipe)
-CREATE TABLE custom_recipes (
-    id SERIAL PRIMARY KEY,
-    user_id INT NOT NULL,                    -- Người tạo
-    recipe_id INT NOT NULL,                  -- Món ăn
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT uq_custom_recipe UNIQUE (user_id, recipe_id),
-    CONSTRAINT fk_cr_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT fk_cr_recipe FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE CASCADE
-);
 
 -- Bảng yêu thích / nổi bật (liên kết N-N giữa người dùng và món ăn) — theo yêu cầu mục 4.3
 CREATE TABLE user_favorite_recipes (
