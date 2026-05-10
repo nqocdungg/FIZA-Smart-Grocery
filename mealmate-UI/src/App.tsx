@@ -1,9 +1,10 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 
 // Auth Pages
 import Login from '@/pages/auth/Login';
 import Register from '@/pages/auth/Register';
+import { useAuth } from '@/context/AuthContext';
 
 // Profile
 import ProfileDetail from '@/pages/profile/ProfileDetail';
@@ -21,33 +22,57 @@ import FoodManagement from '@/pages/admin/FoodManagement';
 import RecipeManagement from '@/pages/admin/RecipeManagement';
 import Performance from '@/pages/admin/Performance';
 
+const RequireAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated } = useAuth();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+const PublicOnlyRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated } = useAuth();
+
+  if (isAuthenticated) {
+    return <Navigate to="/fridge" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+const HomeRedirect: React.FC = () => {
+  const { isAuthenticated } = useAuth();
+
+  return <Navigate to={isAuthenticated ? '/fridge' : '/login'} replace />;
+};
+
 const App: React.FC = () => {
   return (
     <Routes>
-      {/* TODO: Implement route guards based on AuthContext role (ADMIN / CUSTOMER) */}
-
       {/* Auth Routes - Public */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+      <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
+      <Route path="/register" element={<PublicOnlyRoute><Register /></PublicOnlyRoute>} />
 
       {/* Profile */}
-      <Route path="/profile" element={<ProfileDetail />} />
+      <Route path="/profile" element={<RequireAuth><ProfileDetail /></RequireAuth>} />
 
       {/* Customer Routes */}
-      <Route path="/family" element={<FamilyGroup />} />
-      <Route path="/shopping" element={<ShoppingPlan />} />
-      <Route path="/fridge" element={<MyFridge />} />
-      <Route path="/suggestions" element={<MenuSuggestion />} />
-      <Route path="/reports" element={<Reports />} />
+      <Route path="/family" element={<RequireAuth><FamilyGroup /></RequireAuth>} />
+      <Route path="/shopping" element={<RequireAuth><ShoppingPlan /></RequireAuth>} />
+      <Route path="/fridge" element={<RequireAuth><MyFridge /></RequireAuth>} />
+      <Route path="/suggestions" element={<RequireAuth><MenuSuggestion /></RequireAuth>} />
+      <Route path="/reports" element={<RequireAuth><Reports /></RequireAuth>} />
 
       {/* Admin Routes */}
-      <Route path="/admin/users" element={<UserManagement />} />
-      <Route path="/admin/foods" element={<FoodManagement />} />
-      <Route path="/admin/recipes" element={<RecipeManagement />} />
-      <Route path="/admin/performance" element={<Performance />} />
+      <Route path="/admin/users" element={<RequireAuth><UserManagement /></RequireAuth>} />
+      <Route path="/admin/foods" element={<RequireAuth><FoodManagement /></RequireAuth>} />
+      <Route path="/admin/recipes" element={<RequireAuth><RecipeManagement /></RequireAuth>} />
+      <Route path="/admin/performance" element={<RequireAuth><Performance /></RequireAuth>} />
 
       {/* Default redirect */}
-      <Route path="/" element={<Login />} />
+      <Route path="/" element={<HomeRedirect />} />
     </Routes>
   );
 };

@@ -15,5 +15,6 @@ public class Family extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    // TODO: Ad domain fields
+    @Column(nullable = false)
+    private String name; // Tên gia đình
 }

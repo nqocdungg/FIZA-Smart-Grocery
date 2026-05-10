@@ -15,5 +15,13 @@ public class PreservationMethod extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    // TODO: Ad domain fields
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "food_id", nullable = false)
+    private Food food; // Thực phẩm cần bảo quản
+
+    @Column(nullable = false, columnDefinition = "TEXT")
+    private String content; // Nội dung hướng dẫn bảo quản
+
+    @Column(name = "reference_source")
+    private String referenceSource; // Nguồn tham khảo
 }

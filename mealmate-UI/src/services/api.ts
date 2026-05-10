@@ -6,7 +6,7 @@ import axios from 'axios';
 // - Xử lý lỗi 401 (token hết hạn) → redirect về trang login
 // - Xử lý lỗi chung (500, 403, v.v.)
 
-const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -33,9 +33,11 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 || error.response?.status === 403) {
-      // TODO: Token hết hạn hoặc không hợp lệ → xóa token & redirect về login
+    const hasStoredToken = Boolean(localStorage.getItem('accessToken'));
+
+    if (hasStoredToken && (error.response?.status === 401 || error.response?.status === 403)) {
       localStorage.removeItem('accessToken');
+      localStorage.removeItem('authUser');
       window.location.href = '/login';
     }
     return Promise.reject(error);

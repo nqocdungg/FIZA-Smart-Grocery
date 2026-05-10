@@ -15,5 +15,14 @@ public class MealItem extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    // TODO: Ad domain fields
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "meal_id", nullable = false)
+    private Meal meal; // Thuộc bữa ăn nào
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "recipe_id", nullable = false)
+    private com.mealmate.catalog.model.Recipe recipe; // Món ăn
+
+    @Column(name = "status")
+    private String status; // Trạng thái
 }
