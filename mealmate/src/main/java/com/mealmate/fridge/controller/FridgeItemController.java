@@ -1,27 +1,62 @@
 package com.mealmate.fridge.controller;
 
-import com.mealmate.fridge.model.FridgeItem;
+import com.mealmate.fridge.model.dto.CreateFridgeItemRequest;
+import com.mealmate.fridge.model.dto.FridgeItemResponse;
+import com.mealmate.fridge.model.dto.RemoveFridgeItemRequest;
+import com.mealmate.fridge.model.dto.UpdateFridgeItemRequest;
 import com.mealmate.fridge.service.FridgeItemService;
-import com.mealmate.common.dto.ApiResponse;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/fridges/fridgeitems")
-@RequiredArgsConstructor
+@RequestMapping("/api/fridge-items")
 public class FridgeItemController {
 
-    private final FridgeItemService service;
+    private final FridgeItemService fridgeItemService;
+
+    public FridgeItemController(FridgeItemService fridgeItemService) {
+        this.fridgeItemService = fridgeItemService;
+    }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<FridgeItem>>> getAll() {
-        return ResponseEntity.ok(new ApiResponse<>(true, "Success", service.findAll()));
+    public List<FridgeItemResponse> getStoredItems(
+            @RequestParam Long familyId,
+            @RequestParam(required = false) String keyword
+    ) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return fridgeItemService.getStoredItems(familyId);
+        }
+
+        return fridgeItemService.searchStoredItems(familyId, keyword);
     }
 
     @PostMapping
-    public ResponseEntity<ApiResponse<FridgeItem>> create(@RequestBody FridgeItem entity) {
-        return ResponseEntity.ok(new ApiResponse<>(true, "Created", service.save(entity)));
+    public FridgeItemResponse create(
+            @Valid @RequestBody CreateFridgeItemRequest request
+    ) {
+        return fridgeItemService.create(request);
+    }
+
+    @PatchMapping("/{id}")
+    public FridgeItemResponse update(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateFridgeItemRequest request
+    ) {
+        return fridgeItemService.update(id, request);
+    }
+
+    @PatchMapping("/{id}/remove")
+    public FridgeItemResponse remove(
+            @PathVariable Long id,
+            @Valid @RequestBody RemoveFridgeItemRequest request
+    ) {
+        return fridgeItemService.remove(id, request);
+    }
+
+    @GetMapping("/count")
+    public long countStoredItems(@RequestParam Long familyId) {
+        return fridgeItemService.countStoredItems(familyId);
     }
 }
