@@ -15,5 +15,19 @@ public class Food extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    // TODO: Ad domain fields
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private Category category; // Thuộc chủng loại nào
+
+    @Column(nullable = false)
+    private String name; // Tên thực phẩm
+
+    @Column(name = "unit")
+    private String unit; // Đơn vị đo
+
+    @Column(name = "synonyms")
+    private String synonyms; // Từ đồng nghĩa
+
+    @Column(name = "image_url")
+    private String imageUrl; // Đường dẫn ảnh minh họa
 }

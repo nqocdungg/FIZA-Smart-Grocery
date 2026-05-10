@@ -12,10 +12,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -25,14 +23,11 @@ public class UserAuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
-    private final EmailService emailService;
 
     /**
      * Register a new user.
      * - Check email uniqueness
      * - BCrypt encode password
-     * - Generate verification token
-     * - Send verification email
      */
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -41,24 +36,15 @@ public class UserAuthService {
             throw new IllegalArgumentException("Email đã được sử dụng: " + request.getEmail());
         }
 
-        // Generate verification token
-        String verificationToken = UUID.randomUUID().toString();
-
         // Build and save user
         User user = User.builder()
                 .email(request.getEmail())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .fullName(request.getFullName())
                 .phone(request.getPhone())
-                .emailVerified(false)
-                .verificationToken(verificationToken)
-                .verificationTokenExpiry(LocalDateTime.now().plusHours(24))
                 .build();
 
         User savedUser = userRepository.save(user);
-
-        // Send verification email
-        emailService.sendVerificationEmail(savedUser.getEmail(), verificationToken);
 
         log.info("User registered successfully: {}", savedUser.getEmail());
 
@@ -68,26 +54,6 @@ public class UserAuthService {
                 .fullName(savedUser.getFullName())
                 .tokenType("Bearer")
                 .build();
-    }
-
-    /**
-     * Verify email with the given token.
-     */
-    @Transactional
-    public void verifyEmail(String token) {
-        User user = userRepository.findByVerificationToken(token)
-                .orElseThrow(() -> new IllegalArgumentException("Token xác thực không hợp lệ"));
-
-        if (user.getVerificationTokenExpiry().isBefore(LocalDateTime.now())) {
-            throw new IllegalArgumentException("Token xác thực đã hết hạn. Vui lòng đăng ký lại.");
-        }
-
-        user.setEmailVerified(true);
-        user.setVerificationToken(null);
-        user.setVerificationTokenExpiry(null);
-        userRepository.save(user);
-
-        log.info("Email verified successfully for: {}", user.getEmail());
     }
 
     /**

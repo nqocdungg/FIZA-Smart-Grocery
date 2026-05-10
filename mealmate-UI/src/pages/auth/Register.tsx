@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthInput, AuthButton } from '@/components/auth/AuthComponents';
+import { register as registerRequest } from '@/features/auth/api/authApi';
 import './Register.css';
 
 const Register: React.FC = () => {
@@ -16,6 +17,9 @@ const Register: React.FC = () => {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitError, setSubmitError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -38,10 +42,48 @@ const Register: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const getErrorMessage = (error: unknown) => {
+    if (error && typeof error === 'object' && 'response' in error) {
+      const response = (error as { response?: { data?: { message?: string } } }).response;
+      if (response?.data?.message) {
+        return response.data.message;
+      }
+    }
+
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    return 'Đăng ký thất bại. Vui lòng thử lại.';
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validate()) {
-      console.log("Dữ liệu hợp lệ:", formData);
+    setSubmitError('');
+    setSuccessMessage('');
+
+    if (!validate()) {
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await registerRequest({
+        fullName: formData.fullName,
+        phone: formData.phone,
+        email: formData.email,
+        password: formData.password,
+      });
+
+      setSuccessMessage(response?.email ? 'Đăng ký thành công. Vui lòng kiểm tra email để xác thực tài khoản.' : 'Đăng ký thành công.');
+      window.setTimeout(() => {
+        navigate('/login', { replace: true });
+      }, 1200);
+    } catch (error) {
+      setSubmitError(getErrorMessage(error));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -59,6 +101,9 @@ const Register: React.FC = () => {
         </div>
 
         <form className="register-form" onSubmit={handleSubmit}>
+          {submitError && <span className="error-text" style={{ marginBottom: '8px' }}>{submitError}</span>}
+          {successMessage && <span className="error-text" style={{ marginBottom: '8px', color: '#0b735f' }}>{successMessage}</span>}
+
           <AuthInput 
             label="HỌ TÊN" 
             name="fullName"
@@ -136,7 +181,9 @@ const Register: React.FC = () => {
             </div>
           </div>
 
-          <AuthButton type="submit" className="submit-btn">GỬI ĐĂNG KÝ</AuthButton>
+          <AuthButton type="submit" className="submit-btn" disabled={isSubmitting}>
+            {isSubmitting ? 'ĐANG GỬI...' : 'GỬI ĐĂNG KÝ'}
+          </AuthButton>
         </form>
 
         <div className="register-footer">

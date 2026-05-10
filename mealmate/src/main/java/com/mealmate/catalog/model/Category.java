@@ -15,5 +15,12 @@ public class Category extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    // TODO: Ad domain fields
+    @Column(nullable = false)
+    private String name; // Tên chủng loại: Rau củ, Thịt, Hải sản...
+
+    @Column(name = "icon_key")
+    private String iconKey; // Mã icon mặc định của chủng loại
+
+    @Column(name = "color_code")
+    private String colorCode; // Mã màu hiển thị mặc định
 }

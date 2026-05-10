@@ -1,40 +1,78 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
+import { login as loginRequest } from '@/features/auth/api/authApi';
 import { AuthInput, AuthButton, AuthLayout } from '@/components/auth/AuthComponents';
 import './Login.css'; // Import trực tiếp file css cùng cấp
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
-  const [emailOrPhone, setEmailOrPhone] = useState('');
+  const { login } = useAuth();
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<{ identifier?: string; password?: string }>({});
+  const [submitError, setSubmitError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const validate = () => {
     const newErrors: { identifier?: string; password?: string } = {};
-    if (!emailOrPhone.trim()) {
-      newErrors.identifier = "Vui lòng nhập Email hoặc Số điện thoại.";
-    } else if (emailOrPhone.includes('@')) {
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailOrPhone)) {
-        newErrors.identifier = "Định dạng Email không hợp lệ.";
-      }
-    } else if (!/^(0|\+84)[3|5|7|8|9][0-9]{8}$/.test(emailOrPhone)) {
-      newErrors.identifier = "SĐT chưa đúng định dạng VN.";
+    if (!email.trim()) {
+      newErrors.identifier = 'Vui lòng nhập Email.';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      newErrors.identifier = 'Định dạng Email không hợp lệ.';
     }
 
     if (!password) {
-      newErrors.password = "Vui lòng nhập mật khẩu.";
+      newErrors.password = 'Vui lòng nhập mật khẩu.';
     } else if (password.length < 6) {
-      newErrors.password = "Mật khẩu phải có ít nhất 6 ký tự.";
+      newErrors.password = 'Mật khẩu phải có ít nhất 6 ký tự.';
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const getErrorMessage = (error: unknown) => {
+    if (error && typeof error === 'object' && 'response' in error) {
+      const response = (error as { response?: { data?: { message?: string } } }).response;
+      if (response?.data?.message) {
+        return response.data.message;
+      }
+    }
+
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    return 'Đăng nhập thất bại. Vui lòng thử lại.';
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validate()) {
-      console.log("Login data:", { emailOrPhone, password });
+    setSubmitError('');
+
+    if (!validate()) {
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await loginRequest({ email, password });
+
+      login({
+        userId: response.userId,
+        email: response.email,
+        fullName: response.fullName,
+        accessToken: response.accessToken ?? '',
+        tokenType: response.tokenType,
+      });
+
+      navigate('/fridge', { replace: true });
+    } catch (error) {
+      setSubmitError(getErrorMessage(error));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -47,11 +85,12 @@ const Login: React.FC = () => {
         <form className="login-form" onSubmit={handleLogin}>
           <div className="input-group">
             <AuthInput 
-              label="Email/SĐT"
-              placeholder="Nhập email hoặc số điện thoại"
-              value={emailOrPhone}
+              label="Email"
+              placeholder="Nhập email của bạn"
+              value={email}
+              autoComplete="email"
               onChange={(e) => {
-                setEmailOrPhone(e.target.value);
+                setEmail(e.target.value);
                 if (errors.identifier) setErrors({ ...errors, identifier: '' });
               }}
               className={errors.identifier ? 'input-error' : ''}
@@ -65,6 +104,7 @@ const Login: React.FC = () => {
               type="password"
               placeholder="Nhập mật khẩu của bạn"
               value={password}
+              autoComplete="current-password"
               onChange={(e) => {
                 setPassword(e.target.value);
                 if (errors.password) setErrors({ ...errors, password: '' });
@@ -75,8 +115,10 @@ const Login: React.FC = () => {
             {errors.password && <span className="error-text">{errors.password}</span>}
           </div>
 
-          <AuthButton type="submit" style={{ marginTop: '8px' }}>
-            ĐĂNG NHẬP
+          {submitError && <span className="error-text" style={{ marginTop: '-4px' }}>{submitError}</span>}
+
+          <AuthButton type="submit" style={{ marginTop: '8px' }} disabled={isSubmitting}>
+            {isSubmitting ? 'ĐANG XỬ LÝ...' : 'ĐĂNG NHẬP'}
           </AuthButton>
         </form>
 

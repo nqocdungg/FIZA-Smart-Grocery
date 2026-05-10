@@ -24,7 +24,7 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<AuthResponse>> register(@Valid @RequestBody RegisterRequest request) {
         AuthResponse response = userAuthService.register(request);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Đăng ký thành công. Vui lòng kiểm tra email để xác thực tài khoản.", response));
+        return ResponseEntity.ok(new ApiResponse<>(true, "Đăng ký thành công", response));
     }
 
     /**
@@ -37,13 +37,4 @@ public class AuthController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Đăng nhập thành công", response));
     }
 
-    /**
-     * GET /api/auth/verify?token=xxx
-     * Verify email address.
-     */
-    @GetMapping("/verify")
-    public ResponseEntity<ApiResponse<Void>> verifyEmail(@RequestParam("token") String token) {
-        userAuthService.verifyEmail(token);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Xác thực email thành công. Bạn có thể đăng nhập.", null));
-    }
 }
