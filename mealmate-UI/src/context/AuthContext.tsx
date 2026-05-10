@@ -1,44 +1,50 @@
 import React, { createContext, useContext, useState } from 'react';
 import type { ReactNode } from 'react';
-
-// TODO: Định nghĩa interface User đầy đủ dựa trên AuthResponse từ backend
-interface User {
-  userId: number;
-  email: string;
-  fullName: string;
-  accessToken: string;
-}
+import type { AuthSession } from '@/features/auth/types/auth';
 
 interface AuthContextType {
-  user: User | null;
+  user: AuthSession | null;
   isAuthenticated: boolean;
-  login: (user: User) => void;
+  login: (user: AuthSession) => void;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AUTH_STORAGE_KEY = 'authUser';
+
+const readStoredUser = (): AuthSession | null => {
+  const storedUser = localStorage.getItem(AUTH_STORAGE_KEY);
+
+  if (!storedUser) {
+    return null;
+  }
+
+  try {
+    const parsedUser = JSON.parse(storedUser) as AuthSession;
+    return parsedUser?.accessToken ? parsedUser : null;
+  } catch {
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    return null;
+  }
+};
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthSession | null>(() => readStoredUser());
 
-  // TODO: Quản lý trạng thái xác thực:
-  // - Lưu token vào localStorage sau khi login
-  // - Đọc token từ localStorage khi app khởi động (persist session)
-  // - Phân biệt vai trò ADMIN / CUSTOMER để điều hướng route
-  // - Auto logout khi token hết hạn
-
-  const login = (userData: User) => {
+  const login = (userData: AuthSession) => {
     setUser(userData);
     localStorage.setItem('accessToken', userData.accessToken);
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userData));
   };
 
   const logout = () => {
     setUser(null);
     localStorage.removeItem('accessToken');
+    localStorage.removeItem(AUTH_STORAGE_KEY);
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user?.accessToken, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

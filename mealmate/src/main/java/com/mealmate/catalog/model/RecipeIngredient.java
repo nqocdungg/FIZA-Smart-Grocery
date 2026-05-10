@@ -15,5 +15,17 @@ public class RecipeIngredient extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    // TODO: Ad domain fields
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "recipe_id", nullable = false)
+    private Recipe recipe; // Thuộc món ăn nào
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "food_id", nullable = false)
+    private Food food; // Nguyên liệu (thực phẩm)
+
+    @Column(nullable = false)
+    private Double quantity; // Số lượng cần
+
+    @Column(name = "unit")
+    private String unit; // Đơn vị
 }

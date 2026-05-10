@@ -15,5 +15,13 @@ public class Meal extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    // TODO: Ad domain fields
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "menu_id", nullable = false)
+    private Menu menu; // Thuộc thực đơn nào
+
+    @Column(name = "meal_date", nullable = false)
+    private java.time.LocalDate mealDate; // Ngày ăn
+
+    @Column(name = "meal_type", nullable = false)
+    private String mealType; // Loại bữa
 }
