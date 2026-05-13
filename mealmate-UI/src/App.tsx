@@ -2,25 +2,25 @@ import React from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 // Auth Pages
+import { useAuth } from '@/context/AuthContext';
 import Login from '@/pages/auth/Login';
 import Register from '@/pages/auth/Register';
-import { useAuth } from '@/context/AuthContext';
 
 // Profile
 import ProfileDetail from '@/pages/profile/ProfileDetail';
 
 // Customer Pages
 import FamilyGroup from '@/pages/customer/FamilyGroup';
-import ShoppingPlan from '@/pages/customer/ShoppingPlan';
-import MyFridge from '@/pages/customer/MyFridge';
+import MyFridge from '@/pages/customer/fridge/MyFridge';
 import MenuSuggestion from '@/pages/customer/MenuSuggestion';
 import Reports from '@/pages/customer/Reports';
 
 // Admin Pages
-import UserManagement from '@/pages/admin/UserManagement';
 import FoodManagement from '@/pages/admin/FoodManagement';
-import RecipeManagement from '@/pages/admin/RecipeManagement';
 import Performance from '@/pages/admin/Performance';
+import RecipeManagement from '@/pages/admin/RecipeManagement';
+import UserManagement from '@/pages/admin/UserManagement';
+import ShoppingPlanPage from '@/pages/customer/shopping-plan/ShoppingPlanPage';
 
 const RequireAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAuth();
@@ -60,7 +60,7 @@ const App: React.FC = () => {
 
       {/* Customer Routes */}
       <Route path="/family" element={<RequireAuth><FamilyGroup /></RequireAuth>} />
-      <Route path="/shopping" element={<RequireAuth><ShoppingPlan /></RequireAuth>} />
+      <Route path="/shopping" element={<RequireAuth><ShoppingPlanPage /></RequireAuth>} />
       <Route path="/fridge" element={<RequireAuth><MyFridge /></RequireAuth>} />
       <Route path="/suggestions" element={<RequireAuth><MenuSuggestion /></RequireAuth>} />
       <Route path="/reports" element={<RequireAuth><Reports /></RequireAuth>} />

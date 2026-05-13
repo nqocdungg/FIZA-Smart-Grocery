@@ -51,6 +51,7 @@ body {
   background-color: var(--fiza-secondary);
   -webkit-font-smoothing: antialiased;
   font-family: var(--fiza-font-main);
+  overflow-x: hidden;
 }
 
 a {

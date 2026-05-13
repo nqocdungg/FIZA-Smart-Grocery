@@ -1,0 +1,113 @@
+/* Container chính */
+.shopping-card-container {
+    width: 100%;
+    min-width: 320px;
+    padding: 24px 16px;
+    background: white;
+    border-radius: 32px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.04);
+    margin-top: 40px; /* Tạo khoảng trống cho badge ngày */
+
+}
+.shopping-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px; /* Tăng gap từ 12px lên 16px hoặc 20px tùy ý bạn */
+}
+
+/* Badge ngày tháng phía trên */
+.shopping-card-date-badge {
+    width: 100px;
+    padding: 8px 0;
+    background: white;
+    border-radius: 24px;
+    outline: 1px #6DD4B4 solid;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0px 10px 30px -10px rgba(0, 0, 0, 0.1);
+    position: absolute;
+    top: -50px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.shopping-card-day-text {
+    color: #6FC8AA;
+    font-size: 18px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+
+/* Các hàng thông tin (Món ăn, Phụ trách) */
+.shopping-card-row {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    background: #F0F5F1;
+    border-radius: 20px;
+    justify-content: space-between;
+    
+}
+
+/* Badge trạng thái "Đã mua" */
+.shopping-card-status-badge {
+    align-self: flex-end;      /* Căn về phía bên phải */
+    width: 58%;               /* Độ rộng tầm 2/3 dòng */
+    height: 32px;             /* Thu nhỏ chiều cao lại một chút */
+    padding: 0 16px;          /* Padding ngang */
+    background: #44BD97;
+    border-radius: 30px;
+    
+    display: flex;
+    justify-content: center; 
+    align-items: center;
+    
+    /* Chữ trắng và in đậm */
+    color: white !important;
+    font-weight: 700 !important;
+    font-size: 16px;
+}
+.name-tag {
+    background: #d5f3e5;
+    color: #047954;
+    padding: 4px 12px;
+    border-radius: 30px;
+    font-size: 14px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 600;
+    margin-left: auto;
+    margin-right: 4px; 
+}
+/* --- Trạng thái Active (Nổi bật) --- */
+.shopping-card-date-badge.active {
+    background: #6DD4B4 !important;
+    outline: none !important;
+    box-shadow: 0px 10px 30px -10px rgba(0, 0, 0, 0.15);
+}
+
+/* Đổi màu chữ THỨ mấy khi Active */
+.shopping-card-day-text.active {
+    color: white !important;
+    opacity: 0.8;
+}
+
+/* Đổi màu chữ ngày tháng khi Active */
+.shopping-card-date-text.active {
+    color: #F9F9F9 !important;
+    font-size: 24px;
+    font-weight: 700;
+}
+
+/* Làm nổi bật nhẹ cả Card khi Active */
+.shopping-card-container.active {
+    border: 1.5px solid #6DD4B4; /* Thêm viền nhẹ quanh card */
+    transform: translateY(-2px); /* Nhấc nhẹ lên một chút */
+    transition: all 0.2s ease-in-out;
+}
