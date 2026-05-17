@@ -1,0 +1,23 @@
+.category-card {
+    background: white;
+    border-radius: 24px;
+    padding: 20px;
+    margin-bottom: 16px;
+}
+
+.category-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+}
+
+.category-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.category-title h4 {
+    margin: 0;
+    font-size: 18px;
+}

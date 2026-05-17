@@ -1,3 +1,4 @@
+import { useAuth } from "@/context/AuthContext"; // Import useAuth để lấy thông tin user thực
 import React from "react";
 import { useLocation, Link } from "react-router-dom";
 import "./Sidebar.css";
@@ -8,9 +9,10 @@ import iconGroup from "@/assets/icon/Icon-group.svg";
 import iconShopping from "@/assets/icon/Icon-shopping.svg";
 import fridgeMenuIcon from "@/assets/icon/Icon-fridge.svg";
 import iconLogo from "@/assets/icon/Icon-logo.svg";
-import iconSchedule from "@/assets/icon/Icon-schedule.svg";
-import iconStatistic from "@/assets/icon/Icon-statistic.svg";
 import iconRecipe from "@/assets/icon/Icon-recipe.svg";
+import iconSchedule from "@/assets/icon/Icon-schedule.svg";
+import iconShopping from "@/assets/icon/Icon-shopping.svg";
+import iconStatistic from "@/assets/icon/Icon-statistic.svg";
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
@@ -20,9 +22,9 @@ const Sidebar: React.FC = () => {
       <div className="sidebar-logo-section">
         <div className="sidebar-logo">
           <div className="sidebar-logo-box">
-            <img src={iconLogo} alt="" className="sidebar-logo-icon" />
+            <img src={iconLogo} alt="Logo" className="sidebar-logo-icon" />
           </div>
-          <span className="sidebar-brand-full">Fiza</span>
+          <span className="sidebar-brand-full">MealMate</span>
         </div>
       </div>
 
@@ -88,6 +90,20 @@ const Sidebar: React.FC = () => {
         </Link>
       </nav>
 
+      {/* <div className="sidebar-profile-section">
+        <div className="sidebar-profile">
+          <div className="sidebar-avatar">
+            <div className="sidebar-avatar-line" />
+            <img src={user?.avatar || defaultAvatar} alt="Avatar" />
+          </div>
+
+          <div className="sidebar-profile-text">
+            {/* Hiển thị tên thực từ database */}
+      {/* <p>{user?.full_name || "Khách"}</p>
+            <span>{user?.role === 'CUSTOMER' ? 'Thành viên' : 'Nội trợ'}</span>
+          </div>
+        </div>
+      </div> */}
       <div className="sidebar-profile-section">
         <div className="sidebar-profile">
           <div className="sidebar-avatar">

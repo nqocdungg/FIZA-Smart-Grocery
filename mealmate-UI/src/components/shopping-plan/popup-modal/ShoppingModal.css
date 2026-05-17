@@ -1,0 +1,204 @@
+/* Lớp phủ toàn màn hình */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4); /* Làm tối nền */
+    backdrop-filter: blur(5px);    /* Làm mờ nền như Figma */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999; /* Đảm bảo nổi lên trên tất cả */
+}
+
+/* Khung Modal chính */
+.modal-container {
+    background: #F1F5F9; /* Màu nền xám nhạt */
+    width: 700px;
+    max-height: 90vh;    /* Không cao quá màn hình */
+    border-radius: 30px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;    /* Cắt các góc bo tròn */
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+    background: white;
+    padding: 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start; /* Để Tiêu đề và Search bar nằm thẳng đỉnh */
+    border-bottom: 1px solid #f1f5f9;
+}
+
+/* Khối bên trái: Tiêu đề & Date */
+.modal-header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 8px; /* Khoảng cách giữa chữ và datepicker */
+}
+
+.modal-title {
+    font-size: 32px;
+    color: #4D9A80;
+    font-weight: 700;
+    margin: 0;
+}
+
+/* Khối bên phải: Search, Filter, Close */
+.modal-header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 40px; 
+}
+
+.modal-search-wrapper {
+    background: #E4E7ED;
+    border-radius: 99px;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 220px;
+}
+
+.modal-search-wrapper input {
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: 14px;
+    width: 100%;
+}
+
+.search-icon {
+    color: #6B7280;
+}
+
+.filter-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #171D1A;
+}
+
+.close-btn-top {
+    background: #F1F5F9;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: none;
+    cursor: pointer;
+    margin-left: 8px;
+}
+
+/* CHỈ CHO PHÉP SCROLL Ở ĐÂY - Khắc phục lỗi 2 thanh scroll */
+.modal-body {
+    flex: 1;
+    overflow-y: auto; 
+    padding: 24px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.modal-footer {
+    background: white;
+    padding: 20px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #e2e8f0;
+}
+
+/* Các nút bấm */
+.add-food-dashed-btn{
+    padding: 6px 12px;
+    border-radius: 99px;
+    font-size: 14px;
+    border: 2px dashed #cbd5e0;
+}
+.footer-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.confirm-btn {
+    background: #44BD97;
+    color: white;
+    padding: 10px 30px;
+    border-radius: 99px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+}
+.cancel-btn {
+    background: #F0F5F1;
+    color: #3E4944;
+    padding: 10px 30px;
+    border-radius: 99px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+}   
+
+.delete-list-btn {
+    background: #FEE2E2; /* Đỏ nhạt */
+    color: #EF4444;    /* Chữ đỏ đậm */
+    padding: 10px 20px;
+    border-radius: 12px;
+    border: none;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.delete-list-btn:hover {
+    background: #FECACA;
+    transform: translateY(-1px);
+}
+
+.delete-list-btn:active {
+    transform: translateY(0);
+}
+
+.fab-edit-btn {
+    /* Ép kích thước tròn trịa */
+    width: 56px !important;
+    height: 56px !important;
+    min-width: 56px !important;
+    min-height: 56px !important;
+    border-radius: 50% !important;
+
+    /* Vị trí "ghim" lại trên khung modal */
+    position: absolute;
+    bottom: 24px;  /* Cách đáy vùng thân 24px */
+    right: 32px;   /* Cách lề phải vùng thân 32px */
+    
+    /* Hiển thị */
+    background: #6DD4B4;
+    color: white;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 25px rgba(69, 212, 180, 0.5); /* Đổ bóng mạnh để trông lơ lửng */
+    cursor: pointer;
+    z-index: 100; /* Luôn nằm trên cùng các card */
+    
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.floating-edit-btn:hover {
+    transform: scale(1.1);
+    background: #44BD97;
+}

@@ -1,0 +1,131 @@
+.frequent-items-container {
+    width: 265px;
+    height: 282px;
+    padding: 24px 20px;
+    background: white;
+    border-radius: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    box-shadow: 0px 10px 30px -10px rgba(0, 0, 0, 0.04);
+}
+
+.frequent-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.frequent-icon-box {
+    width: 26px;
+    height: 25px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 2px solid #FF6B6B;
+    border-radius: 6px;
+}
+
+.frequent-icon-inner {
+    font-size: 14px;
+}
+
+.frequent-title {
+    color: #D55958;
+    font-size: 14px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin: 0;
+}
+
+
+.frequent-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto; /* Cho phép cuộn nếu danh sách dài */
+}
+
+.frequent-row {
+    align-self: stretch;
+    padding: 12px 16px;
+    background: #FFEFEF; 
+    border-radius: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: transform 0.2s;
+}
+
+.frequent-row:hover {
+    transform: translateX(4px);
+}
+
+.frequent-row-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+}
+
+.frequent-item-check {
+    width: 24px;
+    height: 24px;
+    background: white;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.check-dot {
+    width: 8px;
+    height: 8px;
+    background: #6E7A74;
+    border-radius: 50%;
+}
+
+.frequent-item-name {
+    color: #171D1A;
+    font-size: 14px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 400;
+    line-height: 1.4;
+}
+
+.frequent-row-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.frequent-item-unit {
+    color: #6E7A74;
+    font-size: 12px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+}
+
+/* Nút cộng thêm nhanh (bổ sung để UI hoàn thiện hơn) */
+.frequent-add-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: none;
+    background: #FF6B6B;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: opacity 0.2s;
+}
+
+.frequent-add-btn:hover {
+    opacity: 0.8;
+}
