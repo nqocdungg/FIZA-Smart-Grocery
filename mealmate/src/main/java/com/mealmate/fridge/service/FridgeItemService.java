@@ -5,6 +5,7 @@ import com.mealmate.fridge.model.FridgeItem;
 import com.mealmate.fridge.model.FridgeItemStatus;
 import com.mealmate.fridge.model.RemoveReason;
 import com.mealmate.fridge.model.dto.CreateFridgeItemRequest;
+import com.mealmate.fridge.model.dto.FridgeOverviewResponse;
 import com.mealmate.fridge.model.dto.FridgeItemResponse;
 import com.mealmate.fridge.model.dto.RemoveFridgeItemRequest;
 import com.mealmate.fridge.model.dto.UpdateFridgeItemRequest;
@@ -18,8 +19,11 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 
 @Service
 public class FridgeItemService {
@@ -146,6 +150,37 @@ public class FridgeItemService {
         return fridgeItemRepository.countStoredByFamilyId(getCurrentFamilyIdOrThrow());
     }
 
+    public FridgeOverviewResponse getOverview() {
+        Long familyId = getCurrentFamilyIdOrThrow();
+        List<FridgeItemProjection> items = fridgeItemRepository.findByFamilyIdAndStatusWithFoodName(
+                familyId,
+                FridgeItemStatus.STORED
+        );
+
+        LocalDate today = LocalDate.now();
+        FridgeOverviewResponse response = new FridgeOverviewResponse();
+
+        long expiredCount = items.stream()
+                .filter(item -> item.getExpiryDate() != null && item.getExpiryDate().isBefore(today))
+                .count();
+        long expiringSoonCount = items.stream()
+                .filter(item -> item.getExpiryDate() != null
+                        && !item.getExpiryDate().isBefore(today)
+                        && !item.getExpiryDate().isAfter(today.plusDays(3)))
+                .count();
+        long almostOutCount = items.stream()
+                .filter(item -> isAlmostOut(item.getQuantity(), item.getUnit()))
+                .count();
+
+        response.setTotalStored(items.size());
+        response.setExpiredCount(expiredCount);
+        response.setExpiringSoonCount(expiringSoonCount);
+        response.setAlmostOutCount(almostOutCount);
+        response.setStatus(resolveOverviewStatus(items.size(), expiredCount, expiringSoonCount, almostOutCount));
+
+        return response;
+    }
+
     private void validateCreateRequest(CreateFridgeItemRequest request) {
         if (request.getFoodId() == null) {
             throw new IllegalArgumentException("foodId is required");
@@ -196,6 +231,45 @@ public class FridgeItemService {
             return null;
         }
         return value.trim();
+    }
+
+    private boolean isAlmostOut(BigDecimal quantity, String unit) {
+        if (quantity == null) {
+            return false;
+        }
+
+        BigDecimal threshold = getAlmostOutThreshold(unit);
+        return quantity.compareTo(threshold) <= 0;
+    }
+
+    private BigDecimal getAlmostOutThreshold(String unit) {
+        if (unit == null || unit.trim().isEmpty()) {
+            return BigDecimal.ONE;
+        }
+
+        String normalizedUnit = unit.trim().toLowerCase(Locale.ROOT);
+
+        return switch (normalizedUnit) {
+            case "g" -> new BigDecimal("100");
+            case "kg" -> new BigDecimal("0.1");
+            case "ml" -> new BigDecimal("200");
+            case "l", "lit", "lít" -> new BigDecimal("0.2");
+            case "quả" -> new BigDecimal("2");
+            case "hộp", "gói", "chai", "lon", "cái", "bó" -> BigDecimal.ONE;
+            default -> BigDecimal.ONE;
+        };
+    }
+
+    private String resolveOverviewStatus(long totalStored, long expiredCount, long expiringSoonCount, long almostOutCount) {
+        if (totalStored == 0) {
+            return "EMPTY";
+        }
+
+        if (expiredCount > 0 || expiringSoonCount > 0 || almostOutCount > 0) {
+            return "NEEDS_ATTENTION";
+        }
+
+        return "HAPPY";
     }
 
     private User getCurrentUserOrThrow() {

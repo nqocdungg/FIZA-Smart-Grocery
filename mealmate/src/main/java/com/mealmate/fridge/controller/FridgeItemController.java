@@ -1,6 +1,7 @@
 package com.mealmate.fridge.controller;
 
 import com.mealmate.fridge.model.dto.CreateFridgeItemRequest;
+import com.mealmate.fridge.model.dto.FridgeOverviewResponse;
 import com.mealmate.fridge.model.dto.FridgeItemResponse;
 import com.mealmate.fridge.model.dto.RemoveFridgeItemRequest;
 import com.mealmate.fridge.model.dto.UpdateFridgeItemRequest;
@@ -58,5 +59,10 @@ public class FridgeItemController {
     @GetMapping("/count")
     public long countStoredItems() {
         return fridgeItemService.countStoredItems();
+    }
+
+    @GetMapping("/overview")
+    public FridgeOverviewResponse getOverview() {
+        return fridgeItemService.getOverview();
     }
 }

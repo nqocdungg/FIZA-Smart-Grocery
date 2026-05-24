@@ -1,6 +1,9 @@
 .topbar {
   align-self: stretch;
   height: 80px;
+  position: sticky;
+  top: 0;
+  z-index: 90;
   padding-left: 48px;
   padding-right: 48px;
   background: var(--fiza-background);
@@ -17,7 +20,7 @@
 }
 
 .topbar-title {
-  width: 240px;
+  width: 270px;
   height: 32px;
   display: flex;
   flex-direction: column;

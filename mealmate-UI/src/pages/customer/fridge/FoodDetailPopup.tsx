@@ -130,22 +130,19 @@ const getDaysLeftLabel = (daysLeft: number | null) => {
 
 const getExpiryStatusClass = (daysLeft: number | null) => {
   if (daysLeft === null) return "safe";
-  if (daysLeft <= 2) return "danger";
-  if (daysLeft <= 6) return "warning";
+  if (daysLeft <= 3) return "danger";
   return "safe";
 };
 
 const getProgressColor = (daysLeft: number | null) => {
   if (daysLeft === null) return "#94A3B8";
   if (daysLeft <= 3) return "#EF4444";
-  if (daysLeft <= 7) return "#F59E0B";
   return "#6ED4B4";
 };
 
 const getProgressTrackColor = (daysLeft: number | null) => {
   if (daysLeft === null) return "#E2E8F0";
   if (daysLeft <= 3) return "#FEE2E2";
-  if (daysLeft <= 7) return "#FFEDD5";
   return "#CFE7DF";
 };
 
@@ -173,12 +170,8 @@ const getExpiryMessage = (daysLeft: number | null) => {
     return "Sản phẩm hết hạn hôm nay, nên sử dụng hoặc xử lý trong ngày.";
   }
 
-  if (daysLeft <= 2) {
+  if (daysLeft <= 3) {
     return `Sản phẩm gần hết hạn, nên sử dụng trong ${daysLeft} ngày tới.`;
-  }
-
-  if (daysLeft <= 6) {
-    return `Sản phẩm sắp hết hạn, nên sử dụng trong ${daysLeft} ngày tới.`;
   }
 
   return "Sản phẩm vẫn còn hạn sử dụng tốt.";

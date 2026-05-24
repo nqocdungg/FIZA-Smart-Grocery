@@ -17,12 +17,6 @@
   background: var(--fiza-background);
 }
 
-.my-fridge-page > .topbar {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-}
-
 .my-fridge-content {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 360px;
@@ -67,6 +61,7 @@
   font-weight: 500;
   line-height: 19.5px;
   cursor: pointer;
+  transition: background 180ms ease, color 180ms ease, transform 180ms ease;
 }
 
 .my-fridge-view-tabs button:first-child {
@@ -80,26 +75,7 @@
 .my-fridge-view-tabs button.active {
   background: var(--fiza-primary-light);
   color: var(--fiza-white);
-}
-
-.my-fridge-search {
-  width: min(320px, 100%);
-  height: 43.44px;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  background: var(--fiza-white);
-  color: #1e293b;
-  font-family: "Inter", "Segoe UI", sans-serif;
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 19.5px;
-  outline: none;
-  padding: 0 14px;
-}
-
-.my-fridge-search:focus {
-  border-color: var(--fiza-primary-light);
-  box-shadow: 0 0 0 3px rgba(110, 212, 180, 0.18);
+  transform: translateY(-1px);
 }
 
 .my-fridge-filter-tabs {
@@ -124,11 +100,13 @@
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+  transition: background 180ms ease, color 180ms ease, transform 180ms ease;
 }
 
 .my-fridge-filter-tabs button.active {
   background: var(--fiza-primary);
   color: var(--fiza-white);
+  transform: translateY(-1px);
 }
 
 .my-fridge-category-icon {
@@ -170,11 +148,30 @@
   min-height: 180.4px;
   padding: 20px;
   background: var(--fiza-white);
+  border: 1.4px solid transparent;
   border-radius: 20px;
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 11.98px;
   cursor: pointer;
+  animation: fridgeCardEnter 260ms ease-out both;
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
+}
+
+.my-fridge-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+}
+
+.my-fridge-card.expiry-alert {
+  border-color: #fecaca;
+  background: linear-gradient(180deg, #ffffff 0%, #fffafa 100%);
+}
+
+.my-fridge-card.stock-alert:not(.expiry-alert) {
+  border-color: #fde68a;
+  background: linear-gradient(180deg, #ffffff 0%, #fffdf5 100%);
 }
 
 .my-fridge-card:focus-visible {
@@ -183,10 +180,12 @@
 }
 
 .my-fridge-card-top {
-  height: 47.99px;
+  min-height: 47.99px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 11.98px;
+  padding-right: 72px;
+  box-sizing: border-box;
 }
 
 .my-fridge-food-icon {
@@ -209,6 +208,13 @@
   font-size: 15px;
   font-weight: 600;
   line-height: 22.5px;
+  overflow: visible;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.my-fridge-food-info {
+  min-width: 0;
 }
 
 .my-fridge-food-info p {
@@ -217,6 +223,52 @@
   font-size: 13px;
   font-weight: 400;
   line-height: 19.5px;
+  overflow: visible;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.my-fridge-card-badges {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+  max-width: 64px;
+  pointer-events: none;
+}
+
+.fridge-item-badge {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0;
+  font-weight: 600;
+  line-height: 16.5px;
+  white-space: nowrap;
+  box-shadow: 0 6px 12px rgba(15, 23, 42, 0.08);
+}
+
+.fridge-item-badge.danger {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.fridge-item-badge.warning {
+  background: #fef3c7;
+  color: #a16207;
+}
+
+.fridge-item-badge img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
 }
 
 .my-fridge-food-meta {
@@ -272,6 +324,8 @@
   height: 5.99px;
   border-radius: 42600300px;
   flex-shrink: 0;
+  transform-origin: left center;
+  animation: fridgeProgressReveal 760ms ease-out both;
 }
 
 .my-fridge-sidebar {
@@ -340,6 +394,7 @@
   height: 152px;
   object-fit: contain;
   display: block;
+  animation: fridgeFloat 3.2s ease-in-out infinite;
 }
 
 .fridge-status-copy {
@@ -423,6 +478,13 @@
   font-weight: 500;
   line-height: 19.5px;
   cursor: pointer;
+  transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+}
+
+.alert-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+  filter: saturate(1.04);
 }
 
 .alert-card.danger {
@@ -472,7 +534,7 @@
   justify-content: center;
   gap: 0;
   overflow: hidden;
-  transition: width 180ms ease, padding 180ms ease, gap 180ms ease;
+  transition: width 190ms ease, padding 190ms ease, gap 190ms ease, transform 190ms ease, box-shadow 190ms ease;
 }
 
 .round-action img {
@@ -499,6 +561,8 @@
   width: 168px;
   padding: 0 18px;
   gap: 8px;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.12);
 }
 
 .round-action:hover span,
@@ -513,4 +577,282 @@
 
 .round-action.suggest {
   background: #ffb4a2;
+}
+
+.my-fridge-toast {
+  position: fixed;
+  top: 96px;
+  right: 32px;
+  z-index: 1300;
+  min-width: 280px;
+  max-width: min(420px, calc(100vw - 64px));
+  min-height: 48px;
+  padding: 12px 16px;
+  border-radius: 16px;
+  border: 1px solid #cbfbf1;
+  background: #f0fdf9;
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
+  color: #00786f;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 19.5px;
+  animation: fridgeToastIn 220ms ease-out both;
+}
+
+.my-fridge-toast button {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 9999px;
+  background: rgba(0, 120, 111, 0.1);
+  color: #00786f;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.my-fridge-toast button:hover {
+  background: rgba(0, 120, 111, 0.16);
+}
+
+.my-fridge-toast.danger {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.my-fridge-toast.danger button {
+  background: rgba(185, 28, 28, 0.1);
+  color: #b91c1c;
+}
+
+.fridge-alert-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: fridgeOverlayIn 180ms ease-out both;
+}
+
+.fridge-alert-dialog {
+  width: min(520px, calc(100vw - 48px));
+  max-height: min(620px, calc(100vh - 80px));
+  padding: 24px;
+  border-radius: 22px;
+  background: var(--fiza-white);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  animation: fridgeDialogIn 220ms ease-out both;
+}
+
+.fridge-alert-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.fridge-alert-dialog-header h2 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 27px;
+}
+
+.fridge-alert-dialog-header p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 19.5px;
+}
+
+.fridge-alert-dialog-header button {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 9999px;
+  background: #f1f5f9;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.fridge-alert-list {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fridge-alert-empty {
+  min-height: 76px;
+  border-radius: 16px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fridge-alert-item {
+  width: 100%;
+  min-height: 72px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.fridge-alert-item:hover {
+  transform: translateY(-2px);
+  border-color: #cbfbf1;
+  background: #f8fffc;
+}
+
+.fridge-alert-item-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.fridge-alert-item-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fridge-alert-item-main strong {
+  color: #1e293b;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 21px;
+}
+
+.fridge-alert-item-main span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+}
+
+.fridge-alert-item > img {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+@keyframes fridgeCardEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fridgeProgressReveal {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes fridgeFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes fridgeToastIn {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fridgeOverlayIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fridgeDialogIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .my-fridge-card,
+  .my-fridge-progress-bar,
+  .fridge-status-visual img,
+  .my-fridge-toast,
+  .fridge-alert-overlay,
+  .fridge-alert-dialog {
+    animation: none;
+  }
+
+  .my-fridge-card,
+  .alert-card,
+  .round-action,
+  .fridge-alert-item,
+  .my-fridge-filter-tabs button,
+  .my-fridge-view-tabs button {
+    transition: none;
+  }
 }

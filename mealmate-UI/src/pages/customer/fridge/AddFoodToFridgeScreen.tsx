@@ -1,8 +1,19 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import api from "@/services/api";
 import "./AddFoodToFridgeScreen.css";
 
 type AddFoodMode = "SHOPPING_PLAN" | "MANUAL";
 type ItemStatus = "selected" | "skipped";
+type StorageLocation = "COOL" | "FREEZER" | "DRY";
+
+type FoodFromApi = {
+  id: number;
+  categoryId?: number;
+  categoryName?: string;
+  name: string;
+  unit?: string;
+  synonyms?: string;
+};
 
 type ShoppingItem = {
   id: string;
@@ -21,8 +32,26 @@ type ShoppingCategory = {
   items: ShoppingItem[];
 };
 
+type SelectOption = {
+  label: string;
+  value: string;
+};
+
+type ManualFormState = {
+  foodName: string;
+  selectedFood: FoodFromApi | null;
+  customName: string;
+  quantity: string;
+  storageLocation: StorageLocation | "";
+  specificLocation: string;
+  addedDate: string;
+  expiryDate: string;
+  note: string;
+};
+
 type AddFoodToFridgeScreenProps = {
   onCancel: () => void;
+  onAdded?: () => void;
 };
 
 const shoppingCategories: ShoppingCategory[] = [
@@ -52,13 +81,58 @@ const shoppingCategories: ShoppingCategory[] = [
   },
 ];
 
-const storageLocations = ["Ngăn mát", "Ngăn đông", "Tủ đồ khô"];
-const specificLocations = ["Kệ trên", "Kệ giữa", "Kệ dưới", "Ngăn rau củ", "Cánh tủ"];
-const categoryOptions = ["Trứng & Sữa", "Thịt", "Hải sản", "Rau củ", "Trái cây", "Đồ khô", "Gia vị"];
+const storageLocationOptions: SelectOption[] = [
+  { label: "Ngăn mát", value: "COOL" },
+  { label: "Ngăn đông", value: "FREEZER" },
+  { label: "Tủ đồ khô", value: "DRY" },
+];
+
+const specificLocationOptions: SelectOption[] = [
+  { label: "Kệ trên", value: "TOP_SHELF" },
+  { label: "Kệ giữa", value: "MIDDLE_SHELF" },
+  { label: "Kệ dưới", value: "BOTTOM_SHELF" },
+  { label: "Ngăn rau củ", value: "VEGETABLE_DRAWER" },
+  { label: "Ngăn trái cây", value: "FRUIT_DRAWER" },
+  { label: "Cánh tủ", value: "DOOR_SHELF" },
+];
+
 const unitOptions = ["g", "kg", "ml", "L", "quả", "hộp", "gói"];
 
-const AddFoodToFridgeScreen: React.FC<AddFoodToFridgeScreenProps> = ({ onCancel }) => {
+const getTodayInputValue = () => new Date().toISOString().slice(0, 10);
+
+const normalizeSearchText = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .trim();
+
+const isOtherFood = (food: FoodFromApi) => {
+  const normalizedName = normalizeSearchText(food.name);
+  return normalizedName.endsWith(" khac") || normalizedName.includes(" khac");
+};
+
+const isOtherSelection = (food: FoodFromApi | null) => Boolean(food && isOtherFood(food));
+
+const AddFoodToFridgeScreen: React.FC<AddFoodToFridgeScreenProps> = ({ onCancel, onAdded }) => {
   const [mode, setMode] = useState<AddFoodMode>("SHOPPING_PLAN");
+  const [allFoods, setAllFoods] = useState<FoodFromApi[]>([]);
+  const [foodSuggestions, setFoodSuggestions] = useState<FoodFromApi[]>([]);
+  const [isSearchingFoods, setIsSearchingFoods] = useState(false);
+  const [isSubmittingManual, setIsSubmittingManual] = useState(false);
+  const [manualError, setManualError] = useState("");
+  const [manualForm, setManualForm] = useState<ManualFormState>({
+    foodName: "",
+    selectedFood: null,
+    customName: "",
+    quantity: "",
+    storageLocation: "COOL",
+    specificLocation: "",
+    addedDate: getTodayInputValue(),
+    expiryDate: "",
+    note: "",
+  });
   const [itemStatuses, setItemStatuses] = useState<Record<string, ItemStatus>>(() => {
     return shoppingCategories.reduce<Record<string, ItemStatus>>((acc, category) => {
       category.items.forEach((item) => {
@@ -70,9 +144,145 @@ const AddFoodToFridgeScreen: React.FC<AddFoodToFridgeScreenProps> = ({ onCancel 
 
   const selectedCount = Object.values(itemStatuses).filter((status) => status === "selected").length;
   const skippedCount = Object.values(itemStatuses).filter((status) => status === "skipped").length;
+  const selectedManualFood = manualForm.selectedFood;
+  const hasTypedFoodName = manualForm.foodName.trim().length > 0;
+  const showOtherFoodChoices = hasTypedFoodName && !isSearchingFoods && foodSuggestions.length === 0;
+  const shouldShowCustomName = isOtherSelection(selectedManualFood);
+
+  const otherFoodsByCategory = useMemo(() => {
+    const grouped = new Map<string, FoodFromApi[]>();
+
+    allFoods.filter(isOtherFood).forEach((food) => {
+      const categoryName = food.categoryName || "Danh mục khác";
+      grouped.set(categoryName, [...(grouped.get(categoryName) || []), food]);
+    });
+
+    return Array.from(grouped.entries());
+  }, [allFoods]);
+
+  useEffect(() => {
+    const loadFoods = async () => {
+      try {
+        const response = await api.get<FoodFromApi[]>("/api/foods");
+        setAllFoods(response.data);
+      } catch {
+        setAllFoods([]);
+      }
+    };
+
+    loadFoods();
+  }, []);
+
+  useEffect(() => {
+    const keyword = manualForm.foodName.trim();
+
+    if (!keyword) {
+      setFoodSuggestions([]);
+      setIsSearchingFoods(false);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(async () => {
+      setIsSearchingFoods(true);
+
+      try {
+        const response = await api.get<FoodFromApi[]>("/api/foods", {
+          params: { keyword },
+        });
+        setFoodSuggestions(response.data.filter((food) => !isOtherFood(food)));
+      } catch {
+        setFoodSuggestions([]);
+      } finally {
+        setIsSearchingFoods(false);
+      }
+    }, 250);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [manualForm.foodName]);
 
   const setItemStatus = (itemId: string, status: ItemStatus) => {
     setItemStatuses((current) => ({ ...current, [itemId]: status }));
+  };
+
+  const updateManualForm = (nextValues: Partial<ManualFormState>) => {
+    setManualForm((current) => ({ ...current, ...nextValues }));
+    setManualError("");
+  };
+
+  const handleFoodNameChange = (value: string) => {
+    updateManualForm({
+      foodName: value,
+      selectedFood: null,
+      customName: "",
+    });
+  };
+
+  const handleSelectFood = (food: FoodFromApi) => {
+    updateManualForm({
+      foodName: food.name,
+      selectedFood: food,
+      customName: isOtherFood(food) ? manualForm.foodName.trim() : "",
+    });
+    setFoodSuggestions([]);
+  };
+
+  const validateManualForm = () => {
+    if (!selectedManualFood) {
+      return "Vui lòng chọn thực phẩm từ danh sách gợi ý.";
+    }
+
+    if (shouldShowCustomName && !manualForm.customName.trim()) {
+      return "Vui lòng nhập tên thực phẩm cụ thể.";
+    }
+
+    const quantity = Number(manualForm.quantity);
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      return "Số lượng phải lớn hơn 0.";
+    }
+
+    if (!manualForm.storageLocation) {
+      return "Vui lòng chọn vị trí chính.";
+    }
+
+    if (!manualForm.expiryDate) {
+      return "Vui lòng chọn hạn sử dụng.";
+    }
+
+    return "";
+  };
+
+  const handleSubmitManual = async () => {
+    const validationError = validateManualForm();
+
+    if (validationError) {
+      setManualError(validationError);
+      return;
+    }
+
+    if (!selectedManualFood) return;
+
+    setIsSubmittingManual(true);
+    setManualError("");
+
+    try {
+      await api.post("/api/fridge-items", {
+        foodId: selectedManualFood.id,
+        customName: shouldShowCustomName ? manualForm.customName.trim() : null,
+        quantity: Number(manualForm.quantity),
+        storageLocation: manualForm.storageLocation,
+        specificLocation: manualForm.specificLocation || null,
+        addedDate: manualForm.addedDate || null,
+        expiryDate: manualForm.expiryDate,
+        note: manualForm.note.trim() || null,
+      });
+
+      onAdded?.();
+      onCancel();
+    } catch {
+      setManualError("Không thêm được thực phẩm vào tủ lạnh. Vui lòng thử lại.");
+    } finally {
+      setIsSubmittingManual(false);
+    }
   };
 
   return (
@@ -162,12 +372,22 @@ const AddFoodToFridgeScreen: React.FC<AddFoodToFridgeScreenProps> = ({ onCancel 
 
                           {item.expanded && status === "selected" && (
                             <div className="shopping-item-fields">
-                              <Field label="SL nhập" value={String(item.quantity)} />
-                              <Field label="Đơn vị" as="select" options={unitOptions} value={item.unit} />
+                              <Field label="SL nhập" value={String(item.quantity)} readOnly />
+                              <Field label="Đơn vị" as="select" options={unitOptions} value={item.unit} disabled />
                               <Field label="Hạn sử dụng" type="date" />
-                              <Field label="Danh mục" as="select" options={categoryOptions} value={category.name} />
-                              <Field label="Vị trí chính" as="select" options={storageLocations} value="Ngăn mát" />
-                              <Field label="Vị trí cụ thể" as="select" options={specificLocations} value="Kệ giữa" />
+                              <Field label="Danh mục" as="select" options={[category.name]} value={category.name} disabled />
+                              <Field
+                                label="Vị trí chính"
+                                as="select"
+                                options={storageLocationOptions}
+                                value="COOL"
+                              />
+                              <Field
+                                label="Vị trí cụ thể"
+                                as="select"
+                                options={specificLocationOptions}
+                                value="MIDDLE_SHELF"
+                              />
                             </div>
                           )}
                         </article>
@@ -211,22 +431,123 @@ const AddFoodToFridgeScreen: React.FC<AddFoodToFridgeScreenProps> = ({ onCancel 
           <p>Nhập thông tin thực phẩm cần lưu trữ trong tủ lạnh.</p>
 
           <div className="manual-form">
-            <Field label="Tên thực phẩm" required placeholder="Nhập tên thực phẩm" wide />
-            <Field label="Danh mục" required as="select" options={categoryOptions} />
-            <Field label="Số lượng" required placeholder="Nhập số lượng" />
-            <Field label="Đơn vị" required as="select" options={unitOptions} />
-            <Field label="Ngày nhập" type="date" />
-            <Field label="Hạn sử dụng" required type="date" />
-            <Field label="Vị trí chính" required as="select" options={storageLocations} />
-            <Field label="Vị trí cụ thể" as="select" options={specificLocations} />
-            <Field label="Ghi chú" placeholder="Nhập ghi chú nếu có" wide multiline />
+            <label className="add-fridge-field wide manual-food-search">
+              <span>
+                Tên thực phẩm <strong>*</strong>
+              </span>
+              <input
+                type="text"
+                value={manualForm.foodName}
+                onChange={(event) => handleFoodNameChange(event.target.value)}
+                placeholder="Nhập tên thực phẩm"
+                autoComplete="off"
+              />
+
+              {hasTypedFoodName && !selectedManualFood && (
+                <div className="manual-food-suggestions">
+                  {isSearchingFoods && <p className="manual-suggestion-state">Đang tìm thực phẩm...</p>}
+
+                  {!isSearchingFoods &&
+                    foodSuggestions.map((food) => (
+                      <button type="button" key={food.id} onClick={() => handleSelectFood(food)}>
+                        <strong>{food.name}</strong>
+                        <span>
+                          {food.categoryName || "Chưa có danh mục"}
+                          {food.unit ? ` · ${food.unit}` : ""}
+                        </span>
+                      </button>
+                    ))}
+
+                  {showOtherFoodChoices && (
+                    <div className="manual-other-foods">
+                      <p>Không có thực phẩm khớp. Chọn nhóm thực phẩm phù hợp:</p>
+                      {otherFoodsByCategory.map(([categoryName, foods]) => (
+                        <div className="manual-other-category" key={categoryName}>
+                          <span>{categoryName}</span>
+                          <div>
+                            {foods.map((food) => (
+                              <button type="button" key={food.id} onClick={() => handleSelectFood(food)}>
+                                {food.name}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </label>
+
+            {shouldShowCustomName && (
+              <Field
+                label="Tên thực phẩm cụ thể"
+                required
+                value={manualForm.customName}
+                onChange={(value) => updateManualForm({ customName: value })}
+                placeholder="Nhập tên thực phẩm cụ thể"
+                wide
+              />
+            )}
+
+            <Field label="Danh mục" required value={selectedManualFood?.categoryName || ""} placeholder="Chọn thực phẩm trước" disabled />
+            <Field
+              label="Số lượng"
+              required
+              value={manualForm.quantity}
+              onChange={(value) => updateManualForm({ quantity: value })}
+              placeholder="Nhập số lượng"
+              type="number"
+            />
+            <Field label="Đơn vị" required value={selectedManualFood?.unit || ""} placeholder="Chọn thực phẩm trước" disabled />
+            <Field
+              label="Ngày nhập"
+              type="date"
+              value={manualForm.addedDate}
+              onChange={(value) => updateManualForm({ addedDate: value })}
+            />
+            <Field
+              label="Hạn sử dụng"
+              required
+              type="date"
+              value={manualForm.expiryDate}
+              onChange={(value) => updateManualForm({ expiryDate: value })}
+            />
+            <Field
+              label="Vị trí chính"
+              required
+              as="select"
+              options={storageLocationOptions}
+              value={manualForm.storageLocation}
+              onChange={(value) => updateManualForm({ storageLocation: value as StorageLocation })}
+            />
+            <Field
+              label="Vị trí cụ thể"
+              as="select"
+              options={specificLocationOptions}
+              value={manualForm.specificLocation}
+              onChange={(value) => updateManualForm({ specificLocation: value })}
+              placeholder="Chọn vị trí cụ thể"
+            />
+            <Field
+              label="Ghi chú"
+              value={manualForm.note}
+              onChange={(value) => updateManualForm({ note: value })}
+              placeholder="Nhập ghi chú nếu có"
+              wide
+              multiline
+            />
           </div>
 
+          {manualError && <div className="manual-form-error">{manualError}</div>}
+
           <div className="manual-form-actions">
-            <button type="button" onClick={onCancel}>
+            <button type="button" onClick={onCancel} disabled={isSubmittingManual}>
               Hủy
             </button>
-            <button type="button">Thêm vào tủ</button>
+            <button type="button" onClick={handleSubmitManual} disabled={isSubmittingManual}>
+              {isSubmittingManual ? "Đang thêm..." : "Thêm vào tủ"}
+            </button>
           </div>
         </section>
       )}
@@ -241,10 +562,16 @@ type FieldProps = {
   placeholder?: string;
   type?: string;
   as?: "input" | "select";
-  options?: string[];
+  options?: Array<string | SelectOption>;
   wide?: boolean;
   multiline?: boolean;
+  disabled?: boolean;
+  readOnly?: boolean;
+  onChange?: (value: string) => void;
 };
+
+const getOptionValue = (option: string | SelectOption) => (typeof option === "string" ? option : option.value);
+const getOptionLabel = (option: string | SelectOption) => (typeof option === "string" ? option : option.label);
 
 const Field: React.FC<FieldProps> = ({
   label,
@@ -256,6 +583,9 @@ const Field: React.FC<FieldProps> = ({
   options = [],
   wide,
   multiline,
+  disabled,
+  readOnly,
+  onChange,
 }) => {
   return (
     <label className={`add-fridge-field ${wide ? "wide" : ""} ${multiline ? "multiline" : ""}`}>
@@ -263,18 +593,33 @@ const Field: React.FC<FieldProps> = ({
         {label} {required && <strong>*</strong>}
       </span>
       {multiline ? (
-        <textarea placeholder={placeholder} />
+        <textarea
+          value={value || ""}
+          onChange={(event) => onChange?.(event.target.value)}
+          placeholder={placeholder}
+          disabled={disabled}
+          readOnly={readOnly}
+        />
       ) : as === "select" ? (
-        <select defaultValue={value || ""}>
-          {!value && <option value="">Chọn {label.toLowerCase()}</option>}
+        <select value={value || ""} onChange={(event) => onChange?.(event.target.value)} disabled={disabled}>
+          {!value && <option value="">{placeholder || `Chọn ${label.toLowerCase()}`}</option>}
           {options.map((option) => (
-            <option key={option} value={option}>
-              {option}
+            <option key={getOptionValue(option)} value={getOptionValue(option)}>
+              {getOptionLabel(option)}
             </option>
           ))}
         </select>
       ) : (
-        <input type={type} defaultValue={value} placeholder={placeholder} />
+        <input
+          type={type}
+          value={value || ""}
+          onChange={(event) => onChange?.(event.target.value)}
+          placeholder={placeholder}
+          disabled={disabled}
+          readOnly={readOnly}
+          min={type === "number" ? "0" : undefined}
+          step={type === "number" ? "0.01" : undefined}
+        />
       )}
     </label>
   );
