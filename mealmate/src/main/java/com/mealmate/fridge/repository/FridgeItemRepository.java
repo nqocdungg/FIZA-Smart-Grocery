@@ -173,13 +173,14 @@ public interface FridgeItemRepository extends JpaRepository<FridgeItem, Long> {
         return countByFamilyIdAndStatus(familyId, FridgeItemStatus.STORED);
     }
 
-    @Query("""
-        select count(i.id)
-        from FridgeItem i
-        where i.family.id = :familyId
-          and i.addedDate between :from and :to
-          and (:categoryId is null or i.food.category.id = :categoryId)
-        """)
+    @Query(value = """
+        select count(fi.id)
+        from fridge_items fi
+        join foods f on fi.food_id = f.id
+        where fi.family_id = :familyId
+          and fi.added_date between :from and :to
+          and (:categoryId is null or f.category_id = :categoryId)
+        """, nativeQuery = true)
     Long countItemsAddedToFridge(
         @Param("familyId") Long familyId,
         @Param("from") LocalDate from,
@@ -187,15 +188,16 @@ public interface FridgeItemRepository extends JpaRepository<FridgeItem, Long> {
         @Param("categoryId") Long categoryId
     );
 
-    @Query("""
-        select i.addedDate as date, count(i.id) as count
-        from FridgeItem i
-        where i.family.id = :familyId
-          and i.addedDate between :from and :to
-          and (:categoryId is null or i.food.category.id = :categoryId)
-        group by i.addedDate
-        order by i.addedDate
-        """)
+    @Query(value = """
+        select fi.added_date as date, count(fi.id) as count
+        from fridge_items fi
+        join foods f on fi.food_id = f.id
+        where fi.family_id = :familyId
+          and fi.added_date between :from and :to
+          and (:categoryId is null or f.category_id = :categoryId)
+        group by fi.added_date
+        order by fi.added_date
+        """, nativeQuery = true)
     List<DateCountProjection> countItemsAddedToFridgeByDate(
         @Param("familyId") Long familyId,
         @Param("from") LocalDate from,
@@ -203,18 +205,18 @@ public interface FridgeItemRepository extends JpaRepository<FridgeItem, Long> {
         @Param("categoryId") Long categoryId
     );
 
-    @Query("""
-        select c.id as categoryId, c.name as categoryName, count(i.id) as count
-        from FridgeItem i
-        join i.food f
-        left join f.category c
-        where i.family.id = :familyId
-          and i.status = :status
-          and i.updatedAt >= :from
-          and i.updatedAt < :to
+    @Query(value = """
+        select c.id as categoryId, c.name as categoryName, count(fi.id) as count
+        from fridge_items fi
+        join foods f on fi.food_id = f.id
+        left join categories c on f.category_id = c.id
+        where fi.family_id = :familyId
+          and fi.status = :status
+          and fi.updated_at >= :from
+          and fi.updated_at < :to
           and (:categoryId is null or c.id = :categoryId)
         group by c.id, c.name
-        """)
+        """, nativeQuery = true)
     List<CategoryCountProjection> countByStatusAndUpdatedAtByCategory(
         @Param("familyId") Long familyId,
         @Param("status") String status,
@@ -223,14 +225,15 @@ public interface FridgeItemRepository extends JpaRepository<FridgeItem, Long> {
         @Param("categoryId") Long categoryId
     );
 
-    @Query("""
-        select count(i.id)
-        from FridgeItem i
-        where i.family.id = :familyId
-          and i.status = :status
-          and i.expiryDate between :from and :to
-          and (:categoryId is null or i.food.category.id = :categoryId)
-        """)
+    @Query(value = """
+        select count(fi.id)
+        from fridge_items fi
+        join foods f on fi.food_id = f.id
+        where fi.family_id = :familyId
+          and fi.status = :status
+          and fi.expiry_date between :from and :to
+          and (:categoryId is null or f.category_id = :categoryId)
+        """, nativeQuery = true)
     Long countByStatusAndExpiryDateRange(
         @Param("familyId") Long familyId,
         @Param("status") String status,
@@ -239,16 +242,17 @@ public interface FridgeItemRepository extends JpaRepository<FridgeItem, Long> {
         @Param("categoryId") Long categoryId
     );
 
-    @Query("""
-        select i.expiryDate as date, count(i.id) as count
-        from FridgeItem i
-        where i.family.id = :familyId
-          and i.status = :status
-          and i.expiryDate between :from and :to
-          and (:categoryId is null or i.food.category.id = :categoryId)
-        group by i.expiryDate
-        order by i.expiryDate
-        """)
+    @Query(value = """
+        select fi.expiry_date as date, count(fi.id) as count
+        from fridge_items fi
+        join foods f on fi.food_id = f.id
+        where fi.family_id = :familyId
+          and fi.status = :status
+          and fi.expiry_date between :from and :to
+          and (:categoryId is null or f.category_id = :categoryId)
+        group by fi.expiry_date
+        order by fi.expiry_date
+        """, nativeQuery = true)
     List<DateCountProjection> countByStatusAndExpiryDateGroup(
         @Param("familyId") Long familyId,
         @Param("status") String status,
@@ -257,17 +261,18 @@ public interface FridgeItemRepository extends JpaRepository<FridgeItem, Long> {
         @Param("categoryId") Long categoryId
     );
 
-    @Query("""
-        select function('date', i.updatedAt) as date, count(i.id) as count
-        from FridgeItem i
-        where i.family.id = :familyId
-          and i.status = :status
-          and i.updatedAt >= :from
-          and i.updatedAt < :to
-          and (:categoryId is null or i.food.category.id = :categoryId)
-        group by function('date', i.updatedAt)
-        order by function('date', i.updatedAt)
-        """)
+    @Query(value = """
+        select cast(fi.updated_at as date) as date, count(fi.id) as count
+        from fridge_items fi
+        join foods f on fi.food_id = f.id
+        where fi.family_id = :familyId
+          and fi.status = :status
+          and fi.updated_at >= :from
+          and fi.updated_at < :to
+          and (:categoryId is null or f.category_id = :categoryId)
+        group by cast(fi.updated_at as date)
+        order by cast(fi.updated_at as date)
+        """, nativeQuery = true)
     List<DateCountProjection> countByStatusAndUpdatedAtGroup(
         @Param("familyId") Long familyId,
         @Param("status") String status,

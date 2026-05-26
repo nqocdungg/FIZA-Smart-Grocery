@@ -36,6 +36,12 @@ const HomeRedirect: React.FC = () => {
 const App: React.FC = () => {
   return (
     <Routes>
+      <Route path="/customer/fridge" element={<Navigate to="/fridge" replace />} />
+      <Route path="/customer/family" element={<Navigate to="/family" replace />} />
+      <Route path="/customer/shopping" element={<Navigate to="/shopping" replace />} />
+      <Route path="/customer/suggestions" element={<Navigate to="/suggestions" replace />} />
+      <Route path="/customer/reports" element={<Navigate to="/reports" replace />} />
+
       <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
       <Route path="/register" element={<PublicOnlyRoute><Register /></PublicOnlyRoute>} />
 
@@ -52,6 +58,7 @@ const App: React.FC = () => {
       <Route path="/admin/recipes" element={<RequireAuth><RecipeManagement /></RequireAuth>} />
 
       <Route path="/" element={<HomeRedirect />} />
+      <Route path="*" element={<HomeRedirect />} />
     </Routes>
   );
 };

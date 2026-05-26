@@ -17,6 +17,9 @@ public class UserService {
     }
 
     public User save(User entity) {
+        if (entity == null) {
+            throw new IllegalArgumentException("User entity must not be null");
+        }
         return repository.save(entity);
     }
 
@@ -24,7 +27,6 @@ public class UserService {
         if (familyId == null) {
             return List.of();
         }
-        // 🎯 ĐÃ CẬP NHẬT: Gọi hàm sắp xếp theo ID tăng dần từ UserRepository
-        return repository.findByFamilyIdOrderByIdAsc(familyId);
+        return repository.findByFamily_IdOrderByIdAsc(familyId);
     }
 }

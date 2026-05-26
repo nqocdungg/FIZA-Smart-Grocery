@@ -1,12 +1,12 @@
 server:
-  port: 8081
+  port: ${SERVER_PORT:8080}
 spring:
   application:
     name: mealmate
   datasource:
     url: jdbc:postgresql://localhost:5432/mealmate
     username: postgres
-    password: 123456
+    password: Duy080205
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -37,4 +37,4 @@ jwt:
   expiration: 3600000  # 1 hour in milliseconds
 
 app:
-  base-url: ${APP_BASE_URL:http://localhost:8081}
+  base-url: ${APP_BASE_URL:http://localhost:8080}

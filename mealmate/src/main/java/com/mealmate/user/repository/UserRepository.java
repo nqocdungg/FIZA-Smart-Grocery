@@ -14,6 +14,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     boolean existsByEmail(String email);
 
-    // 🎯 CẬP NHẬT HÀM NÀY: Tự động sắp xếp danh sách theo ID tăng dần (Từ nhỏ đến lớn)
-    List<User> findByFamilyIdOrderByIdAsc(Long familyId); 
+    // Query theo quan hệ User.family.id và sắp xếp theo ID tăng dần
+    List<User> findByFamily_IdOrderByIdAsc(Long familyId);
 }
