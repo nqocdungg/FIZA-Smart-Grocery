@@ -129,6 +129,20 @@
   gap: 19.99px;
 }
 
+.add-fridge-state {
+  min-height: 56px;
+  margin-top: 16px;
+  padding: 0 16px;
+  border-radius: 14px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 19.5px;
+  display: flex;
+  align-items: center;
+}
+
 .shopping-category {
   padding: 19.99px;
   border-radius: 16px;
@@ -477,6 +491,12 @@
 .manual-form-actions button:last-child {
   color: #ffffff;
   background: #6ed4b4;
+}
+
+.add-fridge-summary-actions button:disabled,
+.manual-form-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
 }
 
 .manual-add-card {

@@ -1,0 +1,314 @@
+/* Lớp phủ mờ nền tối trọn màn hình */
+.add-member-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2vh 20px;
+}
+
+/* Khung Card chính của Pop-up */
+.add-member-modal {
+  width: 100%;
+  max-width: 550px; /* Khớp tỉ lệ mẫu rộng của Figma */
+  background: white;
+  box-shadow: 0px 20px 50px rgba(109, 212, 180, 0.15);
+  border-radius: 32px;
+  padding: 4vh 5%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
+  animation: fizaModalFade 0.25s ease-out;
+}
+
+@keyframes fizaModalFade {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Khối Vòng tròn Icon xanh lá mờ phía trên */
+.add-member-icon-wrapper {
+  margin-bottom: 2.5vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.add-member-icon-circle {
+  width: 4.5rem; /* ~72px-80px co giãn */
+  height: 4.5rem;
+  background: rgba(143, 246, 212, 0.20);
+  border-radius: 9999px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.add-member-mail-img {
+  width: 30px;
+  height: 24px;
+  object-fit: contain;
+}
+
+/* Tiêu đề chính */
+.add-member-title-box {
+  margin-bottom: 1.5vh;
+  text-align: center;
+}
+
+.add-member-title {
+  color: #171D1A;
+  font-size: 1.75rem; /* Tỉ lệ chữ 28px-32px */
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.3;
+}
+
+/* Dòng mô tả hướng dẫn */
+.add-member-desc-box {
+  margin-bottom: 3.5vh;
+  text-align: center;
+  width: 100%;
+  max-width: 432px;
+}
+
+.add-member-desc {
+  color: #3E4944;
+  font-size: 1rem; /* 16px */
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 400;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Toàn bộ Form và ô nhập liệu */
+.add-member-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.add-member-input-container {
+  width: 100%;
+  position: relative;
+  margin-bottom: 2.5vh; /* Thu nhỏ từ 4.5vh xuống 2.5vh để nhường không gian cho vùng kết quả bên dưới */
+}
+
+.add-member-input-field {
+  width: 100%;
+  padding: 2vh 120px 2vh 2.5vw; /* Thêm padding-right 120px để text nhập vào không bị đè lên nút Tìm */
+  background: #F0F5F1; /* Nền xám nhạt dịu mắt */
+  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.02) inset;
+  border: none !important; /* Tuyệt đối không để lộ viền trình duyệt */
+  outline: none !important;
+  border-radius: 32px; /* Bo tròn dài dẹt theo mẫu */
+  color: #171D1A;
+  font-size: 1rem;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 400;
+  box-sizing: border-box;
+}
+
+.add-member-input-field::placeholder {
+  color: #6E7A74;
+}
+
+/* Nút tìm kiếm lồng bên phải trong input */
+.add-member-inside-search-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: #00513F;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 6px 18px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.add-member-inside-search-btn:hover {
+  background-color: #006B55;
+}
+
+.add-member-inside-search-btn:disabled {
+  background-color: #6E7A74;
+  cursor: not-allowed;
+}
+
+/* --- KHU VỰC HIỂN THỊ KẾT QUẢ ĐỘNG (DƯỚI Ô INPUT) --- */
+.add-member-result-wrapper {
+  width: 100%;
+  min-height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  margin-bottom: 3vh;
+}
+
+.add-member-status-info {
+  font-size: 0.9rem;
+  color: #6E7A74;
+  font-style: italic;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.add-member-status-error {
+  font-size: 0.9rem;
+  color: #B3261E;
+  font-weight: 600;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+/* Thẻ thông tin User tìm thấy từ CSDL */
+.add-member-user-card {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #F7FAFC;
+  padding: 1.5vh 20px;
+  border-radius: 16px;
+  box-sizing: border-box;
+  border: 1px solid #E2E8F0;
+}
+
+.add-member-card-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.add-member-user-avatar-circle {
+  width: 42px;
+  height: 42px;
+  background-color: #4D9A80;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.add-member-card-details {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.add-member-card-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #171D1A;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.add-member-card-sub {
+  font-size: 0.8rem;
+  color: #6E7A74;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+/* Nút kích hoạt gửi lời mời màu xanh thẫm hành động */
+.add-member-invite-btn-trigger {
+  background-color: #00513F;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  box-shadow: 0px 4px 6px -4px rgba(109, 212, 180, 0.20);
+}
+
+.add-member-invite-btn-trigger:hover {
+  opacity: 0.9;
+}
+
+/* --- HÀNG NÚT CANCEL VÀ FOOTER --- */
+.add-member-action-group {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5vh;
+}
+
+/* Nút hủy bỏ chữ màu đỏ nguy hiểm */
+.add-member-btn-cancel {
+  width: 100%;
+  padding: 1.5vh 0;
+  background: transparent;
+  border: none;
+  color: #B3261E; /* Mã màu Error chuẩn đỏ của Figma */
+  font-size: 1rem;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  transition: opacity 0.2s ease;
+}
+
+.add-member-btn-cancel:hover {
+  opacity: 0.8;
+}
+
+/* Khối Footer hiển thị chồng avatar và text dưới cùng */
+.add-member-footer {
+  margin-top: 3.5vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.add-member-avatar-stack {
+  display: flex;
+  align-items: center;
+}
+
+.add-member-mini-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  overflow: hidden;
+  border: 2px solid white;
+  background: #E2E8F0;
+}
+
+.add-member-mini-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Hiệu ứng xếp chồng đè lên nhau của Avatar nghệ thuật */
+.avatar-two {
+  margin-left: -12px;
+  background: #CBD5E1;
+}
+
+.add-member-footer-text {
+  color: #6E7A74;
+  font-size: 0.75rem; /* 12px */
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+}

@@ -69,9 +69,15 @@ const Register: React.FC = () => {
     setIsSubmitting(true);
 
     try {
+      // 🎯 BƯỚC ĐỒNG BỘ: Chuyển đổi chữ Tiếng Việt sang ENUM chuẩn CSDL Backend nhận dạng
+      const backendGender = formData.gender === 'Nam' ? 'MALE' 
+                          : formData.gender === 'Nữ' ? 'FEMALE' 
+                          : 'OTHER';
+
       const response = await registerRequest({
         fullName: formData.fullName,
         phone: formData.phone,
+        gender: backendGender, // 🎯 THÊM DÒNG NÀY: Đã bắn chuẩn trường giới tính lên hệ thống API
         email: formData.email,
         password: formData.password,
       });

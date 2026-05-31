@@ -2,17 +2,28 @@ import React, { createContext, useContext, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { AuthSession } from '@/features/auth/types/auth';
 
+// 🎯 ĐÃ BỔ SUNG: Định nghĩa các trường dữ liệu chi tiết (Bao gồm cả avatarUrl)
+interface ExtendedAuthFields {
+  phone?: string;
+  gender?: string;
+  roleName?: string;
+  avatarUrl?: string; // Đồng bộ ảnh đại diện tươi mới từ DB lúc Login
+}
+
+// Kết hợp thuộc tính AuthSession gốc với các trường chi tiết mở rộng bằng dấu &
+type ExtendedAuthSession = AuthSession & ExtendedAuthFields;
+
 interface AuthContextType {
-  user: AuthSession | null;
+  user: ExtendedAuthSession | null;
   isAuthenticated: boolean;
-  login: (user: AuthSession) => void;
+  login: (user: ExtendedAuthSession) => void;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const AUTH_STORAGE_KEY = 'authUser';
 
-const readStoredUser = (): AuthSession | null => {
+const readStoredUser = (): ExtendedAuthSession | null => {
   const storedUser = localStorage.getItem(AUTH_STORAGE_KEY);
 
   if (!storedUser) {
@@ -20,7 +31,7 @@ const readStoredUser = (): AuthSession | null => {
   }
 
   try {
-    const parsedUser = JSON.parse(storedUser) as AuthSession;
+    const parsedUser = JSON.parse(storedUser) as ExtendedAuthSession;
     return parsedUser?.accessToken ? parsedUser : null;
   } catch {
     localStorage.removeItem(AUTH_STORAGE_KEY);
@@ -29,9 +40,9 @@ const readStoredUser = (): AuthSession | null => {
 };
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<AuthSession | null>(() => readStoredUser());
+  const [user, setUser] = useState<ExtendedAuthSession | null>(() => readStoredUser());
 
-  const login = (userData: AuthSession) => {
+  const login = (userData: ExtendedAuthSession) => {
     setUser(userData);
     localStorage.setItem('accessToken', userData.accessToken);
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userData));
@@ -41,6 +52,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser(null);
     localStorage.removeItem('accessToken');
     localStorage.removeItem(AUTH_STORAGE_KEY);
+    // 🎯 ĐÃ THÊM: Dọn dẹp sạch sẽ toàn bộ cache bối cảnh gia đình để tránh leak dữ liệu sang phiên sau
+    localStorage.removeItem('currentFamilyName');
+    localStorage.removeItem('familyMembersCache');
   };
 
   return (

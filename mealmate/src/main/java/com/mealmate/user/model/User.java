@@ -37,15 +37,13 @@ public class User extends BaseEntity implements UserDetails {
     @Column(name = "phone")
     private String phone;
 
-    @Column(name = "family_id")
-    private Long familyId;
-
     @Column(name = "gender")
     private String gender;
 
     @Column(name = "avatar_url")
     private String avatarUrl;
 
+    @Builder.Default
     @Column(name = "email_verified")
     private Boolean emailVerified = false;
 
@@ -59,43 +57,46 @@ public class User extends BaseEntity implements UserDetails {
     @JoinColumn(name = "role_id")
     private Role role;
 
-    // ===== UserDetails implementation =====
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "family_id")
+    private Family family;
+
+    public Long getFamilyId() {
+        return family != null ? family.getId() : null;
+    }
+
+    public void setFamilyId(Long familyId) {
+        if (familyId == null) {
+            this.family = null;
+            return;
+        }
+        if (this.family == null) {
+            this.family = new Family();
+        }
+        this.family.setId(familyId);
+    }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        if (role == null) {
-            return Collections.emptyList();
-        }
+        if (role == null) return Collections.emptyList();
         return Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role.getName()));
     }
 
     @Override
-    public String getPassword() {
-        return this.passwordHash;
-    }
+    public String getPassword() { return this.passwordHash; }
 
     @Override
-    public String getUsername() {
-        return this.email;
-    }
+    public String getUsername() { return this.email; }
 
     @Override
-    public boolean isAccountNonExpired() {
-        return true;
-    }
+    public boolean isAccountNonExpired() { return true; }
 
     @Override
-    public boolean isAccountNonLocked() {
-        return true;
-    }
+    public boolean isAccountNonLocked() { return true; }
 
     @Override
-    public boolean isCredentialsNonExpired() {
-        return true;
-    }
+    public boolean isCredentialsNonExpired() { return true; }
 
     @Override
-    public boolean isEnabled() {
-        return true;
-    }
+    public boolean isEnabled() { return true; }
 }

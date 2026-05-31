@@ -1,35 +1,25 @@
 import React from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
-// Auth Pages
 import { useAuth } from '@/context/AuthContext';
 import Login from '@/pages/auth/Login';
 import Register from '@/pages/auth/Register';
-
-// Profile
 import ProfileDetail from '@/pages/profile/ProfileDetail';
 
-// Customer Pages
 import FamilyGroup from '@/pages/customer/group/FamilyGroup';
-import ShoppingPlan from '@/pages/customer/ShoppingPlan';
 import MyFridge from '@/pages/customer/fridge/MyFridge';
 import MenuSuggestion from '@/pages/customer/MenuSuggestion';
 import Reports from '@/pages/customer/Reports';
+import ShoppingPlanPage from '@/pages/customer/shopping-plan/ShoppingPlanPage';
 
-// Admin Pages
 import FoodManagement from '@/pages/admin/FoodManagement';
 import PerformanceManagement from '@/pages/admin/PerformanceManagement';
 import RecipeManagement from '@/pages/admin/RecipeManagement';
 import UserManagement from '@/pages/admin/UserManagement';
-import ShoppingPlanPage from '@/pages/customer/shopping-plan/ShoppingPlanPage';
 
 const RequireAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAuth();
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
   return <>{children}</>;
 };
 
@@ -70,14 +60,17 @@ const HomeRedirect: React.FC = () => {
 const App: React.FC = () => {
   return (
     <Routes>
-      {/* Auth Routes - Public */}
+      <Route path="/customer/fridge" element={<Navigate to="/fridge" replace />} />
+      <Route path="/customer/family" element={<Navigate to="/family" replace />} />
+      <Route path="/customer/shopping" element={<Navigate to="/shopping" replace />} />
+      <Route path="/customer/suggestions" element={<Navigate to="/suggestions" replace />} />
+      <Route path="/customer/reports" element={<Navigate to="/reports" replace />} />
+
       <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
       <Route path="/register" element={<PublicOnlyRoute><Register /></PublicOnlyRoute>} />
 
-      {/* Profile */}
       <Route path="/profile" element={<RequireAuth><ProfileDetail /></RequireAuth>} />
 
-      {/* Customer Routes */}
       <Route path="/family" element={<RequireAuth><FamilyGroup /></RequireAuth>} />
       <Route path="/shopping" element={<RequireAuth><ShoppingPlanPage /></RequireAuth>} />
       <Route path="/fridge" element={<RequireAuth><MyFridge /></RequireAuth>} />
@@ -90,8 +83,8 @@ const App: React.FC = () => {
       <Route path="/admin/recipes" element={<RequireAdmin><RecipeManagement /></RequireAdmin>} />
       <Route path="/admin/performance" element={<RequireAdmin><PerformanceManagement /></RequireAdmin>} />
 
-      {/* Default redirect */}
       <Route path="/" element={<HomeRedirect />} />
+      <Route path="*" element={<HomeRedirect />} />
     </Routes>
   );
 };

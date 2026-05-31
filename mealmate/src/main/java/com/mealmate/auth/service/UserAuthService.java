@@ -41,6 +41,11 @@ public class UserAuthService {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new IllegalArgumentException("Email đã được sử dụng: " + request.getEmail());
         }
+        
+        String finalGender = "OTHER";
+        if (request.getGender() != null && !request.getGender().isBlank()) {
+            finalGender = request.getGender().toUpperCase(); // Biến đổi thành 'MALE', 'FEMALE', 'OTHER'
+        }
 
         // 3. THAY ĐỔI MẶC ĐỊNH: Set role_id = 3 (Người nội trợ) cho tài khoản đăng ký mới
         Role defaultRole = new Role();
@@ -53,6 +58,7 @@ public class UserAuthService {
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .fullName(request.getFullName())
                 .phone(request.getPhone())
+                .gender(finalGender)
                 .role(defaultRole) 
                 .emailVerified(false)
                 .build();
@@ -84,6 +90,7 @@ public class UserAuthService {
         claims.put("userId", savedUser.getId());
         claims.put("fullName", savedUser.getFullName());
         claims.put("email", savedUser.getEmail());
+        claims.put("gender", savedUser.getGender() != null ? savedUser.getGender() : "OTHER"); // 🎯 BỔ SUNG: Nạp vào Token khi Đăng ký
         claims.put("role", savedUser.getRole() != null ? savedUser.getRole().getName() : "HOUSEKEEPER");
 
         String token = jwtService.generateToken(claims, savedUser.getEmail());
@@ -96,6 +103,7 @@ public class UserAuthService {
                 .email(savedUser.getEmail())
                 .fullName(savedUser.getFullName())
                 .role(savedUser.getRole() != null ? savedUser.getRole().getName() : "HOUSEKEEPER")
+                .gender(savedUser.getGender() != null ? savedUser.getGender() : "OTHER") // 🎯 BỔ SUNG: Trả về cho Front-end khi Đăng ký
                 .build();
     }
 
@@ -114,6 +122,7 @@ public class UserAuthService {
         claims.put("userId", user.getId());
         claims.put("fullName", user.getFullName());
         claims.put("email", user.getEmail());
+        claims.put("gender", user.getGender() != null ? user.getGender() : "OTHER"); // 🎯 BỔ SUNG: Nạp vào Token khi Đăng nhập
         claims.put("role", user.getRole() != null ? user.getRole().getName() : "CUSTOMER");
 
         String token = jwtService.generateToken(claims, user.getEmail());
@@ -127,6 +136,7 @@ public class UserAuthService {
                 .email(user.getEmail())
                 .fullName(user.getFullName())
                 .role(user.getRole() != null ? user.getRole().getName() : "CUSTOMER")
+                .gender(user.getGender() != null ? user.getGender() : "OTHER") // 🎯 BỔ SUNG: Trả về cho Front-end khi Đăng nhập
                 .build();
     }
 }

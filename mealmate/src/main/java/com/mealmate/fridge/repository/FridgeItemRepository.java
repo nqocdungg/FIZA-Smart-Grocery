@@ -6,9 +6,22 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface FridgeItemRepository extends JpaRepository<FridgeItem, Long> {
+
+    interface DateCountProjection {
+        LocalDate getDate();
+        Long getCount();
+    }
+
+    interface CategoryCountProjection {
+        Long getCategoryId();
+        String getCategoryName();
+        Long getCount();
+    }
 
     @Query(value = """
         SELECT 
@@ -159,4 +172,112 @@ public interface FridgeItemRepository extends JpaRepository<FridgeItem, Long> {
     default long countStoredByFamilyId(Long familyId) {
         return countByFamilyIdAndStatus(familyId, FridgeItemStatus.STORED);
     }
+
+    @Query(value = """
+        select count(fi.id)
+        from fridge_items fi
+        join foods f on fi.food_id = f.id
+        where fi.family_id = :familyId
+          and fi.added_date between :from and :to
+          and (:categoryId is null or f.category_id = :categoryId)
+        """, nativeQuery = true)
+    Long countItemsAddedToFridge(
+        @Param("familyId") Long familyId,
+        @Param("from") LocalDate from,
+        @Param("to") LocalDate to,
+        @Param("categoryId") Long categoryId
+    );
+
+    @Query(value = """
+        select fi.added_date as date, count(fi.id) as count
+        from fridge_items fi
+        join foods f on fi.food_id = f.id
+        where fi.family_id = :familyId
+          and fi.added_date between :from and :to
+          and (:categoryId is null or f.category_id = :categoryId)
+        group by fi.added_date
+        order by fi.added_date
+        """, nativeQuery = true)
+    List<DateCountProjection> countItemsAddedToFridgeByDate(
+        @Param("familyId") Long familyId,
+        @Param("from") LocalDate from,
+        @Param("to") LocalDate to,
+        @Param("categoryId") Long categoryId
+    );
+
+    @Query(value = """
+        select c.id as categoryId, c.name as categoryName, count(fi.id) as count
+        from fridge_items fi
+        join foods f on fi.food_id = f.id
+        left join categories c on f.category_id = c.id
+        where fi.family_id = :familyId
+          and fi.status = :status
+          and fi.updated_at >= :from
+          and fi.updated_at < :to
+          and (:categoryId is null or c.id = :categoryId)
+        group by c.id, c.name
+        """, nativeQuery = true)
+    List<CategoryCountProjection> countByStatusAndUpdatedAtByCategory(
+        @Param("familyId") Long familyId,
+        @Param("status") String status,
+        @Param("from") LocalDateTime from,
+        @Param("to") LocalDateTime to,
+        @Param("categoryId") Long categoryId
+    );
+
+    @Query(value = """
+        select count(fi.id)
+        from fridge_items fi
+        join foods f on fi.food_id = f.id
+        where fi.family_id = :familyId
+          and fi.status = :status
+          and fi.expiry_date between :from and :to
+          and (:categoryId is null or f.category_id = :categoryId)
+        """, nativeQuery = true)
+    Long countByStatusAndExpiryDateRange(
+        @Param("familyId") Long familyId,
+        @Param("status") String status,
+        @Param("from") LocalDate from,
+        @Param("to") LocalDate to,
+        @Param("categoryId") Long categoryId
+    );
+
+    @Query(value = """
+        select fi.expiry_date as date, count(fi.id) as count
+        from fridge_items fi
+        join foods f on fi.food_id = f.id
+        where fi.family_id = :familyId
+          and fi.status = :status
+          and fi.expiry_date between :from and :to
+          and (:categoryId is null or f.category_id = :categoryId)
+        group by fi.expiry_date
+        order by fi.expiry_date
+        """, nativeQuery = true)
+    List<DateCountProjection> countByStatusAndExpiryDateGroup(
+        @Param("familyId") Long familyId,
+        @Param("status") String status,
+        @Param("from") LocalDate from,
+        @Param("to") LocalDate to,
+        @Param("categoryId") Long categoryId
+    );
+
+    @Query(value = """
+        select cast(fi.updated_at as date) as date, count(fi.id) as count
+        from fridge_items fi
+        join foods f on fi.food_id = f.id
+        where fi.family_id = :familyId
+          and fi.status = :status
+          and fi.updated_at >= :from
+          and fi.updated_at < :to
+          and (:categoryId is null or f.category_id = :categoryId)
+        group by cast(fi.updated_at as date)
+        order by cast(fi.updated_at as date)
+        """, nativeQuery = true)
+    List<DateCountProjection> countByStatusAndUpdatedAtGroup(
+        @Param("familyId") Long familyId,
+        @Param("status") String status,
+        @Param("from") LocalDateTime from,
+        @Param("to") LocalDateTime to,
+        @Param("categoryId") Long categoryId
+    );
 }

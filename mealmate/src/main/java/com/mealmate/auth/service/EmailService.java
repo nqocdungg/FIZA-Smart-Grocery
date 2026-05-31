@@ -2,19 +2,19 @@ package com.mealmate.auth.service;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class EmailService {
 
-    private final JavaMailSender mailSender;
+    @Autowired(required = false)
+    private JavaMailSender mailSender;
 
     @Value("${app.base-url}")
     private String baseUrl;
@@ -23,6 +23,10 @@ public class EmailService {
      * Send verification email with HTML content containing the activation link.
      */
     public void sendVerificationEmail(String toEmail, String token) {
+        if (mailSender == null) {
+            log.warn("JavaMailSender is not configured. Skip sending verification email to: {}", toEmail);
+            return;
+        }
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");

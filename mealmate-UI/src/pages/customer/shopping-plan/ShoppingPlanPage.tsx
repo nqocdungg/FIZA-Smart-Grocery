@@ -29,7 +29,6 @@ const ShoppingPlanPage: React.FC = () => {
     };
 
     const handleOpenDetailModal = (date: string) => {
-        const plan = plans.find(p => p.planned_date === date);
         setModalMode('DETAIL');
         // 3. Truyền data (sau này sẽ gọi API lấy detail theo listId)
         // Tạm thời truyền mock hoặc object rỗng để test giao diện
@@ -43,7 +42,7 @@ const ShoppingPlanPage: React.FC = () => {
 
 
     // Mock data cho 7 ngày (sau này sẽ gọi từ shoppingApi.ts)
-    const [plans, setPlans] = useState<DailyPlanCardData[]>([
+    const [plans] = useState<DailyPlanCardData[]>([
         { planned_date: '2026-05-04', dayOfWeek: 'Thứ 2', displayDate: '4/5', totalItems: 6, purchasedItems: 3, assigneeNames: ['Xuân'] },
         { planned_date: '2026-05-05', dayOfWeek: 'Thứ 3', displayDate: '5/5', totalItems: 7, purchasedItems: 3, assigneeNames: ['Xuân'] },
         { planned_date: '2026-05-06', dayOfWeek: 'Thứ 4', displayDate: '6/5', totalItems: 4, purchasedItems: 3, assigneeNames: ['Xuân'] },

@@ -8,6 +8,7 @@ export interface RegisterRequest {
   password: string;
   fullName: string;
   phone?: string;
+  gender?: string;
 }
 
 export interface AuthResponse {

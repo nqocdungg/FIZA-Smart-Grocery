@@ -1,20 +1,28 @@
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
 spring:
   application:
     name: mealmate
   datasource:
     url: jdbc:postgresql://localhost:5432/mealmate
     username: postgres
-    password: 12345678
+    password: admin 
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: none 
+    show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+
+logging:
+  level:
+    org.hibernate.SQL: WARN
+    org.hibernate.orm.results: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+    org.springframework.web: INFO
+    com.mealmate: INFO
   mail:
     host: smtp.gmail.com
     port: 587
@@ -29,4 +37,4 @@ jwt:
   expiration: 3600000  # 1 hour in milliseconds
 
 app:
-  base-url: ${APP_BASE_URL:http://localhost:8081}
+  base-url: ${APP_BASE_URL:http://localhost:8080}

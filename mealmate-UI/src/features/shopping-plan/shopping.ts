@@ -32,6 +32,7 @@ export interface ShoppingListItem {
   id: number;
   shopping_list_id: number;
   food_id: number;
+  custom_name?: string;
   food?: Food;
   quantity: number;
   unit: string;
@@ -39,6 +40,8 @@ export interface ShoppingListItem {
   assigned_to?: number; // ID users
   assignee?: UserSummary;
   is_purchased: boolean;
+  imported_to_fridge_at?: string;
+  fridge_item_id?: number;
   order_number?: number;
 }
 

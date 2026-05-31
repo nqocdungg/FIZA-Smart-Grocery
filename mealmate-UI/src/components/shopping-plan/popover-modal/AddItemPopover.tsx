@@ -18,7 +18,7 @@ const AddItemPopover: React.FC<AddItemPopoverProps> = ({
     onCancel
 }) => {
     const [quantity, setQuantity] = useState(1);
-    const [assignee, setAssignee] = useState('Mẹ');
+    const [assignee] = useState('Mẹ');
     const [note, setNote] = useState('');
 
     return (
