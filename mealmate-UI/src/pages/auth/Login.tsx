@@ -66,7 +66,7 @@ const Login: React.FC = () => {
       let detailedGender = "OTHER";
       let detailedRoleName = "Thành viên";
 
-      // 🎯 ĐÃ SỬA: Ép kiểu trung gian sang 'any' để bypass qua bộ lọc TypeScript của AuthResponse gốc
+      // 🎯 Ép kiểu trung gian sang 'any' để bypass qua bộ lọc TypeScript của AuthResponse gốc
       const rawResponse = response as any;
       let detailedAvatar = rawResponse.avatarUrl || rawResponse.avatar_url || undefined;
 
@@ -126,14 +126,20 @@ const Login: React.FC = () => {
         fullName: response.fullName,
         accessToken: currentToken,
         tokenType: response.tokenType,
+        role: response.role, // Giữ lại cho phân quyền admin
         phone: detailedPhone,
         gender: detailedGender,
         roleName: detailedRoleName,
-        avatarUrl: detailedAvatar // 🎯 Đã an toàn vượt qua vòng kiểm tra lỗi compile
+        avatarUrl: detailedAvatar 
       });
 
-      // Điều hướng an toàn sang màn hình giao diện chính
-      navigate('/fridge', { replace: true });
+      // 4. KIỂM TRA PHÂN QUYỀN VÀ ĐIỀU HƯỚNG CHUẨN XÁC
+      if (response.role === 'ADMIN') {
+        navigate('/admin/users', { replace: true });
+      } else {
+        navigate('/fridge', { replace: true });
+      }
+      
     } catch (error) {
       setSubmitError(getErrorMessage(error));
     } finally {

@@ -102,6 +102,7 @@ SELECT
 FROM roles r
 WHERE r.name = 'CUSTOMER';
 
+select * from user;
 -- =====================================================
 -- 3. FAMILY
 -- families.housekeeper_id -> users.id
