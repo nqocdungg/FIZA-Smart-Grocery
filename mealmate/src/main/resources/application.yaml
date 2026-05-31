@@ -1,12 +1,12 @@
 server:
-  port: 8081
+  port: 8080
 spring:
   application:
     name: mealmate
   datasource:
     url: jdbc:postgresql://localhost:5432/mealmate
     username: postgres
-    password: 123456
+    password: 12345678
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:

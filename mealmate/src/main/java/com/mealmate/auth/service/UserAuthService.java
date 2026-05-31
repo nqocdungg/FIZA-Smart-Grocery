@@ -95,6 +95,7 @@ public class UserAuthService {
                 .tokenType("Bearer")
                 .email(savedUser.getEmail())
                 .fullName(savedUser.getFullName())
+                .role(savedUser.getRole() != null ? savedUser.getRole().getName() : "HOUSEKEEPER")
                 .build();
     }
 
@@ -125,6 +126,7 @@ public class UserAuthService {
                 .tokenType("Bearer")
                 .email(user.getEmail())
                 .fullName(user.getFullName())
+                .role(user.getRole() != null ? user.getRole().getName() : "CUSTOMER")
                 .build();
     }
 }

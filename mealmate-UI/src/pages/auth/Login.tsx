@@ -66,9 +66,14 @@ const Login: React.FC = () => {
         fullName: response.fullName,
         accessToken: response.accessToken ?? '',
         tokenType: response.tokenType,
+        role: response.role,
       });
 
-      navigate('/fridge', { replace: true });
+      if (response.role === 'ADMIN') {
+        navigate('/admin/users', { replace: true });
+      } else {
+        navigate('/fridge', { replace: true });
+      }
     } catch (error) {
       setSubmitError(getErrorMessage(error));
     } finally {

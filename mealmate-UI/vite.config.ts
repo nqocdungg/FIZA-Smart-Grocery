@@ -13,7 +13,7 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        target: "http://localhost:8081", // Cổng Backend của bạn
+        target: "http://localhost:8080", // Cổng Backend của bạn
         changeOrigin: true,
         secure: false,
         // Nếu Backend của bạn KHÔNG có tiền tố /api trong code Java

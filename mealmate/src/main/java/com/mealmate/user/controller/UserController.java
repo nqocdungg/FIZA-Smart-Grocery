@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 import java.util.List;
 
 @RestController
@@ -19,13 +20,28 @@ public class UserController {
     private final UserService service;
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<List<User>>> getAll() {
         return ResponseEntity.ok(new ApiResponse<>(true, "Success", service.findAll()));
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<User>> create(@RequestBody User entity) {
         return ResponseEntity.ok(new ApiResponse<>(true, "Created", service.save(entity)));
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<User>> update(@PathVariable Long id, @RequestBody User entity) {
+        return ResponseEntity.ok(new ApiResponse<>(true, "Updated", service.update(id, entity)));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id) {
+        service.delete(id);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Deleted", null));
     }
 
     // =========================================================================
