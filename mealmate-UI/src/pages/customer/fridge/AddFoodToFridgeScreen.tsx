@@ -15,21 +15,29 @@ type FoodFromApi = {
   synonyms?: string;
 };
 
-type ShoppingItem = {
-  id: string;
-  name: string;
+type ShoppingImportCandidateFromApi = {
+  shoppingListItemId: number;
+  shoppingListId: number;
+  plannedDate?: string;
+  foodId: number;
+  foodName: string;
+  customName?: string;
+  categoryId?: number;
+  categoryName?: string;
+  categoryIconKey?: string;
+  categoryColorCode?: string;
   quantity: number;
-  unit: string;
-  selectedByDefault?: boolean;
-  expanded?: boolean;
+  unit?: string;
+  note?: string;
 };
 
-type ShoppingCategory = {
-  id: string;
-  name: string;
-  icon: string;
-  color: string;
-  items: ShoppingItem[];
+type ShoppingDraft = {
+  status: ItemStatus;
+  quantity: string;
+  storageLocation: StorageLocation | "";
+  specificLocation: string;
+  expiryDate: string;
+  note: string;
 };
 
 type SelectOption = {
@@ -54,33 +62,6 @@ type AddFoodToFridgeScreenProps = {
   onAdded?: () => void;
 };
 
-const shoppingCategories: ShoppingCategory[] = [
-  {
-    id: "dairy",
-    name: "Trứng & Sữa",
-    icon: "🥛",
-    color: "#E5F5FF",
-    items: [
-      { id: "milk", name: "Sữa tươi nguyên chất", quantity: 2, unit: "L", selectedByDefault: true, expanded: true },
-      { id: "egg", name: "Trứng gà ta", quantity: 10, unit: "quả", selectedByDefault: true, expanded: true },
-    ],
-  },
-  {
-    id: "meat",
-    name: "Thịt",
-    icon: "🥩",
-    color: "#FFE5E5",
-    items: [{ id: "beef", name: "Thịt bò thăn", quantity: 400, unit: "g" }],
-  },
-  {
-    id: "seafood",
-    name: "Hải sản",
-    icon: "🦐",
-    color: "#E5F5FF",
-    items: [{ id: "shrimp", name: "Tôm sú tươi", quantity: 1, unit: "kg" }],
-  },
-];
-
 const storageLocationOptions: SelectOption[] = [
   { label: "Ngăn mát", value: "COOL" },
   { label: "Ngăn đông", value: "FREEZER" },
@@ -96,7 +77,17 @@ const specificLocationOptions: SelectOption[] = [
   { label: "Cánh tủ", value: "DOOR_SHELF" },
 ];
 
-const unitOptions = ["g", "kg", "ml", "L", "quả", "hộp", "gói"];
+const categoryIconMap: Record<string, string> = {
+  vegetable: "🥬",
+  fruit: "🍎",
+  meat: "🥩",
+  seafood: "🐟",
+  dairy: "🥛",
+  "dry-food": "🌾",
+  dry_food: "🌾",
+  spice: "🧂",
+  default_food: "🍽️",
+};
 
 const getTodayInputValue = () => new Date().toISOString().slice(0, 10);
 
@@ -115,6 +106,21 @@ const isOtherFood = (food: FoodFromApi) => {
 
 const isOtherSelection = (food: FoodFromApi | null) => Boolean(food && isOtherFood(food));
 
+const getCandidateDisplayName = (candidate: ShoppingImportCandidateFromApi) =>
+  candidate.customName || candidate.foodName || "Thực phẩm";
+
+const getCandidateIcon = (candidate: ShoppingImportCandidateFromApi) =>
+  categoryIconMap[candidate.categoryIconKey || "default_food"] || categoryIconMap.default_food;
+
+const createDraft = (candidate: ShoppingImportCandidateFromApi): ShoppingDraft => ({
+  status: "selected",
+  quantity: String(candidate.quantity ?? ""),
+  storageLocation: "COOL",
+  specificLocation: "",
+  expiryDate: "",
+  note: candidate.note || "",
+});
+
 const AddFoodToFridgeScreen: React.FC<AddFoodToFridgeScreenProps> = ({ onCancel, onAdded }) => {
   const [mode, setMode] = useState<AddFoodMode>("SHOPPING_PLAN");
   const [allFoods, setAllFoods] = useState<FoodFromApi[]>([]);
@@ -122,6 +128,11 @@ const AddFoodToFridgeScreen: React.FC<AddFoodToFridgeScreenProps> = ({ onCancel,
   const [isSearchingFoods, setIsSearchingFoods] = useState(false);
   const [isSubmittingManual, setIsSubmittingManual] = useState(false);
   const [manualError, setManualError] = useState("");
+  const [shoppingCandidates, setShoppingCandidates] = useState<ShoppingImportCandidateFromApi[]>([]);
+  const [shoppingDrafts, setShoppingDrafts] = useState<Record<number, ShoppingDraft>>({});
+  const [isLoadingShopping, setIsLoadingShopping] = useState(false);
+  const [isSubmittingShopping, setIsSubmittingShopping] = useState(false);
+  const [shoppingError, setShoppingError] = useState("");
   const [manualForm, setManualForm] = useState<ManualFormState>({
     foodName: "",
     selectedFood: null,
@@ -133,21 +144,27 @@ const AddFoodToFridgeScreen: React.FC<AddFoodToFridgeScreenProps> = ({ onCancel,
     expiryDate: "",
     note: "",
   });
-  const [itemStatuses, setItemStatuses] = useState<Record<string, ItemStatus>>(() => {
-    return shoppingCategories.reduce<Record<string, ItemStatus>>((acc, category) => {
-      category.items.forEach((item) => {
-        acc[item.id] = item.selectedByDefault ? "selected" : "skipped";
-      });
-      return acc;
-    }, {});
-  });
 
-  const selectedCount = Object.values(itemStatuses).filter((status) => status === "selected").length;
-  const skippedCount = Object.values(itemStatuses).filter((status) => status === "skipped").length;
   const selectedManualFood = manualForm.selectedFood;
   const hasTypedFoodName = manualForm.foodName.trim().length > 0;
   const showOtherFoodChoices = hasTypedFoodName && !isSearchingFoods && foodSuggestions.length === 0;
   const shouldShowCustomName = isOtherSelection(selectedManualFood);
+
+  const selectedShoppingDrafts = Object.values(shoppingDrafts).filter((draft) => draft.status === "selected");
+  const selectedCount = selectedShoppingDrafts.length;
+  const skippedCount = Object.values(shoppingDrafts).filter((draft) => draft.status === "skipped").length;
+  const missingExpiryCount = selectedShoppingDrafts.filter((draft) => !draft.expiryDate).length;
+
+  const shoppingCandidatesByCategory = useMemo(() => {
+    const grouped = new Map<string, ShoppingImportCandidateFromApi[]>();
+
+    shoppingCandidates.forEach((candidate) => {
+      const categoryName = candidate.categoryName || "Danh mục khác";
+      grouped.set(categoryName, [...(grouped.get(categoryName) || []), candidate]);
+    });
+
+    return Array.from(grouped.entries());
+  }, [shoppingCandidates]);
 
   const otherFoodsByCategory = useMemo(() => {
     const grouped = new Map<string, FoodFromApi[]>();
@@ -172,6 +189,34 @@ const AddFoodToFridgeScreen: React.FC<AddFoodToFridgeScreenProps> = ({ onCancel,
 
     loadFoods();
   }, []);
+
+  useEffect(() => {
+    const loadShoppingCandidates = async () => {
+      setIsLoadingShopping(true);
+      setShoppingError("");
+
+      try {
+        const response = await api.get<ShoppingImportCandidateFromApi[]>("/api/fridge-items/import-candidates");
+        setShoppingCandidates(response.data);
+        setShoppingDrafts(
+          response.data.reduce<Record<number, ShoppingDraft>>((acc, candidate) => {
+            acc[candidate.shoppingListItemId] = createDraft(candidate);
+            return acc;
+          }, {})
+        );
+      } catch {
+        setShoppingCandidates([]);
+        setShoppingDrafts({});
+        setShoppingError("Không tải được danh sách thực phẩm đã mua.");
+      } finally {
+        setIsLoadingShopping(false);
+      }
+    };
+
+    if (mode === "SHOPPING_PLAN") {
+      loadShoppingCandidates();
+    }
+  }, [mode]);
 
   useEffect(() => {
     const keyword = manualForm.foodName.trim();
@@ -200,8 +245,15 @@ const AddFoodToFridgeScreen: React.FC<AddFoodToFridgeScreenProps> = ({ onCancel,
     return () => window.clearTimeout(timeoutId);
   }, [manualForm.foodName]);
 
-  const setItemStatus = (itemId: string, status: ItemStatus) => {
-    setItemStatuses((current) => ({ ...current, [itemId]: status }));
+  const updateShoppingDraft = (shoppingListItemId: number, nextValues: Partial<ShoppingDraft>) => {
+    setShoppingDrafts((current) => ({
+      ...current,
+      [shoppingListItemId]: {
+        ...current[shoppingListItemId],
+        ...nextValues,
+      },
+    }));
+    setShoppingError("");
   };
 
   const updateManualForm = (nextValues: Partial<ManualFormState>) => {
@@ -251,6 +303,32 @@ const AddFoodToFridgeScreen: React.FC<AddFoodToFridgeScreenProps> = ({ onCancel,
     return "";
   };
 
+  const validateShoppingImport = () => {
+    if (selectedCount === 0) {
+      return "Vui lòng chọn ít nhất một thực phẩm để thêm vào tủ.";
+    }
+
+    if (missingExpiryCount > 0) {
+      return "Vui lòng bổ sung hạn sử dụng cho các thực phẩm đã chọn.";
+    }
+
+    const invalidDraft = shoppingCandidates.find((candidate) => {
+      const draft = shoppingDrafts[candidate.shoppingListItemId];
+      const quantity = Number(draft?.quantity);
+
+      return (
+        draft?.status === "selected" &&
+        (!Number.isFinite(quantity) || quantity <= 0 || !draft.storageLocation)
+      );
+    });
+
+    if (invalidDraft) {
+      return "Vui lòng kiểm tra số lượng và vị trí chính của thực phẩm đã chọn.";
+    }
+
+    return "";
+  };
+
   const handleSubmitManual = async () => {
     const validationError = validateManualForm();
 
@@ -285,6 +363,46 @@ const AddFoodToFridgeScreen: React.FC<AddFoodToFridgeScreenProps> = ({ onCancel,
     }
   };
 
+  const handleSubmitShoppingImport = async () => {
+    const validationError = validateShoppingImport();
+
+    if (validationError) {
+      setShoppingError(validationError);
+      return;
+    }
+
+    const items = shoppingCandidates
+      .filter((candidate) => shoppingDrafts[candidate.shoppingListItemId]?.status === "selected")
+      .map((candidate) => {
+        const draft = shoppingDrafts[candidate.shoppingListItemId];
+
+        return {
+          shoppingListItemId: candidate.shoppingListItemId,
+          foodId: candidate.foodId,
+          customName: candidate.customName || null,
+          quantity: Number(draft.quantity),
+          storageLocation: draft.storageLocation,
+          specificLocation: draft.specificLocation || null,
+          addedDate: getTodayInputValue(),
+          expiryDate: draft.expiryDate,
+          note: draft.note.trim() || null,
+        };
+      });
+
+    setIsSubmittingShopping(true);
+    setShoppingError("");
+
+    try {
+      await api.post("/api/fridge-items/import-from-shopping", { items });
+      onAdded?.();
+      onCancel();
+    } catch {
+      setShoppingError("Không thêm được thực phẩm đã mua vào tủ lạnh. Vui lòng thử lại.");
+    } finally {
+      setIsSubmittingShopping(false);
+    }
+  };
+
   return (
     <div className="add-fridge-screen">
       <header className="add-fridge-header">
@@ -316,86 +434,129 @@ const AddFoodToFridgeScreen: React.FC<AddFoodToFridgeScreenProps> = ({ onCancel,
             <h2>Danh sách thực phẩm đã mua</h2>
             <p>Chọn thực phẩm cần đưa vào tủ và bổ sung thông tin lưu trữ.</p>
 
+            {isLoadingShopping && <div className="add-fridge-state">Đang tải danh sách thực phẩm đã mua...</div>}
+
+            {!isLoadingShopping && shoppingCandidates.length === 0 && !shoppingError && (
+              <div className="add-fridge-state">Chưa có thực phẩm đã mua nào cần nhập vào tủ lạnh.</div>
+            )}
+
             <div className="shopping-category-list">
-              {shoppingCategories.map((category) => (
-                <section className="shopping-category" key={category.id}>
-                  <div className="shopping-category-header">
-                    <div className="shopping-category-icon" style={{ backgroundColor: category.color }}>
-                      {category.icon}
-                    </div>
-                    <div>
-                      <h3>{category.name}</h3>
-                      <p>{category.items.length} mục</p>
-                    </div>
-                  </div>
+              {shoppingCandidatesByCategory.map(([categoryName, items]) => {
+                const firstItem = items[0];
 
-                  <div className="shopping-item-list">
-                    {category.items.map((item) => {
-                      const status = itemStatuses[item.id];
-                      return (
-                        <article className={`shopping-item ${status === "selected" ? "selected" : ""}`} key={item.id}>
-                          <div className="shopping-item-main">
-                            <button
-                              className={`shopping-check ${status === "selected" ? "selected" : ""}`}
-                              type="button"
-                              onClick={() => setItemStatus(item.id, status === "selected" ? "skipped" : "selected")}
-                              aria-label={status === "selected" ? "Bỏ chọn thực phẩm" : "Chọn thực phẩm"}
-                            >
-                              {status === "selected" && <span />}
-                            </button>
+                return (
+                  <section className="shopping-category" key={categoryName}>
+                    <div className="shopping-category-header">
+                      <div
+                        className="shopping-category-icon"
+                        style={{ backgroundColor: firstItem.categoryColorCode || "#E5F5FF" }}
+                      >
+                        {getCandidateIcon(firstItem)}
+                      </div>
+                      <div>
+                        <h3>{categoryName}</h3>
+                        <p>{items.length} mục</p>
+                      </div>
+                    </div>
 
-                            <div className="shopping-item-info">
-                              <div className="shopping-item-topline">
-                                <h4>{item.name}</h4>
-                                <div className="shopping-item-actions">
-                                  <button
-                                    className={status === "selected" ? "active" : ""}
-                                    type="button"
-                                    onClick={() => setItemStatus(item.id, "selected")}
-                                  >
-                                    Đã mua
-                                  </button>
-                                  <button
-                                    className={status === "skipped" ? "active skip" : ""}
-                                    type="button"
-                                    onClick={() => setItemStatus(item.id, "skipped")}
-                                  >
-                                    Bỏ qua
-                                  </button>
+                    <div className="shopping-item-list">
+                      {items.map((item) => {
+                        const draft = shoppingDrafts[item.shoppingListItemId] || createDraft(item);
+                        const status = draft.status;
+
+                        return (
+                          <article className={`shopping-item ${status === "selected" ? "selected" : ""}`} key={item.shoppingListItemId}>
+                            <div className="shopping-item-main">
+                              <button
+                                className={`shopping-check ${status === "selected" ? "selected" : ""}`}
+                                type="button"
+                                onClick={() =>
+                                  updateShoppingDraft(item.shoppingListItemId, {
+                                    status: status === "selected" ? "skipped" : "selected",
+                                  })
+                                }
+                                aria-label={status === "selected" ? "Bỏ chọn thực phẩm" : "Chọn thực phẩm"}
+                              >
+                                {status === "selected" && <span />}
+                              </button>
+
+                              <div className="shopping-item-info">
+                                <div className="shopping-item-topline">
+                                  <h4>{getCandidateDisplayName(item)}</h4>
+                                  <div className="shopping-item-actions">
+                                    <button
+                                      className={status === "selected" ? "active" : ""}
+                                      type="button"
+                                      onClick={() => updateShoppingDraft(item.shoppingListItemId, { status: "selected" })}
+                                    >
+                                      Đã mua
+                                    </button>
+                                    <button
+                                      className={status === "skipped" ? "active skip" : ""}
+                                      type="button"
+                                      onClick={() => updateShoppingDraft(item.shoppingListItemId, { status: "skipped" })}
+                                    >
+                                      Bỏ qua
+                                    </button>
+                                  </div>
                                 </div>
+                                <p>
+                                  Đã mua: {item.quantity} {item.unit || ""}
+                                </p>
                               </div>
-                              <p>
-                                Đã mua: {item.quantity} {item.unit}
-                              </p>
                             </div>
-                          </div>
 
-                          {item.expanded && status === "selected" && (
-                            <div className="shopping-item-fields">
-                              <Field label="SL nhập" value={String(item.quantity)} readOnly />
-                              <Field label="Đơn vị" as="select" options={unitOptions} value={item.unit} disabled />
-                              <Field label="Hạn sử dụng" type="date" />
-                              <Field label="Danh mục" as="select" options={[category.name]} value={category.name} disabled />
-                              <Field
-                                label="Vị trí chính"
-                                as="select"
-                                options={storageLocationOptions}
-                                value="COOL"
-                              />
-                              <Field
-                                label="Vị trí cụ thể"
-                                as="select"
-                                options={specificLocationOptions}
-                                value="MIDDLE_SHELF"
-                              />
-                            </div>
-                          )}
-                        </article>
-                      );
-                    })}
-                  </div>
-                </section>
-              ))}
+                            {status === "selected" && (
+                              <div className="shopping-item-fields">
+                                <Field
+                                  label="SL nhập"
+                                  value={draft.quantity}
+                                  type="number"
+                                  onChange={(value) => updateShoppingDraft(item.shoppingListItemId, { quantity: value })}
+                                />
+                                <Field label="Đơn vị" value={item.unit || ""} disabled />
+                                <Field
+                                  label="Hạn sử dụng"
+                                  required
+                                  type="date"
+                                  value={draft.expiryDate}
+                                  onChange={(value) => updateShoppingDraft(item.shoppingListItemId, { expiryDate: value })}
+                                />
+                                <Field label="Danh mục" value={categoryName} disabled />
+                                <Field
+                                  label="Vị trí chính"
+                                  required
+                                  as="select"
+                                  options={storageLocationOptions}
+                                  value={draft.storageLocation}
+                                  onChange={(value) =>
+                                    updateShoppingDraft(item.shoppingListItemId, { storageLocation: value as StorageLocation })
+                                  }
+                                />
+                                <Field
+                                  label="Vị trí cụ thể"
+                                  as="select"
+                                  options={specificLocationOptions}
+                                  value={draft.specificLocation}
+                                  onChange={(value) => updateShoppingDraft(item.shoppingListItemId, { specificLocation: value })}
+                                  placeholder="Chọn vị trí cụ thể"
+                                />
+                                <Field
+                                  label="Ghi chú"
+                                  value={draft.note}
+                                  onChange={(value) => updateShoppingDraft(item.shoppingListItemId, { note: value })}
+                                  placeholder="Nhập ghi chú nếu có"
+                                  wide
+                                />
+                              </div>
+                            )}
+                          </article>
+                        );
+                      })}
+                    </div>
+                  </section>
+                );
+              })}
             </div>
           </section>
 
@@ -404,7 +565,7 @@ const AddFoodToFridgeScreen: React.FC<AddFoodToFridgeScreenProps> = ({ onCancel,
 
             <div className="add-fridge-summary-stats">
               <SummaryBox label="Đã chọn" value={selectedCount} variant="selected" />
-              <SummaryBox label="Cần bổ sung HSD" value={0} variant="warning" />
+              <SummaryBox label="Cần bổ sung HSD" value={missingExpiryCount} variant="warning" />
               <SummaryBox label="Bỏ qua" value={skippedCount} variant="muted" />
             </div>
 
@@ -417,11 +578,19 @@ const AddFoodToFridgeScreen: React.FC<AddFoodToFridgeScreenProps> = ({ onCancel,
               </ul>
             </div>
 
+            {shoppingError && <div className="manual-form-error">{shoppingError}</div>}
+
             <div className="add-fridge-summary-actions">
-              <button type="button" onClick={onCancel}>
+              <button type="button" onClick={onCancel} disabled={isSubmittingShopping}>
                 Hủy
               </button>
-              <button type="button">Xác nhận thêm vào tủ</button>
+              <button
+                type="button"
+                onClick={handleSubmitShoppingImport}
+                disabled={isSubmittingShopping || selectedCount === 0 || missingExpiryCount > 0}
+              >
+                {isSubmittingShopping ? "Đang thêm..." : "Xác nhận thêm vào tủ"}
+              </button>
             </div>
           </aside>
         </div>
@@ -602,7 +771,7 @@ const Field: React.FC<FieldProps> = ({
         />
       ) : as === "select" ? (
         <select value={value || ""} onChange={(event) => onChange?.(event.target.value)} disabled={disabled}>
-          {!value && <option value="">{placeholder || `Chọn ${label.toLowerCase()}`}</option>}
+          <option value="">{placeholder || `Chọn ${label.toLowerCase()}`}</option>
           {options.map((option) => (
             <option key={getOptionValue(option)} value={getOptionValue(option)}>
               {getOptionLabel(option)}

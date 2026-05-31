@@ -138,6 +138,7 @@ CREATE TABLE fridge_items (
     id SERIAL PRIMARY KEY,
     family_id INT NOT NULL,                  -- Thuộc gia đình nào
     food_id INT NOT NULL,                    -- Thực phẩm gì
+    custom_name VARCHAR(255),                -- Tên cụ thể trong tủ nếu dùng thực phẩm "khác"
     quantity NUMERIC(10, 2) NOT NULL DEFAULT 0, -- Số lượng
     storage_location VARCHAR(100),           -- Vị trí lưu trữ chính: COOL (ngăn mát), FREEZER (ngăn đông), DRY (tủ đồ khô)
     specific_location VARCHAR(100),          -- Vị trí cụ thể trong khu vực lưu trữ: VEGETABLE_DRAWER (ngăn rau), DOOR_SHELF (cánh tủ), TOP_SHELF (kệ trên)...
@@ -145,6 +146,7 @@ CREATE TABLE fridge_items (
     expiry_date DATE,                        -- Hạn sử dụng
     status VARCHAR(50) DEFAULT 'STORED',     -- Trạng thái: STORED (đang lưu), EXPIRED (hết hạn), USED (đã dùng hết), REMOVED (đã loại bỏ)
     image_url VARCHAR(500),                  -- Ảnh chụp thực phẩm trong tủ (tùy chọn)
+    note TEXT,                               -- Ghi chú
     removed_reason VARCHAR(100),                -- Lý do loại bỏ: USED_UP, EXPIRED_DISCARDED, SPOILED, WRONG_INFO, OTHER
     removed_reason_note TEXT,                   -- Nội dung lý do khác nếu người dùng chọn OTHER
     removed_at TIMESTAMP,                       -- Thời điểm loại bỏ thực phẩm khỏi tủ; NULL nếu thực phẩm vẫn đang lưu
@@ -179,17 +181,21 @@ CREATE TABLE shopping_list_items (
     id SERIAL PRIMARY KEY,
     shopping_list_id INT NOT NULL,           -- Thuộc danh sách nào
     food_id INT NOT NULL,                    -- Thực phẩm cần mua
+    custom_name VARCHAR(255),                -- Tên cụ thể nếu chọn thực phẩm "khác"
     order_number INT,                        -- Số thứ tự
     quantity NUMERIC(10, 2) NOT NULL,        -- Số lượng cần mua
     unit VARCHAR(50),                        -- Đơn vị tính
     note TEXT,                               -- Ghi chú thêm
     assigned_to INT,                         -- Người được giao mua
     is_purchased BOOLEAN DEFAULT FALSE,      -- Đã mua chưa
+    imported_to_fridge_at TIMESTAMP,         -- Thời điểm đã nhập mục này vào tủ lạnh
+    fridge_item_id INT,                      -- Fridge item được tạo từ mục đi chợ này
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_sli_list FOREIGN KEY (shopping_list_id) REFERENCES shopping_lists(id) ON DELETE CASCADE,
     CONSTRAINT fk_sli_food FOREIGN KEY (food_id) REFERENCES foods(id) ON DELETE CASCADE,
-    CONSTRAINT fk_sli_assignee FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL
+    CONSTRAINT fk_sli_assignee FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL,
+    CONSTRAINT fk_sli_fridge_item FOREIGN KEY (fridge_item_id) REFERENCES fridge_items(id) ON DELETE SET NULL
 );
 
 -- ==========================================
@@ -293,11 +299,6 @@ CREATE TABLE meal_items (
 INSERT INTO roles (name, description) VALUES
 ('ADMIN', 'Quản trị viên hệ thống - toàn quyền truy cập'),
 ('CUSTOMER', 'Khách hàng / thành viên gia đình');
-
--- Thêm logic cho bảng fridge
-ALTER TABLE fridge_items
-    ADD COLUMN custom_name VARCHAR(255),
-    ADD COLUMN note TEXT;
 
 CREATE TABLE invitations (
     id SERIAL PRIMARY KEY,

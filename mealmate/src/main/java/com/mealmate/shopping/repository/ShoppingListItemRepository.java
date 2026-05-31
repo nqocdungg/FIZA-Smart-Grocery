@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ShoppingListItemRepository extends JpaRepository<ShoppingListItem, Long> {
@@ -79,5 +80,48 @@ public interface ShoppingListItemRepository extends JpaRepository<ShoppingListIt
 	    @Param("from") LocalDate from,
 	    @Param("to") LocalDate to,
 	    @Param("categoryId") Long categoryId
+    );
+
+    @Query(value = """
+        SELECT
+            sli.id AS shoppingListItemId,
+            sl.id AS shoppingListId,
+            sl.planned_date AS plannedDate,
+            f.id AS foodId,
+            f.name AS foodName,
+            sli.custom_name AS customName,
+            f.category_id AS categoryId,
+            c.name AS categoryName,
+            c.icon_key AS categoryIconKey,
+            c.color_code AS categoryColorCode,
+            sli.quantity AS quantity,
+            COALESCE(sli.unit, f.unit) AS unit,
+            sli.note AS note
+        FROM shopping_list_items sli
+        JOIN shopping_lists sl ON sl.id = sli.shopping_list_id
+        JOIN foods f ON f.id = sli.food_id
+        LEFT JOIN categories c ON c.id = f.category_id
+        WHERE sl.family_id = :familyId
+          AND COALESCE(sli.is_purchased, false) = true
+          AND sli.imported_to_fridge_at IS NULL
+        ORDER BY
+            CASE WHEN sl.planned_date IS NULL THEN 1 ELSE 0 END,
+            sl.planned_date DESC,
+            sli.order_number ASC,
+            sli.id ASC
+        """, nativeQuery = true)
+    List<ShoppingImportCandidateProjection> findFridgeImportCandidates(@Param("familyId") Long familyId);
+
+    @Query("""
+        SELECT item
+        FROM ShoppingListItem item
+        JOIN FETCH item.shoppingList shoppingList
+        JOIN FETCH item.food food
+        WHERE item.id = :id
+          AND shoppingList.family.id = :familyId
+        """)
+    Optional<ShoppingListItem> findImportableByIdAndFamilyId(
+            @Param("id") Long id,
+            @Param("familyId") Long familyId
     );
 }

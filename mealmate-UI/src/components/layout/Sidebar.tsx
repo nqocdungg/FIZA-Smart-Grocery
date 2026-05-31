@@ -14,6 +14,7 @@ import fridgeMenuIcon from "@/assets/icon/Icon-fridge.svg";
 import iconLogo from "@/assets/icon/Icon-logo.svg";
 import iconRecipe from "@/assets/icon/Icon-recipe.svg";
 import iconSchedule from "@/assets/icon/Icon-schedule.svg";
+import iconShopping from "@/assets/icon/Icon-shopping.svg";
 import iconStatistic from "@/assets/icon/Icon-statistic.svg";
 import iconShopping from "@/assets/icon/Icon-shopping.svg";
 

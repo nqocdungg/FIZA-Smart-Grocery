@@ -4,6 +4,10 @@ import com.mealmate.common.base.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import com.mealmate.fridge.model.FridgeItem;
+
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "shopping_list_items")
 @Getter
@@ -23,6 +27,9 @@ public class ShoppingListItem extends BaseEntity {
     @JoinColumn(name = "food_id", nullable = false)
     private com.mealmate.catalog.model.Food food; // Thực phẩm cần mua
 
+    @Column(name = "custom_name")
+    private String customName;
+
     @Column(name = "order_number")
     private Integer orderNumber; // Số thứ tự
 
@@ -41,4 +48,11 @@ public class ShoppingListItem extends BaseEntity {
 
     @Column(name = "is_purchased")
     private Boolean isPurchased = false; // Đã mua chưa
+
+    @Column(name = "imported_to_fridge_at")
+    private LocalDateTime importedToFridgeAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "fridge_item_id")
+    private FridgeItem fridgeItem;
 }

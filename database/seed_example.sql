@@ -334,9 +334,9 @@ SELECT
 FROM (
     VALUES
         ('Rau muống', 1, 500.00, 'g', 'Mua bó tươi', FALSE),
-        ('Thịt lợn', 2, 500.00, 'g', 'Nạc vai', FALSE),
+        ('Thịt lợn', 2, 500.00, 'g', 'Nạc vai', TRUE),
         ('Cam', 3, 4.00, 'quả', NULL, TRUE),
-        ('Dầu ăn', 4, 1000.00, 'ml', NULL, FALSE)
+        ('Dầu ăn', 4, 1000.00, 'ml', NULL, TRUE)
 ) AS v(food_name, order_number, quantity, unit, note, is_purchased)
 JOIN foods f ON f.name = v.food_name
 JOIN shopping_lists sl ON sl.note = 'Danh sách mua bổ sung cho tuần này'
