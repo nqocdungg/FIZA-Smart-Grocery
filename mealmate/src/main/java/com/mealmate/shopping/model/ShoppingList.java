@@ -3,6 +3,8 @@ package com.mealmate.shopping.model;
 import com.mealmate.common.base.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import java.util.List;
+import java.util.ArrayList;
 
 @Entity
 @Table(name = "shopping_lists")
@@ -31,4 +33,7 @@ public class ShoppingList extends BaseEntity {
 
     @Column(columnDefinition = "TEXT")
     private String note; // Ghi chú
+
+    @OneToMany(mappedBy = "shoppingList", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ShoppingListItem> items = new ArrayList<>();
 }
