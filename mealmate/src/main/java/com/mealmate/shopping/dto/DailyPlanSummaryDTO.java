@@ -1,5 +1,6 @@
 package com.mealmate.shopping.dto;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import lombok.Builder;
@@ -13,6 +14,6 @@ public class DailyPlanSummaryDTO {
     private String displayDate; // "4/5"
     private int totalItems;
     private int purchasedItems;
-    private List<String> assigneeNames;
+    private List<String> assigneeNames = new ArrayList<>();
     private Long listId;
 }

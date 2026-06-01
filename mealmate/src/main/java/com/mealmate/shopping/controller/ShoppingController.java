@@ -3,14 +3,12 @@ package com.mealmate.shopping.controller;
 import java.time.LocalDate;
 import java.util.List;
 
+import com.mealmate.catalog.model.Food;
+import com.mealmate.catalog.repository.FoodRepository;
+import com.mealmate.shopping.dto.ShoppingListRequestDTO;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.mealmate.common.dto.ApiResponse;
 import com.mealmate.shopping.dto.DailyPlanSummaryDTO;
@@ -24,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class ShoppingController {
     private final ShoppingListService service;
+    private final FoodRepository foodRepository;
 
     @GetMapping("/summary")
     public ResponseEntity<ApiResponse<List<DailyPlanSummaryDTO>>> getSummary(
@@ -45,5 +44,16 @@ public class ShoppingController {
     public ResponseEntity<ApiResponse<Void>> toggleItem(@PathVariable Long itemId) {
         service.toggleItemStatus(itemId);
         return ResponseEntity.ok(new ApiResponse<>(true, "Cập nhật trạng thái thành công", null));
+    }
+
+    @PostMapping("/save")
+    public ResponseEntity<ApiResponse<Void>> savePlan(@RequestBody ShoppingListRequestDTO request) {
+        service.savePlan(request);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Lưu kế hoạch thành công", null));
+    }
+
+    @GetMapping("/foods/search")
+    public ResponseEntity<ApiResponse<List<Food>>> searchFoods(@RequestParam String query) {
+        return ResponseEntity.ok(new ApiResponse<>(true, "Success", foodRepository.findByNameContainingIgnoreCase(query)));
     }
 }
