@@ -13,27 +13,21 @@ import java.util.ArrayList;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ShoppingList extends BaseEntity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by", nullable = false)
-    private com.mealmate.user.model.User createdBy; // Người tạo danh sách
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "family_id", nullable = false)
-    private com.mealmate.user.model.Family family; // Thuộc gia đình nào
+    @Column(name = "created_by", nullable = false)
+    private Long createdBy;
 
-    @Column(name = "created_date")
-    private java.time.LocalDate createdDate; // Ngày tạo
+    @Column(name = "family_id", nullable = false)
+    private Long familyId; // Thuộc gia đình
 
     @Column(name = "planned_date")
-    private java.time.LocalDate plannedDate; // Ngày dự kiến đi mua
+    private java.time.LocalDate plannedDate; // Ngày dự kiến mua
 
     @Column(columnDefinition = "TEXT")
     private String note; // Ghi chú
 
     @OneToMany(mappedBy = "shoppingList", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ShoppingListItem> items = new ArrayList<>();
+
+    //Sau thêm loại kế hoạch cho kế hoạch tuần
 }

@@ -1,5 +1,6 @@
 package com.mealmate.shopping.model;
 
+import com.mealmate.catalog.model.Food;
 import com.mealmate.common.base.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -11,34 +12,17 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ShoppingListItem extends BaseEntity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "shopping_list_id", nullable = false)
-    private ShoppingList shoppingList; // Thuộc danh sách nào
+    private ShoppingList shoppingList; // Thuộc danh sách
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "food_id", nullable = false)
-    private com.mealmate.catalog.model.Food food; // Thực phẩm cần mua
+    private Food food;
 
-    @Column(name = "order_number")
-    private Integer orderNumber; // Số thứ tự
-
-    @Column(nullable = false)
-    private Double quantity; // Số lượng cần mua
-
-    @Column(name = "unit")
-    private String unit; // Đơn vị tính
-
-    @Column(columnDefinition = "TEXT")
-    private String note; // Ghi chú thêm
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "assigned_to")
-    private com.mealmate.user.model.User assignedTo; // Người được giao mua
-
-    @Column(name = "is_purchased")
-    private Boolean isPurchased = false; // Đã mua chưa
+    private Double quantity;
+    private String unit;
+    private String note;
+    private Long assignedTo;
+    private Boolean isPurchased = false;
 }
