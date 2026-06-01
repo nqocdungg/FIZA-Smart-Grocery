@@ -10,6 +10,12 @@ import java.util.List;
 @Repository
 public interface RecipeIngredientRepository extends JpaRepository<RecipeIngredient, Long> {
 
+    // 🎯 GIỮ NGUYÊN từ nhánh hihi: Phục vụ CRUD và xóa nguyên liệu theo món
+    List<RecipeIngredient> findByRecipeId(Long recipeId);
+    
+    void deleteByRecipeId(Long recipeId);
+
+    // 🎯 GIỮ NGUYÊN từ nhánh release/hieulq: Phục vụ thuật toán gợi ý món ăn thông minh
     @Query(value = """
         SELECT
             r.id AS recipeId,

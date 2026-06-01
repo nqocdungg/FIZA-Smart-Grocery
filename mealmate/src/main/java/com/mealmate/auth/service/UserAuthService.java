@@ -102,6 +102,7 @@ public class UserAuthService {
                 .tokenType("Bearer")
                 .email(savedUser.getEmail())
                 .fullName(savedUser.getFullName())
+                .role(savedUser.getRole() != null ? savedUser.getRole().getName() : "HOUSEKEEPER")
                 .gender(savedUser.getGender() != null ? savedUser.getGender() : "OTHER") // 🎯 BỔ SUNG: Trả về cho Front-end khi Đăng ký
                 .build();
     }
@@ -134,6 +135,7 @@ public class UserAuthService {
                 .tokenType("Bearer")
                 .email(user.getEmail())
                 .fullName(user.getFullName())
+                .role(user.getRole() != null ? user.getRole().getName() : "CUSTOMER")
                 .gender(user.getGender() != null ? user.getGender() : "OTHER") // 🎯 BỔ SUNG: Trả về cho Front-end khi Đăng nhập
                 .build();
     }
