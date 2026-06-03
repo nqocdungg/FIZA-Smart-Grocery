@@ -452,3 +452,4 @@ END $$;
 INSERT INTO roles (name, description, is_active)
 VALUES
     ('BOSS', 'Người nội trợ', TRUE);
+--Tạo 1 cột ước lượng mấy người ăn
