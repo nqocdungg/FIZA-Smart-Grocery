@@ -1,25 +1,16 @@
 -- =====================================================
--- SEED DATA CHUAN CHO MEALMATE
--- Chay sau database/db.sql.
---
--- Script nay reset toan bo du lieu mau va tao lai tu dau:
--- - 2 roles: ADMIN, CUSTOMER
--- - 2 users mau, mat khau deu la: password
--- - 1 family mau
--- - 7 categories da chot
--- - foods khong co icon rieng; UI dung icon_key cua categories
--- - preservation, fridge, shopping, recipes, menu mau
+-- MealMate seed data for recommendation demo
+-- Run after database/db.sql
 -- =====================================================
 
 BEGIN;
 
--- =====================================================
--- 0. RESET DU LIEU MAU
--- =====================================================
-
 TRUNCATE TABLE
     role_permissions,
     permissions,
+    recipe_tag_items,
+    recipe_tags,
+    user_recipe_history,
     user_favorite_recipes,
     custom_recipes,
     meal_items,
@@ -31,6 +22,7 @@ TRUNCATE TABLE
     shopping_lists,
     fridge_items,
     preservation_methods,
+    unit_conversions,
     foods,
     categories,
     families,
@@ -38,418 +30,415 @@ TRUNCATE TABLE
     roles
 RESTART IDENTITY CASCADE;
 
--- =====================================================
--- 1. ROLES
--- =====================================================
-
 INSERT INTO roles (name, description, is_active)
 VALUES
-    ('ADMIN', 'Quản trị viên hệ thống', TRUE),
-    ('CUSTOMER', 'Người dùng gia đình', TRUE);
+    ('ADMIN', 'System administrator', TRUE),
+    ('CUSTOMER', 'Family user', TRUE);
 
--- =====================================================
--- 2. USERS
--- Password mau: password
--- BCrypt hash cua "password":
--- $2a$10$yTDXwEpBVd0ri5chsz3FyeiUW2amh5jAlfAJR6DmFjJvD32pNFWK2
--- =====================================================
+INSERT INTO users (family_id, role_id, email, password_hash, full_name, email_verified)
+SELECT NULL, r.id, 'admin@mealmate.local', '$2a$10$yTDXwEpBVd0ri5chsz3FyeiUW2amh5jAlfAJR6DmFjJvD32pNFWK2', 'Admin MealMate', TRUE
+FROM roles r WHERE r.name = 'ADMIN';
 
-INSERT INTO users (
-    family_id,
-    role_id,
-    email,
-    password_hash,
-    full_name,
-    phone,
-    gender,
-    avatar_url,
-    email_verified
-)
-SELECT
-    NULL,
-    r.id,
-    'admin@mealmate.local',
-    '$2a$10$yTDXwEpBVd0ri5chsz3FyeiUW2amh5jAlfAJR6DmFjJvD32pNFWK2',
-    'Admin MealMate',
-    '0900000000',
-    'OTHER',
-    NULL,
-    TRUE
-FROM roles r
-WHERE r.name = 'ADMIN';
+INSERT INTO users (family_id, role_id, email, password_hash, full_name, email_verified)
+SELECT NULL, r.id, 'user@mealmate.local', '$2a$10$yTDXwEpBVd0ri5chsz3FyeiUW2amh5jAlfAJR6DmFjJvD32pNFWK2', 'Nguyen Minh Quang', TRUE
+FROM roles r WHERE r.name = 'CUSTOMER';
 
-INSERT INTO users (
-    family_id,
-    role_id,
-    email,
-    password_hash,
-    full_name,
-    phone,
-    gender,
-    avatar_url,
-    email_verified
-)
-SELECT
-    NULL,
-    r.id,
-    'user@mealmate.local',
-    '$2a$10$yTDXwEpBVd0ri5chsz3FyeiUW2amh5jAlfAJR6DmFjJvD32pNFWK2',
-    'Nguyễn Minh Quang',
-    '0912345678',
-    'MALE',
-    NULL,
-    TRUE
-FROM roles r
-WHERE r.name = 'CUSTOMER';
-
-select * from user;
--- =====================================================
--- 3. FAMILY
--- families.housekeeper_id -> users.id
--- users.family_id -> families.id
--- Do 2 bang co quan he vong, tao user truoc, tao family sau, roi update user.
--- =====================================================
+INSERT INTO users (family_id, role_id, email, password_hash, full_name, email_verified)
+SELECT NULL, r.id, 'member@mealmate.local', '$2a$10$yTDXwEpBVd0ri5chsz3FyeiUW2amh5jAlfAJR6DmFjJvD32pNFWK2', 'Tran Thu Ha', TRUE
+FROM roles r WHERE r.name = 'CUSTOMER';
 
 INSERT INTO families (name, housekeeper_id)
-SELECT
-    'Gia đình Minh Quang',
-    u.id
+SELECT 'Family Quang', u.id
 FROM users u
 WHERE u.email = 'user@mealmate.local';
 
 UPDATE users
-SET family_id = (
-    SELECT id
-    FROM families
-    WHERE name = 'Gia đình Minh Quang'
-    LIMIT 1
-)
-WHERE email = 'user@mealmate.local';
-
--- =====================================================
--- 4. CATEGORIES
--- Chi categories luu icon_key. Foods khong co icon_key rieng.
--- 7 loai da chot: Rau củ, Trái cây, Thịt, Hải sản, Trứng & Sữa, Đồ khô, Gia vị.
--- =====================================================
+SET family_id = (SELECT id FROM families WHERE name = 'Family Quang')
+WHERE email IN ('user@mealmate.local', 'member@mealmate.local');
 
 INSERT INTO categories (name, icon_key, color_code)
 VALUES
-    ('Rau củ', 'vegetable', '#E8F5E9'),
-    ('Trái cây', 'fruit', '#FFF3E0'),
-    ('Thịt', 'meat', '#FFEBEE'),
-    ('Hải sản', 'seafood', '#E3F2FD'),
-    ('Trứng & Sữa', 'dairy', '#FFFDE7'),
-    ('Đồ khô', 'dry-food', '#F3E5F5'),
-    ('Gia vị', 'spice', '#FBE9E7');
+    ('Vegetables', 'vegetable', '#E8F5E9'),
+    ('Fruits', 'fruit', '#FFF3E0'),
+    ('Meat', 'meat', '#FFEBEE'),
+    ('Seafood', 'seafood', '#E3F2FD'),
+    ('Egg and Dairy', 'dairy', '#FFFDE7'),
+    ('Dry food', 'dry-food', '#F3E5F5'),
+    ('Spice', 'spice', '#FBE9E7');
 
--- =====================================================
--- 5. FOODS
--- UI lay icon tu categories.icon_key thong qua categoryIconKey.
--- =====================================================
-
-INSERT INTO foods (
-    category_id,
-    name,
-    unit,
-    synonyms,
-    image_url,
-    is_system,
-    created_by,
-    family_id
-)
-SELECT
-    c.id,
-    v.food_name,
-    v.unit,
-    v.synonyms,
-    NULL,
-    TRUE,
-    NULL,
-    NULL
+INSERT INTO foods (category_id, name, unit, synonyms, is_system)
+SELECT c.id, v.food_name, v.unit, v.synonyms, TRUE
 FROM (
     VALUES
-        ('Rau củ', 'Cà chua', 'g', 'tomato,cà chua bi,cà chua đỏ'),
-        ('Rau củ', 'Cà rốt', 'g', 'carrot,củ cà rốt'),
-        ('Rau củ', 'Rau muống', 'g', 'rau xanh,rau muống'),
-        ('Rau củ', 'Khoai tây', 'g', 'potato,củ khoai tây'),
-        ('Rau củ', 'Rau củ khác', 'g', 'rau khác,củ khác,rau củ khác,khác'),
-
-        ('Trái cây', 'Táo', 'quả', 'apple,táo đỏ,táo xanh'),
-        ('Trái cây', 'Chuối', 'quả', 'banana,chuối tiêu,chuối tây'),
-        ('Trái cây', 'Cam', 'quả', 'orange,cam vàng'),
-        ('Trái cây', 'Dưa hấu', 'g', 'watermelon,dưa đỏ'),
-        ('Trái cây', 'Trái cây khác', 'g', 'hoa quả khác,trái cây khác,khác'),
-
-        ('Thịt', 'Thịt lợn', 'g', 'thịt heo,heo,lợn,pork'),
-        ('Thịt', 'Thịt bò', 'g', 'bò,beef,thịt bò Mỹ'),
-        ('Thịt', 'Thịt gà', 'g', 'gà,chicken,ức gà,đùi gà'),
-        ('Thịt', 'Xúc xích', 'g', 'sausage,xuc xich'),
-        ('Thịt', 'Thịt khác', 'g', 'thịt khác,khác'),
-
-        ('Hải sản', 'Cá hồi', 'g', 'salmon,cá hồi Nauy'),
-        ('Hải sản', 'Tôm', 'g', 'shrimp,tôm sú,tôm thẻ'),
-        ('Hải sản', 'Mực', 'g', 'squid,mực ống,mực tươi'),
-        ('Hải sản', 'Cá thu', 'g', 'mackerel,cá biển'),
-        ('Hải sản', 'Hải sản khác', 'g', 'đồ biển khác,hải sản khác,khác'),
-
-        ('Trứng & Sữa', 'Trứng gà', 'quả', 'egg,trứng,trứng gà ta'),
-        ('Trứng & Sữa', 'Sữa tươi', 'ml', 'milk,sữa không đường,sữa có đường'),
-        ('Trứng & Sữa', 'Sữa chua', 'hộp', 'yogurt,yaourt'),
-        ('Trứng & Sữa', 'Phô mai', 'g', 'cheese,pho mai'),
-        ('Trứng & Sữa', 'Trứng & Sữa khác', 'g', 'trứng khác,sữa khác,trứng sữa khác,khác'),
-
-        ('Đồ khô', 'Gạo', 'g', 'rice,gạo tẻ,gạo nếp'),
-        ('Đồ khô', 'Mì gói', 'gói', 'instant noodle,mì ăn liền'),
-        ('Đồ khô', 'Bún khô', 'g', 'bún,miến khô,phở khô'),
-        ('Đồ khô', 'Bột mì', 'g', 'flour,bột làm bánh'),
-        ('Đồ khô', 'Đồ khô khác', 'g', 'đồ khô khác,khác'),
-
-        ('Gia vị', 'Muối', 'g', 'salt,muối ăn'),
-        ('Gia vị', 'Đường', 'g', 'sugar,đường trắng,đường nâu'),
-        ('Gia vị', 'Nước mắm', 'ml', 'fish sauce,mắm'),
-        ('Gia vị', 'Dầu ăn', 'ml', 'cooking oil,dầu thực vật'),
-        ('Gia vị', 'Gia vị khác', 'g', 'gia vị khác,khác')
+        ('Vegetables', 'Tomato', 'g', 'ca chua'),
+        ('Vegetables', 'Carrot', 'g', 'ca rot'),
+        ('Vegetables', 'Spinach', 'g', 'rau cai'),
+        ('Vegetables', 'Garlic', 'g', 'toi'),
+        ('Vegetables', 'Onion', 'g', 'hanh tay'),
+        ('Vegetables', 'Potato', 'g', 'khoai tay'),
+        ('Fruits', 'Apple', 'piece', 'tao'),
+        ('Fruits', 'Banana', 'piece', 'chuoi'),
+        ('Meat', 'Beef', 'g', 'thit bo'),
+        ('Meat', 'Chicken Breast', 'g', 'thit ga'),
+        ('Meat', 'Pork', 'g', 'thit lon'),
+        ('Seafood', 'Salmon', 'g', 'ca hoi'),
+        ('Seafood', 'Shrimp', 'g', 'tom'),
+        ('Egg and Dairy', 'Egg', 'piece', 'trung ga'),
+        ('Egg and Dairy', 'Milk', 'ml', 'sua tuoi'),
+        ('Dry food', 'Rice', 'g', 'gao'),
+        ('Dry food', 'Noodle', 'g', 'mi soi'),
+        ('Spice', 'Fish Sauce', 'ml', 'nuoc mam'),
+        ('Spice', 'Cooking Oil', 'ml', 'dau an'),
+        ('Spice', 'Salt', 'g', 'muoi')
 ) AS v(category_name, food_name, unit, synonyms)
 JOIN categories c ON c.name = v.category_name;
-
--- =====================================================
--- 6. PRESERVATION METHODS
--- =====================================================
-
-INSERT INTO preservation_methods (food_id, content, reference_source)
-SELECT f.id, v.content, 'MealMate seed'
-FROM (
-    VALUES
-        ('Cà chua', 'Bảo quản trong ngăn mát, tránh để gần thực phẩm có mùi mạnh.'),
-        ('Cà rốt', 'Giữ khô ráo, để trong ngăn rau củ hoặc hộp kín.'),
-        ('Rau muống', 'Nhặt bỏ lá hỏng, bọc giấy hoặc túi thoáng khí trước khi cho vào ngăn mát.'),
-        ('Táo', 'Để trong ngăn trái cây, tránh để chung với thực phẩm có mùi mạnh.'),
-        ('Dưa hấu', 'Sau khi cắt nên bọc kín và bảo quản trong ngăn mát.'),
-        ('Thịt lợn', 'Bọc kín, bảo quản ngăn đông nếu chưa dùng trong ngày.'),
-        ('Thịt bò', 'Chia khẩu phần nhỏ, bọc kín trước khi cấp đông.'),
-        ('Thịt gà', 'Bảo quản riêng trong hộp kín, tránh tiếp xúc với thực phẩm ăn liền.'),
-        ('Cá hồi', 'Bảo quản lạnh sâu nếu chưa dùng ngay, rã đông trong ngăn mát.'),
-        ('Tôm', 'Rửa sạch, để ráo, bọc kín và cấp đông.'),
-        ('Trứng gà', 'Để trong khay riêng, không rửa trứng trước khi bảo quản.'),
-        ('Sữa tươi', 'Luôn đậy kín nắp, bảo quản ngăn mát sau khi mở.'),
-        ('Sữa chua', 'Bảo quản ngăn mát và dùng trước hạn in trên bao bì.'),
-        ('Gạo', 'Đậy kín, để nơi khô ráo, thoáng mát.'),
-        ('Mì gói', 'Bảo quản nơi khô ráo, tránh ánh nắng trực tiếp.'),
-        ('Muối', 'Đậy kín sau khi dùng, tránh nơi ẩm.'),
-        ('Nước mắm', 'Đậy kín nắp, để nơi thoáng mát, tránh ánh nắng.')
-) AS v(food_name, content)
-JOIN foods f ON f.name = v.food_name;
-
--- Them huong dan bo sung cho mot so thuc pham hien thi nhieu dong tren UI.
-INSERT INTO preservation_methods (food_id, content, reference_source)
-SELECT f.id, v.content, 'MealMate seed'
-FROM (
-    VALUES
-        ('Cà chua', 'Nên dùng sớm khi quả đã chín mềm.'),
-        ('Thịt bò', 'Không cấp đông lại sau khi đã rã đông hoàn toàn.'),
-        ('Cá hồi', 'Đóng kín túi hoặc hộp để tránh ám mùi.'),
-        ('Trứng gà', 'Tránh đặt ở cánh tủ nếu nhiệt độ thay đổi nhiều.'),
-        ('Gạo', 'Kiểm tra định kỳ để tránh ẩm mốc hoặc côn trùng.')
-) AS v(food_name, content)
-JOIN foods f ON f.name = v.food_name;
-
--- =====================================================
--- 7. FRIDGE ITEMS
--- =====================================================
-
-INSERT INTO fridge_items (
-    family_id,
-    food_id,
-    custom_name,
-    quantity,
-    storage_location,
-    specific_location,
-    added_date,
-    expiry_date,
-    status,
-    image_url,
-    note
-)
-SELECT
-    fam.id,
-    f.id,
-    v.custom_name,
-    v.quantity,
-    v.storage_location,
-    v.specific_location,
-    CURRENT_DATE - v.added_days_ago,
-    CURRENT_DATE + v.expiry_days_left,
-    'STORED',
-    NULL,
-    v.note
-FROM (
-    VALUES
-        ('Cà chua', NULL, 500.00, 'COOL', 'VEGETABLE_DRAWER', 2, 2, 'Dùng cho salad hoặc sốt cà chua'),
-        ('Sữa tươi', NULL, 1000.00, 'COOL', 'DOOR_SHELF', 1, 3, 'Đã mở nắp'),
-        ('Thịt bò', NULL, 300.00, 'FREEZER', NULL, 5, 20, 'Chia sẵn một bữa'),
-        ('Táo', NULL, 6.00, 'COOL', 'FRUIT_DRAWER', 3, 7, NULL),
-        ('Cá hồi', NULL, 400.00, 'FREEZER', NULL, 2, 14, NULL),
-        ('Trứng gà', NULL, 10.00, 'COOL', 'MIDDLE_SHELF', 4, 10, NULL),
-        ('Cà rốt', NULL, 300.00, 'COOL', 'VEGETABLE_DRAWER', 3, 4, NULL),
-        ('Gạo', NULL, 2000.00, 'DRY', NULL, 10, 120, 'Bao gạo đã mở'),
-        ('Dưa hấu', 'Dưa hấu đã cắt', 1.00, 'COOL', 'FRUIT_DRAWER', 1, 1, 'Bọc kín bằng màng bọc')
-) AS v(food_name, custom_name, quantity, storage_location, specific_location, added_days_ago, expiry_days_left, note)
-JOIN foods f ON f.name = v.food_name
-CROSS JOIN families fam
-WHERE fam.name = 'Gia đình Minh Quang';
-
--- =====================================================
--- 8. SHOPPING LIST SAMPLE
--- =====================================================
-
-INSERT INTO shopping_lists (created_by, family_id, created_date, planned_date, note)
-SELECT
-    u.id,
-    fam.id,
-    CURRENT_DATE,
-    CURRENT_DATE + 1,
-    'Danh sách mua bổ sung cho tuần này'
-FROM users u
-JOIN families fam ON fam.name = 'Gia đình Minh Quang'
-WHERE u.email = 'user@mealmate.local';
-
-INSERT INTO shopping_list_items (
-    shopping_list_id,
-    food_id,
-    order_number,
-    quantity,
-    unit,
-    note,
-    assigned_to,
-    is_purchased
-)
-SELECT
-    sl.id,
-    f.id,
-    v.order_number,
-    v.quantity,
-    v.unit,
-    v.note,
-    u.id,
-    v.is_purchased
-FROM (
-    VALUES
-        ('Rau muống', 1, 500.00, 'g', 'Mua bó tươi', FALSE),
-        ('Thịt lợn', 2, 500.00, 'g', 'Nạc vai', TRUE),
-        ('Cam', 3, 4.00, 'quả', NULL, TRUE),
-        ('Dầu ăn', 4, 1000.00, 'ml', NULL, TRUE)
-) AS v(food_name, order_number, quantity, unit, note, is_purchased)
-JOIN foods f ON f.name = v.food_name
-JOIN shopping_lists sl ON sl.note = 'Danh sách mua bổ sung cho tuần này'
-JOIN users u ON u.email = 'user@mealmate.local';
-
--- =====================================================
--- 9. RECIPES + INGREDIENTS
--- =====================================================
 
 INSERT INTO recipes (
     name,
     instructions,
-    reference_link,
-    author,
     preferred_meal_time,
     display_status,
-    image_url
+    image_url,
+    cooking_time_minutes,
+    difficulty,
+    calories,
+    protein,
+    fat,
+    carbs,
+    serving_size
 )
 VALUES
-    ('Bò xào cà rốt', 'Thái mỏng thịt bò, xào nhanh với cà rốt và nêm gia vị vừa ăn.', NULL, 'MealMate', 'DINNER', 'SYSTEM', NULL),
-    ('Salad cà chua trứng', 'Luộc trứng, cắt cà chua, trộn cùng gia vị nhẹ.', NULL, 'MealMate', 'BREAKFAST', 'SYSTEM', NULL),
-    ('Cơm cá hồi áp chảo', 'Áp chảo cá hồi, ăn kèm cơm và rau củ.', NULL, 'MealMate', 'LUNCH', 'SYSTEM', NULL);
+    ('Beef Stir Fry Spinach', 'Stir fry beef with spinach and garlic.', 'DINNER', 'SYSTEM', NULL, 20, 'EASY', 420, 32.5, 18.0, 20.0, 2),
+    ('Tomato Egg Salad', 'Boil eggs and mix with tomato.', 'BREAKFAST', 'SYSTEM', NULL, 10, 'EASY', 220, 11.0, 12.0, 10.0, 1),
+    ('Salmon Rice Bowl', 'Pan-sear salmon and serve with rice.', 'LUNCH', 'SYSTEM', NULL, 25, 'MEDIUM', 560, 34.0, 22.0, 48.0, 2),
+    ('Chicken Garlic Noodle', 'Cook noodle and toss with chicken and garlic.', 'DINNER', 'SYSTEM', NULL, 30, 'MEDIUM', 510, 30.0, 14.0, 60.0, 2),
+    ('Shrimp Fried Rice', 'Fry rice with shrimp, egg and fish sauce.', 'LUNCH', 'SYSTEM', NULL, 25, 'MEDIUM', 540, 26.0, 16.0, 68.0, 2),
+    ('Potato Beef Soup', 'Simmer beef with potato and onion.', 'DINNER', 'SYSTEM', NULL, 45, 'MEDIUM', 480, 28.0, 20.0, 34.0, 3),
+    ('Milk Banana Smoothie', 'Blend milk and banana.', 'BREAKFAST', 'SYSTEM', NULL, 5, 'EASY', 180, 6.0, 4.0, 30.0, 1),
+    ('Spinach Omelette', 'Cook egg omelette with spinach.', 'BREAKFAST', 'SYSTEM', NULL, 12, 'EASY', 250, 14.0, 16.0, 8.0, 1);
 
 INSERT INTO recipe_ingredients (recipe_id, food_id, quantity, unit)
-SELECT r.id, f.id, v.quantity, v.unit
+SELECT r.id, f.id, v.qty, v.unit
 FROM (
     VALUES
-        ('Bò xào cà rốt', 'Thịt bò', 200.00, 'g'),
-        ('Bò xào cà rốt', 'Cà rốt', 150.00, 'g'),
-        ('Bò xào cà rốt', 'Dầu ăn', 20.00, 'ml'),
-        ('Salad cà chua trứng', 'Cà chua', 200.00, 'g'),
-        ('Salad cà chua trứng', 'Trứng gà', 2.00, 'quả'),
-        ('Cơm cá hồi áp chảo', 'Cá hồi', 200.00, 'g'),
-        ('Cơm cá hồi áp chảo', 'Gạo', 150.00, 'g')
-) AS v(recipe_name, food_name, quantity, unit)
+        ('Beef Stir Fry Spinach', 'Beef', 300, 'g'),
+        ('Beef Stir Fry Spinach', 'Spinach', 200, 'g'),
+        ('Beef Stir Fry Spinach', 'Garlic', 20, 'g'),
+        ('Beef Stir Fry Spinach', 'Cooking Oil', 15, 'ml'),
+
+        ('Tomato Egg Salad', 'Tomato', 200, 'g'),
+        ('Tomato Egg Salad', 'Egg', 2, 'piece'),
+        ('Tomato Egg Salad', 'Salt', 2, 'g'),
+
+        ('Salmon Rice Bowl', 'Salmon', 220, 'g'),
+        ('Salmon Rice Bowl', 'Rice', 180, 'g'),
+        ('Salmon Rice Bowl', 'Cooking Oil', 10, 'ml'),
+
+        ('Chicken Garlic Noodle', 'Chicken Breast', 250, 'g'),
+        ('Chicken Garlic Noodle', 'Noodle', 180, 'g'),
+        ('Chicken Garlic Noodle', 'Garlic', 15, 'g'),
+        ('Chicken Garlic Noodle', 'Cooking Oil', 10, 'ml'),
+
+        ('Shrimp Fried Rice', 'Shrimp', 200, 'g'),
+        ('Shrimp Fried Rice', 'Rice', 200, 'g'),
+        ('Shrimp Fried Rice', 'Egg', 1, 'piece'),
+        ('Shrimp Fried Rice', 'Fish Sauce', 10, 'ml'),
+
+        ('Potato Beef Soup', 'Beef', 250, 'g'),
+        ('Potato Beef Soup', 'Potato', 250, 'g'),
+        ('Potato Beef Soup', 'Onion', 100, 'g'),
+        ('Potato Beef Soup', 'Salt', 4, 'g'),
+
+        ('Milk Banana Smoothie', 'Milk', 250, 'ml'),
+        ('Milk Banana Smoothie', 'Banana', 2, 'piece'),
+
+        ('Spinach Omelette', 'Egg', 2, 'piece'),
+        ('Spinach Omelette', 'Spinach', 120, 'g'),
+        ('Spinach Omelette', 'Cooking Oil', 8, 'ml')
+) AS v(recipe_name, food_name, qty, unit)
 JOIN recipes r ON r.name = v.recipe_name
 JOIN foods f ON f.name = v.food_name;
+
+INSERT INTO fridge_items (
+    family_id,
+    food_id,
+    quantity,
+    storage_location,
+    added_date,
+    expiry_date,
+    status,
+    note
+)
+SELECT fam.id, f.id, v.qty, v.storage_location, CURRENT_DATE - v.added_days, CURRENT_DATE + v.expiry_days, v.status, v.note
+FROM (
+    VALUES
+        ('Beef', 500, 'FREEZER', 2, 10, 'STORED', 'enough for stir-fry'),
+        ('Spinach', 250, 'COOL', 1, 1, 'STORED', 'expiring soon'),
+        ('Garlic', 10, 'COOL', 3, 20, 'STORED', 'not enough for some recipes'),
+        ('Cooking Oil', 300, 'DRY', 10, 120, 'STORED', NULL),
+        ('Tomato', 300, 'COOL', 2, 2, 'STORED', NULL),
+        ('Egg', 8, 'COOL', 4, 5, 'STORED', NULL),
+        ('Milk', 700, 'COOL', 1, 3, 'STORED', NULL),
+        ('Banana', 4, 'COOL', 1, 2, 'STORED', NULL),
+        ('Salmon', 100, 'FREEZER', 5, 15, 'STORED', 'insufficient for recipe'),
+        ('Rice', 1500, 'DRY', 20, 180, 'STORED', NULL),
+        ('Noodle', 300, 'DRY', 7, 60, 'STORED', NULL),
+        ('Shrimp', 100, 'FREEZER', 2, 7, 'STORED', 'insufficient for fried rice'),
+        ('Potato', 180, 'COOL', 3, 6, 'STORED', 'insufficient for soup'),
+        ('Onion', 80, 'COOL', 2, 8, 'STORED', 'insufficient for soup'),
+        ('Fish Sauce', 120, 'DRY', 30, 365, 'STORED', NULL),
+        ('Salt', 200, 'DRY', 30, 365, 'STORED', NULL),
+        ('Pork', 300, 'FREEZER', 10, 0, 'EXPIRED', 'must not be used in recommendation'),
+        ('Apple', 3, 'COOL', 6, 0, 'USED', 'already consumed')
+) AS v(food_name, qty, storage_location, added_days, expiry_days, status, note)
+JOIN foods f ON f.name = v.food_name
+CROSS JOIN families fam
+WHERE fam.name = 'Family Quang';
 
 INSERT INTO user_favorite_recipes (user_id, recipe_id)
 SELECT u.id, r.id
 FROM users u
-JOIN recipes r ON r.name IN ('Bò xào cà rốt', 'Salad cà chua trứng')
+JOIN recipes r ON r.name IN ('Beef Stir Fry Spinach', 'Milk Banana Smoothie')
 WHERE u.email = 'user@mealmate.local';
 
--- =====================================================
--- 10. MENU SAMPLE
--- =====================================================
+INSERT INTO recipe_tags (name)
+VALUES
+    ('QUICK'),
+    ('HEALTHY'),
+    ('HIGH_PROTEIN'),
+    ('LOW_CALORIE'),
+    ('VEGETARIAN'),
+    ('SOUP'),
+    ('MAIN_DISH'),
+    ('SIDE_DISH'),
+    ('BREAKFAST_FRIENDLY')
+ON CONFLICT (name) DO NOTHING;
+
+INSERT INTO recipe_tag_items (recipe_id, tag_id)
+SELECT r.id, t.id
+FROM (
+    VALUES
+        ('Beef Stir Fry Spinach', 'HIGH_PROTEIN'),
+        ('Beef Stir Fry Spinach', 'MAIN_DISH'),
+        ('Tomato Egg Salad', 'LOW_CALORIE'),
+        ('Tomato Egg Salad', 'BREAKFAST_FRIENDLY'),
+        ('Salmon Rice Bowl', 'HIGH_PROTEIN'),
+        ('Chicken Garlic Noodle', 'MAIN_DISH'),
+        ('Potato Beef Soup', 'SOUP'),
+        ('Milk Banana Smoothie', 'QUICK'),
+        ('Spinach Omelette', 'BREAKFAST_FRIENDLY')
+) AS v(recipe_name, tag_name)
+JOIN recipes r ON r.name = v.recipe_name
+JOIN recipe_tags t ON t.name = v.tag_name
+ON CONFLICT ON CONSTRAINT uq_recipe_tag_items_recipe_tag DO NOTHING;
+
+INSERT INTO user_recipe_history (user_id, recipe_id, action)
+SELECT u.id, r.id, v.action
+FROM (
+    VALUES
+        ('user@mealmate.local', 'Beef Stir Fry Spinach', 'LIKED'),
+        ('user@mealmate.local', 'Shrimp Fried Rice', 'SKIPPED'),
+        ('user@mealmate.local', 'Milk Banana Smoothie', 'COOKED'),
+        ('member@mealmate.local', 'Tomato Egg Salad', 'VIEWED')
+) AS v(user_email, recipe_name, action)
+JOIN users u ON u.email = v.user_email
+JOIN recipes r ON r.name = v.recipe_name;
+
+INSERT INTO unit_conversions (from_unit, to_unit, multiplier, is_bidirectional)
+VALUES
+    ('kg', 'g', 1000.000000, TRUE),
+    ('l', 'ml', 1000.000000, TRUE),
+    ('piece', 'piece', 1.000000, TRUE),
+    ('g', 'g', 1.000000, TRUE),
+    ('ml', 'ml', 1.000000, TRUE)
+ON CONFLICT (from_unit, to_unit) DO NOTHING;
 
 INSERT INTO menus (family_id, start_date, end_date)
-SELECT id, CURRENT_DATE, CURRENT_DATE + 6
-FROM families
-WHERE name = 'Gia đình Minh Quang';
+SELECT fam.id, CURRENT_DATE - 7, CURRENT_DATE + 7
+FROM families fam
+WHERE fam.name = 'Family Quang';
 
 INSERT INTO meals (menu_id, meal_date, meal_type)
-SELECT m.id, CURRENT_DATE, v.meal_type
+SELECT m.id, v.meal_date, v.meal_type
 FROM menus m
 CROSS JOIN (
     VALUES
-        ('BREAKFAST'),
-        ('LUNCH'),
-        ('DINNER')
-) AS v(meal_type)
-WHERE m.start_date = CURRENT_DATE;
+        (CURRENT_DATE - 1, 'DINNER'),
+        (CURRENT_DATE - 2, 'LUNCH'),
+        (CURRENT_DATE - 5, 'BREAKFAST'),
+        (CURRENT_DATE, 'BREAKFAST'),
+        (CURRENT_DATE, 'LUNCH'),
+        (CURRENT_DATE, 'DINNER')
+) AS v(meal_date, meal_type)
+WHERE m.start_date = CURRENT_DATE - 7;
 
 INSERT INTO meal_items (meal_id, recipe_id, status)
-SELECT meal.id, recipe.id, 'CONFIRMED'
+SELECT me.id, r.id, 'CONFIRMED'
 FROM (
     VALUES
-        ('BREAKFAST', 'Salad cà chua trứng'),
-        ('LUNCH', 'Cơm cá hồi áp chảo'),
-        ('DINNER', 'Bò xào cà rốt')
-) AS v(meal_type, recipe_name)
-JOIN meals meal ON meal.meal_type = v.meal_type AND meal.meal_date = CURRENT_DATE
-JOIN recipes recipe ON recipe.name = v.recipe_name;
+        (CURRENT_DATE - 1, 'DINNER', 'Beef Stir Fry Spinach'),
+        (CURRENT_DATE - 2, 'LUNCH', 'Salmon Rice Bowl'),
+        (CURRENT_DATE - 5, 'BREAKFAST', 'Milk Banana Smoothie'),
+        (CURRENT_DATE, 'BREAKFAST', 'Tomato Egg Salad'),
+        (CURRENT_DATE, 'LUNCH', 'Shrimp Fried Rice')
+) AS v(meal_date, meal_type, recipe_name)
+JOIN meals me ON me.meal_date = v.meal_date AND me.meal_type = v.meal_type
+JOIN recipes r ON r.name = v.recipe_name;
 
-COMMIT;
+INSERT INTO shopping_lists (created_by, family_id, created_date, planned_date, note)
+SELECT u.id, fam.id, CURRENT_DATE, CURRENT_DATE + 1, 'Weekly refill list'
+FROM users u
+JOIN families fam ON fam.name = 'Family Quang'
+WHERE u.email = 'user@mealmate.local';
+
+INSERT INTO shopping_list_items (shopping_list_id, food_id, order_number, quantity, unit, note, assigned_to, is_purchased)
+SELECT sl.id, f.id, v.order_number, v.qty, v.unit, v.note, u.id, v.is_purchased
+FROM (
+    VALUES
+        ('Garlic', 1, 100, 'g', 'top-up', FALSE),
+        ('Shrimp', 2, 300, 'g', 'for weekend', FALSE),
+        ('Apple', 3, 5, 'piece', 'kids snack', TRUE)
+) AS v(food_name, order_number, qty, unit, note, is_purchased)
+JOIN shopping_lists sl ON sl.note = 'Weekly refill list'
+JOIN foods f ON f.name = v.food_name
+JOIN users u ON u.email = 'user@mealmate.local';
 
 -- =====================================================
--- 11. QUICK CHECK
+-- 11. REMOTE DEMO ADDITIONS
 -- =====================================================
 
-SELECT id, name
-FROM roles
-ORDER BY id;
-
-SELECT id, email, full_name, family_id, role_id, password_hash
-FROM users
-ORDER BY id;
-
-SELECT id, name, icon_key, color_code
-FROM categories
-ORDER BY id;
-
-SELECT f.id, f.name, c.name AS category_name, f.unit, c.icon_key AS category_icon_key
-FROM foods f
-JOIN categories c ON c.id = f.category_id
-ORDER BY c.id, f.id;
-
-SELECT fi.id, fam.name AS family_name, f.name AS food_name, fi.quantity, f.unit, fi.storage_location, fi.expiry_date
-FROM fridge_items fi
-JOIN families fam ON fam.id = fi.family_id
-JOIN foods f ON f.id = fi.food_id
-ORDER BY fi.id;
-
-DO $$
-BEGIN
-    RAISE NOTICE 'Seed data reset and completed successfully. Login: user@mealmate.local / password';
-END $$;
-
-
---Cập nhật thêm role
 INSERT INTO roles (name, description, is_active)
 VALUES
-    ('BOSS', 'Người nội trợ', TRUE);
---Tạo 1 cột ước lượng mấy người ăn
+    ('BOSS', 'Người nội trợ', TRUE)
+ON CONFLICT (name) DO NOTHING;
+
+
+-- =====================================================
+-- 12. FAMILY QUANG MINH - RECOMMENDATION TEST DATA
+-- Adds richer favorites and behavior history for rule-based scoring demos.
+-- =====================================================
+
+INSERT INTO users (family_id, role_id, email, password_hash, full_name, email_verified)
+SELECT fam.id, r.id, v.email, '$2a$10$yTDXwEpBVd0ri5chsz3FyeiUW2amh5jAlfAJR6DmFjJvD32pNFWK2', v.full_name, TRUE
+FROM (
+    VALUES
+        ('child@mealmate.local', 'Nguyen Bao An'),
+        ('elder@mealmate.local', 'Pham Minh Duc')
+) AS v(email, full_name)
+JOIN roles r ON r.name = 'CUSTOMER'
+JOIN families fam ON fam.name = 'Family Quang'
+ON CONFLICT (email) DO NOTHING;
+
+UPDATE users
+SET family_id = (SELECT id FROM families WHERE name = 'Family Quang')
+WHERE email IN (
+    'user@mealmate.local',
+    'member@mealmate.local',
+    'child@mealmate.local',
+    'elder@mealmate.local'
+);
+
+INSERT INTO user_favorite_recipes (user_id, recipe_id)
+SELECT u.id, r.id
+FROM (
+    VALUES
+        ('user@mealmate.local', 'Beef Stir Fry Spinach'),
+        ('user@mealmate.local', 'Milk Banana Smoothie'),
+        ('member@mealmate.local', 'Salmon Rice Bowl'),
+        ('member@mealmate.local', 'Tomato Egg Salad'),
+        ('child@mealmate.local', 'Milk Banana Smoothie'),
+        ('child@mealmate.local', 'Chicken Garlic Noodle'),
+        ('elder@mealmate.local', 'Potato Beef Soup'),
+        ('elder@mealmate.local', 'Salmon Rice Bowl')
+) AS v(user_email, recipe_name)
+JOIN users u ON u.email = v.user_email
+JOIN recipes r ON r.name = v.recipe_name
+ON CONFLICT DO NOTHING;
+
+INSERT INTO user_recipe_history (user_id, recipe_id, action, created_at)
+SELECT u.id, r.id, v.action, CURRENT_TIMESTAMP - (v.days_ago * INTERVAL '1 day')
+FROM (
+    VALUES
+        ('user@mealmate.local', 'Beef Stir Fry Spinach', 'COOKED', 1),
+        ('user@mealmate.local', 'Salmon Rice Bowl', 'VIEWED', 2),
+        ('user@mealmate.local', 'Shrimp Fried Rice', 'SKIPPED', 3),
+        ('member@mealmate.local', 'Tomato Egg Salad', 'DISLIKED', 1),
+        ('member@mealmate.local', 'Salmon Rice Bowl', 'LIKED', 2),
+        ('child@mealmate.local', 'Milk Banana Smoothie', 'LIKED', 1),
+        ('child@mealmate.local', 'Spinach Omelette', 'SKIPPED', 4),
+        ('elder@mealmate.local', 'Potato Beef Soup', 'LIKED', 1),
+        ('elder@mealmate.local', 'Shrimp Fried Rice', 'DISLIKED', 5)
+) AS v(user_email, recipe_name, action, days_ago)
+JOIN users u ON u.email = v.user_email
+JOIN recipes r ON r.name = v.recipe_name;
+
+-- Extra stored fridge items to create clear scoring scenarios:
+-- - Chicken becomes fully matchable for Chicken Garlic Noodle.
+-- - Carrot has no current recipe usage, proving unused fridge foods do not affect candidate score.
+-- - Expired/USED rows must be ignored by recommendation stock aggregation.
+INSERT INTO fridge_items (
+    family_id,
+    food_id,
+    quantity,
+    storage_location,
+    added_date,
+    expiry_date,
+    status,
+    note
+)
+SELECT fam.id, f.id, v.qty, v.storage_location, CURRENT_DATE - v.added_days, CURRENT_DATE + v.expiry_days, v.status, v.note
+FROM (
+    VALUES
+        ('Chicken Breast', 350, 'FREEZER', 1, 12, 'STORED', 'recommendation test: enough for chicken noodle'),
+        ('Garlic', 40, 'COOL', 1, 4, 'STORED', 'recommendation test: top-up garlic, near expiry'),
+        ('Carrot', 500, 'COOL', 1, 3, 'STORED', 'recommendation test: unused ingredient'),
+        ('Shrimp', 300, 'FREEZER', 1, 2, 'EXPIRED', 'recommendation test: expired shrimp ignored'),
+        ('Milk', 200, 'COOL', 4, -1, 'STORED', 'recommendation test: past expiry ignored even if status stored'),
+        ('Banana', 2, 'COOL', 2, 1, 'USED', 'recommendation test: used banana ignored')
+) AS v(food_name, qty, storage_location, added_days, expiry_days, status, note)
+JOIN foods f ON f.name = v.food_name
+JOIN families fam ON fam.name = 'Family Quang';
+
+-- Add more recent meals to exercise recent penalty tiers:
+-- yesterday = -20, within 3 days = -15, within 7 days = -10.
+INSERT INTO meals (menu_id, meal_date, meal_type)
+SELECT m.id, v.meal_date, v.meal_type
+FROM menus m
+CROSS JOIN (
+    VALUES
+        (CURRENT_DATE - 3, 'DINNER'),
+        (CURRENT_DATE - 6, 'DINNER')
+) AS v(meal_date, meal_type)
+WHERE m.family_id = (SELECT id FROM families WHERE name = 'Family Quang')
+  AND m.start_date <= v.meal_date
+  AND m.end_date >= v.meal_date
+  AND NOT EXISTS (
+      SELECT 1
+      FROM meals existing
+      WHERE existing.menu_id = m.id
+        AND existing.meal_date = v.meal_date
+        AND existing.meal_type = v.meal_type
+  );
+
+INSERT INTO meal_items (meal_id, recipe_id, status)
+SELECT me.id, r.id, 'CONFIRMED'
+FROM (
+    VALUES
+        (CURRENT_DATE - 3, 'DINNER', 'Chicken Garlic Noodle'),
+        (CURRENT_DATE - 6, 'DINNER', 'Potato Beef Soup')
+) AS v(meal_date, meal_type, recipe_name)
+JOIN meals me ON me.meal_date = v.meal_date AND me.meal_type = v.meal_type
+JOIN menus m ON m.id = me.menu_id AND m.family_id = (SELECT id FROM families WHERE name = 'Family Quang')
+JOIN recipes r ON r.name = v.recipe_name
+ON CONFLICT ON CONSTRAINT uq_meal_recipe DO NOTHING;
+
+INSERT INTO unit_conversions (from_unit, to_unit, multiplier, is_bidirectional)
+VALUES
+    ('kg', 'g', 1000.000000, TRUE),
+    ('l', 'ml', 1000.000000, TRUE),
+    ('piece', 'piece', 1.000000, TRUE),
+    ('g', 'g', 1.000000, TRUE),
+    ('ml', 'ml', 1.000000, TRUE)
+ON CONFLICT (from_unit, to_unit) DO NOTHING;
+
+COMMIT;
