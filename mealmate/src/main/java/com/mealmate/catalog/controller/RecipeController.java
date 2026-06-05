@@ -4,17 +4,15 @@ import com.mealmate.catalog.model.Recipe;
 import com.mealmate.catalog.model.dto.RecipeCatalogResponse;
 import com.mealmate.catalog.model.dto.RecipeCreateRequest;
 import com.mealmate.catalog.model.dto.RecipeDetailResponse;
+import com.mealmate.catalog.model.dto.RecipeImageUpdateRequest;
 import com.mealmate.catalog.service.RecipeService;
 import com.mealmate.common.dto.ApiResponse;
-import com.mealmate.common.storage.ImageUploadResponse;
 import jakarta.validation.Valid;
 import com.mealmate.user.model.User;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 @RestController
@@ -60,21 +58,21 @@ public class RecipeController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Removed from favorites", null));
     }
 
-    @PostMapping(value = "/{recipeId}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ApiResponse<ImageUploadResponse>> uploadImage(
+    @PatchMapping("/{recipeId}/image")
+    public ResponseEntity<ApiResponse<RecipeDetailResponse>> updateImage(
             @PathVariable Long recipeId,
-            @RequestParam("file") MultipartFile file
-    ) {
-        return ResponseEntity.ok(new ApiResponse<>(true, "Uploaded", service.uploadImage(recipeId, file)));
-    }
-
-    @PostMapping(value = "/full", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ApiResponse<RecipeDetailResponse>> createFull(
-            @Valid @RequestPart("recipe") RecipeCreateRequest request,
-            @RequestPart(value = "image", required = false) MultipartFile image,
+            @Valid @RequestBody RecipeImageUpdateRequest request,
             Authentication authentication
     ) {
-        return ResponseEntity.ok(new ApiResponse<>(true, "Created", service.createRecipe(request, image, resolveUserId(authentication))));
+        return ResponseEntity.ok(new ApiResponse<>(true, "Updated", service.updateImageUrl(recipeId, request, resolveUserId(authentication))));
+    }
+
+    @PostMapping("/full")
+    public ResponseEntity<ApiResponse<RecipeDetailResponse>> createFull(
+            @Valid @RequestBody RecipeCreateRequest request,
+            Authentication authentication
+    ) {
+        return ResponseEntity.ok(new ApiResponse<>(true, "Created", service.createRecipe(request, resolveUserId(authentication))));
     }
 
     @PostMapping

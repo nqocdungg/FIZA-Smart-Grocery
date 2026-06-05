@@ -1,5 +1,6 @@
 import api from '@/services/api';
 import type { ApiResponse } from '@/features/auth/types/auth';
+import { uploadFile } from '@/features/uploads/uploadApi';
 
 export interface RecipeCatalogItem {
   id: number;
@@ -44,10 +45,13 @@ export interface CreateRecipePayload {
   instructions?: string;
   referenceLink?: string;
   author?: string;
+  imageUrl?: string;
   preferredMealTime?: string;
   cookingTimeMinutes?: number;
   ingredients: RecipeIngredientInput[];
 }
+
+const RECIPE_UPLOAD_FOLDER = 'recipes';
 
 export interface RecipeImageUploadResponse {
   imageUrl: string;
@@ -82,42 +86,25 @@ export const uploadRecipeImage = async (
   recipeId: number,
   file: File
 ): Promise<RecipeImageUploadResponse> => {
-  const formData = new FormData();
-  formData.append('file', file);
+  const upload = await uploadFile(file, RECIPE_UPLOAD_FOLDER);
+  await api.patch<ApiResponse<RecipeDetail>>(`/api/v1/catalogs/recipes/${recipeId}/image`, {
+    imageUrl: upload.url,
+  });
 
-  const response = await api.post<ApiResponse<RecipeImageUploadResponse>>(
-    `/api/v1/catalogs/recipes/${recipeId}/image`,
-    formData,
-    {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    }
-  );
-
-  return response.data.data;
+  return {
+    imageUrl: upload.url,
+    publicId: upload.publicId,
+  };
 };
 
 export const createRecipe = async (
   payload: CreateRecipePayload,
   image?: File | null
 ): Promise<RecipeDetail> => {
-  const formData = new FormData();
-  formData.append(
-    'recipe',
-    new Blob([JSON.stringify(payload)], {
-      type: 'application/json',
-    })
-  );
-
-  if (image) {
-    formData.append('image', image);
-  }
-
-  const response = await api.post<ApiResponse<RecipeDetail>>('/api/v1/catalogs/recipes/full', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
+  const imageUrl = image ? (await uploadFile(image, RECIPE_UPLOAD_FOLDER)).url : payload.imageUrl;
+  const response = await api.post<ApiResponse<RecipeDetail>>('/api/v1/catalogs/recipes/full', {
+    ...payload,
+    imageUrl,
   });
 
   return response.data.data;

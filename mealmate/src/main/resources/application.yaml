@@ -38,9 +38,9 @@ jwt:
 
 app:
   cloudinary:
-    cloud-name: ${CLOUDINARY_CLOUD_NAME:}
-    api-key: ${CLOUDINARY_API_KEY:}
-    api-secret: ${CLOUDINARY_API_SECRET:}
+    cloud-name: ${CLOUDINARY_CLOUD_NAME:dcpfuezuz}
+    api-key: ${CLOUDINARY_API_KEY:283424587871336}
+    api-secret: ${CLOUDINARY_API_SECRET:_3eASMMa55IXWjyWbdfaCk8hrqg}
     recipe-folder: ${CLOUDINARY_RECIPE_FOLDER:mealmate/recipes}
     upload-folder: ${CLOUDINARY_UPLOAD_FOLDER:mealmate/uploads}
   base-url: ${APP_BASE_URL:http://localhost:8080}

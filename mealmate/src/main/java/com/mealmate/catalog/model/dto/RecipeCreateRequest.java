@@ -22,6 +22,8 @@ public class RecipeCreateRequest {
 
     private String author;
 
+    private String imageUrl;
+
     private String preferredMealTime;
 
     @Positive

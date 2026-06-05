@@ -20,14 +20,6 @@ public class CloudinaryStorageService {
     private final Cloudinary cloudinary;
     private final CloudinaryProperties properties;
 
-    public ImageUploadResponse uploadRecipeImage(MultipartFile file) {
-        FileUploadResponse uploadResponse = uploadFile(file, properties.getRecipeFolder());
-        return ImageUploadResponse.builder()
-                .imageUrl(uploadResponse.getUrl())
-                .publicId(uploadResponse.getPublicId())
-                .build();
-    }
-
     public FileUploadResponse uploadFile(MultipartFile file, String folder) {
         validateSupportedFile(file);
         validateConfigured();

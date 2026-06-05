@@ -559,13 +559,20 @@
   color: #006b55;
   font-size: 12px;
   font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  white-space: nowrap;
 }
 
 .menu-modal-empty {
   min-height: 160px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 12px;
   text-align: center;
   color: #65736d;
   padding: 20px;
@@ -579,16 +586,77 @@
   width: min(860px, calc(100vw - 48px));
 }
 
+.menu-picker-modal {
+  width: min(760px, calc(100vw - 48px));
+}
+
+.menu-modal-backdrop.nested {
+  z-index: 1350;
+  background: rgba(15, 23, 42, 0.32);
+}
+
+.menu-preview-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 0;
+}
+
+.menu-tiny-icon-btn,
+.menu-tiny-add-btn {
+  border: none;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  font-weight: 800;
+  transition: transform 160ms ease, background 160ms ease;
+}
+
+.menu-tiny-icon-btn {
+  width: 32px;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #006b55;
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.06);
+}
+
+.menu-tiny-icon-btn.danger {
+  color: #be123c;
+  background: #fff1f2;
+}
+
+.menu-tiny-add-btn {
+  border-radius: 999px;
+  padding: 0 12px;
+  background: rgba(109, 212, 180, 0.22);
+  color: #006b55;
+}
+
+.menu-tiny-icon-btn:hover,
+.menu-tiny-add-btn:hover {
+  transform: translateY(-1px);
+}
+
 .edit-controls {
   grid-template-columns: repeat(3, minmax(160px, 1fr));
 }
 
-.edit-recipe-options {
+.edit-recipe-options,
+.draft-picker-grid {
   display: grid;
   gap: 10px;
 }
 
-.edit-recipe-option {
+.draft-picker-grid {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+.edit-recipe-option,
+.draft-picker-option {
   border: 1px solid #dce7e1;
   border-radius: 18px;
   background: #ffffff;
@@ -601,11 +669,13 @@
   cursor: pointer;
 }
 
-.edit-recipe-option strong {
+.edit-recipe-option strong,
+.draft-picker-option strong {
   font-size: 14px;
 }
 
-.edit-recipe-option span {
+.edit-recipe-option span,
+.draft-picker-option span {
   color: #65736d;
   font-size: 12px;
 }

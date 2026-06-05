@@ -31,6 +31,7 @@ import {
   type MenuPlanRecipe,
   type RecipeRecommendation,
 } from "@/features/recommendations/recommendationApi";
+import { fetchRecipeCatalog, type RecipeCatalogItem } from "@/features/recipes/recipeApi";
 
 type ToastState = {
   message: string;
@@ -40,6 +41,8 @@ type ToastState = {
 type DraftMeal = {
   mealType: MealType;
   recommendation: RecipeRecommendation | null;
+  existingMealItemId?: number;
+  originalRecipeId?: number;
 };
 
 type DraftDay = {
@@ -55,6 +58,11 @@ type EditMealForm = {
   date: string;
   status: "SUGGESTED" | "CONFIRMED";
   recipeName: string;
+};
+
+type DraftPickerTarget = {
+  date: string;
+  mealType: MealType;
 };
 
 const mealTypes: MealType[] = ["BREAKFAST", "LUNCH", "DINNER"];
@@ -142,6 +150,83 @@ const getRecipeInitial = (name: string) => {
     .toUpperCase();
 };
 
+const createEmptyDraftDays = (startDate: string, mode: MenuGenerateMode): DraftDay[] => {
+  const totalDays = mode === "WEEK" ? 7 : 1;
+  const start = parseDateOnly(startDate);
+
+  return Array.from({ length: totalDays }, (_, dayIndex) => ({
+    date: toDateOnly(addDays(start, dayIndex)),
+    meals: mealTypes.map((mealType) => ({
+      mealType,
+      recommendation: null,
+    })),
+  }));
+};
+
+const menuPlanRecipeToRecommendation = (recipe: MenuPlanRecipe): RecipeRecommendation => ({
+  recipeId: recipe.recipeId,
+  recipeName: recipe.recipeName,
+  imageUrl: recipe.imageUrl,
+  score: 0,
+  matchPercent: 0,
+  availableIngredients: [],
+  missingIngredients: [],
+  reasons: ["Món đã có trong thực đơn"],
+});
+
+const createDraftDaysFromMenuPlan = (startDate: string, mode: MenuGenerateMode, savedMenuDays: MenuPlanDay[]): DraftDay[] => {
+  return createEmptyDraftDays(startDate, mode).map((draftDay) => {
+    const savedDay = savedMenuDays.find((day) => day.date === draftDay.date);
+
+    return {
+      ...draftDay,
+      meals: draftDay.meals.map((draftMeal) => {
+        const savedRecipe = getMealFromDay(savedDay, draftMeal.mealType).recipes[0];
+        if (!savedRecipe) return draftMeal;
+
+        return {
+          ...draftMeal,
+          recommendation: menuPlanRecipeToRecommendation(savedRecipe),
+          existingMealItemId: savedRecipe.mealItemId,
+          originalRecipeId: savedRecipe.recipeId,
+        };
+      }),
+    };
+  });
+};
+
+const mergeGeneratedDraftWithSavedDraft = (generatedDays: DraftDay[], savedDraftDays: DraftDay[]): DraftDay[] => {
+  return generatedDays.map((generatedDay) => {
+    const savedDay = savedDraftDays.find((day) => day.date === generatedDay.date);
+
+    return {
+      ...generatedDay,
+      meals: generatedDay.meals.map((generatedMeal) => {
+        const savedMeal = savedDay?.meals.find((meal) => meal.mealType === generatedMeal.mealType);
+        if (!savedMeal) return generatedMeal;
+
+        return {
+          ...generatedMeal,
+          recommendation: generatedMeal.recommendation || savedMeal.recommendation,
+          existingMealItemId: savedMeal.existingMealItemId,
+          originalRecipeId: savedMeal.originalRecipeId,
+        };
+      }),
+    };
+  });
+};
+
+const catalogRecipeToRecommendation = (recipe: RecipeCatalogItem): RecipeRecommendation => ({
+  recipeId: recipe.id,
+  recipeName: recipe.name,
+  imageUrl: recipe.imageUrl || undefined,
+  score: 0,
+  matchPercent: 0,
+  availableIngredients: [],
+  missingIngredients: [],
+  reasons: ["Người dùng tự chọn từ danh sách món ăn"],
+});
+
 const getErrorMessage = (error: unknown, fallback: string) => {
   if (error instanceof Error && error.message) return error.message;
   return fallback;
@@ -160,12 +245,19 @@ const MenuSuggestion: React.FC = () => {
   const [draftMode, setDraftMode] = useState<MenuGenerateMode>("WEEK");
   const [draftStartDate, setDraftStartDate] = useState(() => toDateOnly(new Date()));
   const [draftDays, setDraftDays] = useState<DraftDay[]>([]);
+  const [isLoadingDraftPlan, setIsLoadingDraftPlan] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editForm, setEditForm] = useState<EditMealForm | null>(null);
   const [editOptions, setEditOptions] = useState<RecipeRecommendation[]>([]);
   const [isLoadingEditOptions, setIsLoadingEditOptions] = useState(false);
   const [isUpdatingMealItem, setIsUpdatingMealItem] = useState(false);
+  const [recipeCatalog, setRecipeCatalog] = useState<RecipeCatalogItem[]>([]);
+  const [isLoadingRecipeCatalog, setIsLoadingRecipeCatalog] = useState(false);
+  const [draftPickerTarget, setDraftPickerTarget] = useState<DraftPickerTarget | null>(null);
+  const [draftPickerOptions, setDraftPickerOptions] = useState<RecipeRecommendation[]>([]);
+  const [isLoadingDraftPickerOptions, setIsLoadingDraftPickerOptions] = useState(false);
+  const [draftRecipeSearch, setDraftRecipeSearch] = useState("");
   const [toast, setToast] = useState<ToastState | null>(null);
 
   const weekDays = useMemo(() => {
@@ -191,6 +283,22 @@ const MenuSuggestion: React.FC = () => {
     setToast({ message, variant });
     window.setTimeout(() => setToast(null), 3200);
   }, []);
+
+  const loadRecipeCatalog = useCallback(async () => {
+    if (recipeCatalog.length > 0) return recipeCatalog;
+
+    setIsLoadingRecipeCatalog(true);
+    try {
+      const recipes = await fetchRecipeCatalog();
+      setRecipeCatalog(recipes);
+      return recipes;
+    } catch (error) {
+      showToast(getErrorMessage(error, "Không tải được danh sách món ăn."), "error");
+      return [];
+    } finally {
+      setIsLoadingRecipeCatalog(false);
+    }
+  }, [recipeCatalog, showToast]);
 
   const loadFamily = useCallback(async () => {
     const currentFamily = await recommendationApi.getCurrentFamily();
@@ -241,11 +349,38 @@ const MenuSuggestion: React.FC = () => {
     setSelectedDate(nextStart);
   };
 
+  const loadDraftPlan = useCallback(
+    async (startDate: string, mode: MenuGenerateMode) => {
+      setDraftDays(createDraftDaysFromMenuPlan(startDate, mode, menuDays));
+
+      if (!family?.id || !userId) return;
+
+      setIsLoadingDraftPlan(true);
+      try {
+        const endDate = toDateOnly(addDays(parseDateOnly(startDate), mode === "WEEK" ? 6 : 0));
+        const response = await recommendationApi.getMenuPlan({
+          familyId: family.id,
+          userId,
+          startDate,
+          endDate,
+        });
+        setDraftDays(createDraftDaysFromMenuPlan(startDate, mode, response.days));
+      } catch (error) {
+        showToast(getErrorMessage(error, "Không tải được thực đơn đã lưu cho khoảng ngày đã chọn."), "error");
+      } finally {
+        setIsLoadingDraftPlan(false);
+      }
+    },
+    [family?.id, menuDays, showToast, userId]
+  );
+
   const openCreateModal = (mode: MenuGenerateMode = "WEEK", startDate = selectedDate) => {
     setDraftMode(mode);
     setDraftStartDate(startDate);
-    setDraftDays([]);
+    setDraftPickerTarget(null);
+    setDraftRecipeSearch("");
     setIsModalOpen(true);
+    void loadDraftPlan(startDate, mode);
   };
 
   const generateDraft = async () => {
@@ -264,7 +399,12 @@ const MenuSuggestion: React.FC = () => {
         candidateLimit: 12,
       });
 
-      setDraftDays(response.days);
+      setDraftDays((currentDays) =>
+        mergeGeneratedDraftWithSavedDraft(
+          response.days,
+          currentDays.length > 0 ? currentDays : createDraftDaysFromMenuPlan(draftStartDate, draftMode, menuDays)
+        )
+      );
       if (response.days.every((day) => day.meals.every((meal) => !meal.recommendation))) {
         showToast("Không tìm thấy món phù hợp với nguyên liệu hiện có.", "error");
       }
@@ -275,19 +415,78 @@ const MenuSuggestion: React.FC = () => {
     }
   };
 
+  const startBlankDraft = () => {
+    setDraftDays(createDraftDaysFromMenuPlan(draftStartDate, draftMode, menuDays));
+    setDraftPickerTarget(null);
+  };
+
+  const updateDraftMeal = (date: string, mealType: MealType, recommendation: RecipeRecommendation | null) => {
+    setDraftDays((currentDays) => {
+      const baseDays = currentDays.length > 0 ? currentDays : createDraftDaysFromMenuPlan(draftStartDate, draftMode, menuDays);
+
+      return baseDays.map((day) => {
+        if (day.date !== date) return day;
+        return {
+          ...day,
+          meals: day.meals.map((meal) => (meal.mealType === mealType ? { ...meal, recommendation } : meal)),
+        };
+      });
+    });
+  };
+
+  const openDraftRecipePicker = async (target: DraftPickerTarget) => {
+    setDraftPickerTarget(target);
+    setDraftRecipeSearch("");
+    void loadRecipeCatalog();
+
+    if (!family?.id || !userId) {
+      setDraftPickerOptions([]);
+      return;
+    }
+
+    setIsLoadingDraftPickerOptions(true);
+    try {
+      const response = await recommendationApi.recommendRecipes({
+        familyId: family.id,
+        userId,
+        mealType: target.mealType,
+        date: target.date,
+        limit: 12,
+      });
+      setDraftPickerOptions(response.recommendations);
+    } catch {
+      setDraftPickerOptions([]);
+    } finally {
+      setIsLoadingDraftPickerOptions(false);
+    }
+  };
+
+  const selectDraftRecipe = (recipe: RecipeRecommendation) => {
+    if (!draftPickerTarget) return;
+    updateDraftMeal(draftPickerTarget.date, draftPickerTarget.mealType, recipe);
+    setDraftPickerTarget(null);
+    setDraftRecipeSearch("");
+  };
+
   const saveDraft = async () => {
     if (!family?.id || !userId) {
       showToast("Cần có gia đình và tài khoản đăng nhập để lưu thực đơn.", "error");
       return;
     }
 
-    const selectedItems = draftDays.flatMap((day) =>
+    const changedMeals = draftDays.flatMap((day) =>
       day.meals
-        .filter((meal) => meal.recommendation)
-        .map((meal) => ({ date: day.date, mealType: meal.mealType, recipeId: meal.recommendation?.recipeId }))
+        .map((meal) => ({ date: day.date, meal }))
+        .filter(({ meal }) => {
+          if (meal.existingMealItemId) {
+            return !meal.recommendation || meal.recommendation.recipeId !== meal.originalRecipeId;
+          }
+          return Boolean(meal.recommendation);
+        })
     );
 
-    if (selectedItems.length === 0) {
+    const hasAnyRecipe = draftDays.some((day) => day.meals.some((meal) => meal.recommendation));
+    if (!hasAnyRecipe) {
       showToast("Chưa có món nào trong bản xem trước để lưu.", "error");
       return;
     }
@@ -295,14 +494,32 @@ const MenuSuggestion: React.FC = () => {
     setIsSaving(true);
     try {
       await Promise.all(
-        selectedItems.map((item) =>
-          recommendationApi.addRecommendationToMeal(item.recipeId as number, {
+        changedMeals.map(({ date, meal }) => {
+          if (meal.existingMealItemId && !meal.recommendation) {
+            return recommendationApi.deleteMealItem(meal.existingMealItemId, {
+              familyId: family.id,
+              userId,
+            });
+          }
+
+          if (meal.existingMealItemId && meal.recommendation) {
+            return recommendationApi.updateMealItem(meal.existingMealItemId, {
+              familyId: family.id,
+              userId,
+              recipeId: meal.recommendation.recipeId,
+              mealType: meal.mealType,
+              date,
+              status: "CONFIRMED",
+            });
+          }
+
+          return recommendationApi.addRecommendationToMeal(meal.recommendation?.recipeId as number, {
             familyId: family.id,
-            mealType: item.mealType,
-            date: item.date,
+            mealType: meal.mealType,
+            date,
             status: "CONFIRMED",
-          })
-        )
+          });
+        })
       );
 
       const nextWeekStart = toDateOnly(getWeekStart(parseDateOnly(draftStartDate)));
@@ -559,7 +776,7 @@ const MenuSuggestion: React.FC = () => {
             <header className="menu-modal-header">
               <div>
                 <h2>Tạo thực đơn mới</h2>
-                <p>Chọn ngày bắt đầu, kiểu tạo và xem trước món được recommendation đề xuất.</p>
+                <p>Chọn ngày bắt đầu, tạo khung gợi ý và tùy chỉnh từng món trước khi lưu.</p>
               </div>
               <button className="menu-icon-btn" type="button" onClick={() => setIsModalOpen(false)} aria-label="Đóng">
                 <X size={18} />
@@ -577,7 +794,8 @@ const MenuSuggestion: React.FC = () => {
                     onChange={(event) => {
                       const value = event.target.value;
                       setDraftStartDate(value);
-                      setDraftDays([]);
+                      setDraftPickerTarget(null);
+                      void loadDraftPlan(value, draftMode);
                     }}
                   />
                 </div>
@@ -590,7 +808,8 @@ const MenuSuggestion: React.FC = () => {
                       type="button"
                       onClick={() => {
                         setDraftMode("DAY");
-                        setDraftDays([]);
+                        setDraftPickerTarget(null);
+                        void loadDraftPlan(draftStartDate, "DAY");
                       }}
                     >
                       Theo ngày
@@ -600,7 +819,8 @@ const MenuSuggestion: React.FC = () => {
                       type="button"
                       onClick={() => {
                         setDraftMode("WEEK");
-                        setDraftDays([]);
+                        setDraftPickerTarget(null);
+                        void loadDraftPlan(draftStartDate, "WEEK");
                       }}
                     >
                       Theo tuần
@@ -622,9 +842,18 @@ const MenuSuggestion: React.FC = () => {
                   </span>
                 </header>
 
-                {draftDays.length === 0 ? (
+                {isLoadingDraftPlan ? (
                   <div className="menu-modal-empty">
-                    <span>Nhấn “Tạo thực đơn tự động” để gọi backend recommendation và sinh bản xem trước.</span>
+                    <Loader2 className="menu-spin" size={22} />
+                    <span>Đang đồng bộ thực đơn đã lưu cho khoảng ngày này...</span>
+                  </div>
+                ) : draftDays.length === 0 ? (
+                  <div className="menu-modal-empty">
+                    <span>Nhấn “Tạo thực đơn tự động” để lấy gợi ý hoặc tạo khung trống để tự chọn món.</span>
+                    <button className="menu-secondary-btn" type="button" onClick={startBlankDraft}>
+                      <Plus size={17} />
+                      Tự chọn món ăn
+                    </button>
                   </div>
                 ) : (
                   <div className="menu-preview-list">
@@ -652,17 +881,58 @@ const MenuSuggestion: React.FC = () => {
                                   {meal.recommendation ? (
                                     <>
                                       <strong>{meal.recommendation.recipeName}</strong>
-                                      <span>
-                                        Khớp {meal.recommendation.matchPercent}% nguyên liệu · Thiếu{" "}
-                                        {meal.recommendation.missingIngredients.length} nguyên liệu
-                                      </span>
+                                      {meal.recommendation.score > 0 ? (
+                                        <span>
+                                          Khớp {meal.recommendation.matchPercent}% nguyên liệu · Thiếu{" "}
+                                          {meal.recommendation.missingIngredients.length} nguyên liệu
+                                        </span>
+                                      ) : (
+                                        <span>{meal.existingMealItemId ? "Đã có trong thực đơn đã lưu." : "Món người dùng tự chọn."}</span>
+                                      )}
                                     </>
                                   ) : (
                                     <span>Không có món phù hợp với slot này.</span>
                                   )}
                                 </div>
 
-                                {meal.recommendation && <span className="menu-score-chip">Score {meal.recommendation.score}</span>}
+                                <div className="menu-preview-actions">
+                                  {meal.recommendation ? (
+                                    <>
+                                      <span className="menu-score-chip">
+                                        {meal.existingMealItemId
+                                          ? "Đã lưu"
+                                          : meal.recommendation.score > 0
+                                            ? `Score ${meal.recommendation.score}`
+                                            : "Tự chọn"}
+                                      </span>
+                                      <button
+                                        className="menu-tiny-icon-btn"
+                                        type="button"
+                                        onClick={() => openDraftRecipePicker({ date: day.date, mealType: meal.mealType })}
+                                        aria-label={`Thay món ${meta.label.toLowerCase()}`}
+                                      >
+                                        <Edit3 size={14} />
+                                      </button>
+                                      <button
+                                        className="menu-tiny-icon-btn danger"
+                                        type="button"
+                                        onClick={() => updateDraftMeal(day.date, meal.mealType, null)}
+                                        aria-label={`Xóa món ${meta.label.toLowerCase()}`}
+                                      >
+                                        <X size={14} />
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <button
+                                      className="menu-tiny-add-btn"
+                                      type="button"
+                                      onClick={() => openDraftRecipePicker({ date: day.date, mealType: meal.mealType })}
+                                    >
+                                      <Plus size={15} />
+                                      Chọn món
+                                    </button>
+                                  )}
+                                </div>
                               </div>
                             );
                           })}
@@ -683,6 +953,98 @@ const MenuSuggestion: React.FC = () => {
                 {isSaving ? "Đang lưu..." : "Lưu thực đơn"}
               </button>
             </footer>
+          </section>
+        </div>
+      )}
+
+      {draftPickerTarget && (
+        <div className="menu-modal-backdrop nested" onClick={() => setDraftPickerTarget(null)}>
+          <section className="menu-modal menu-picker-modal" onClick={(event) => event.stopPropagation()}>
+            <header className="menu-modal-header">
+              <div>
+                <h2>Chọn món ăn</h2>
+                <p>
+                  {mealMeta[draftPickerTarget.mealType].label} ngày {formatDisplayDate(draftPickerTarget.date)}
+                </p>
+              </div>
+              <button className="menu-icon-btn" type="button" onClick={() => setDraftPickerTarget(null)} aria-label="Đóng">
+                <X size={18} />
+              </button>
+            </header>
+
+            <div className="menu-modal-body">
+              <div className="menu-field">
+                <label htmlFor="draft-recipe-search">Tìm món</label>
+                <input
+                  id="draft-recipe-search"
+                  type="search"
+                  value={draftRecipeSearch}
+                  onChange={(event) => setDraftRecipeSearch(event.target.value)}
+                  placeholder="Nhập tên món ăn"
+                />
+              </div>
+
+              <section className="menu-preview-panel">
+                <header className="menu-preview-header">
+                  <h3>Món gợi ý phù hợp</h3>
+                  <span className="menu-score-chip">
+                    <Info size={13} /> Có thể bỏ qua và chọn món bất kỳ bên dưới
+                  </span>
+                </header>
+
+                {isLoadingDraftPickerOptions ? (
+                  <div className="menu-modal-empty compact">
+                    <Loader2 className="menu-spin" size={20} />
+                    <span>Đang tải món gợi ý...</span>
+                  </div>
+                ) : draftPickerOptions.length > 0 ? (
+                  <div className="draft-picker-grid">
+                    {draftPickerOptions.map((recipe) => (
+                      <button className="draft-picker-option" key={recipe.recipeId} type="button" onClick={() => selectDraftRecipe(recipe)}>
+                        <strong>{recipe.recipeName}</strong>
+                        <span>
+                          Score {recipe.score} · Khớp {recipe.matchPercent}% · Thiếu {recipe.missingIngredients.length} nguyên liệu
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="menu-modal-empty compact">
+                    <span>Không có món gợi ý cho slot này.</span>
+                  </div>
+                )}
+              </section>
+
+              <section className="menu-preview-panel">
+                <header className="menu-preview-header">
+                  <h3>Tất cả món ăn</h3>
+                  <span className="menu-score-chip">{recipeCatalog.length} món</span>
+                </header>
+
+                {isLoadingRecipeCatalog ? (
+                  <div className="menu-modal-empty compact">
+                    <Loader2 className="menu-spin" size={20} />
+                    <span>Đang tải danh sách món...</span>
+                  </div>
+                ) : (
+                  <div className="draft-picker-grid">
+                    {recipeCatalog
+                      .filter((recipe) => recipe.name.toLowerCase().includes(draftRecipeSearch.trim().toLowerCase()))
+                      .map((recipe) => (
+                        <button
+                          className="draft-picker-option"
+                          key={recipe.id}
+                          type="button"
+                          onClick={() => selectDraftRecipe(catalogRecipeToRecommendation(recipe))}
+                        >
+                          <strong>{recipe.name}</strong>
+                          <span>{recipe.preferredMealTime || recipe.displayStatus || "Món tự chọn"}</span>
+                        </button>
+                      ))}
+                  </div>
+                )}
+              </section>
+            </div>
           </section>
         </div>
       )}

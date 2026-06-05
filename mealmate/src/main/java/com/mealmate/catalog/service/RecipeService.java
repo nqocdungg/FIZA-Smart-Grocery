@@ -5,6 +5,7 @@ import com.mealmate.catalog.model.RecipeIngredient;
 import com.mealmate.catalog.model.dto.RecipeCreateRequest;
 import com.mealmate.catalog.model.dto.RecipeCatalogResponse;
 import com.mealmate.catalog.model.dto.RecipeDetailResponse;
+import com.mealmate.catalog.model.dto.RecipeImageUpdateRequest;
 import com.mealmate.catalog.model.dto.RecipeIngredientDetailResponse;
 import com.mealmate.catalog.model.dto.RecipeIngredientRequest;
 import com.mealmate.catalog.repository.FoodRepository;
@@ -12,13 +13,10 @@ import com.mealmate.catalog.repository.RecipeIngredientRepository;
 import com.mealmate.catalog.repository.RecipeIngredientDetailProjection;
 import com.mealmate.catalog.repository.RecipeIngredientSummaryProjection;
 import com.mealmate.catalog.repository.RecipeRepository;
-import com.mealmate.common.storage.CloudinaryStorageService;
-import com.mealmate.common.storage.ImageUploadResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
@@ -38,7 +36,6 @@ public class RecipeService {
     private final RecipeRepository repository;
     private final RecipeIngredientRepository recipeIngredientRepository;
     private final FoodRepository foodRepository;
-    private final CloudinaryStorageService cloudinaryStorageService;
 
     public List<Recipe> findAll() {
         return repository.findAll();
@@ -124,30 +121,26 @@ public class RecipeService {
     }
 
     @Transactional
-    public ImageUploadResponse uploadImage(Long recipeId, MultipartFile file) {
+    public RecipeDetailResponse updateImageUrl(Long recipeId, RecipeImageUpdateRequest request, Long userId) {
         Recipe recipe = repository.findById(recipeId)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Recipe not found: " + recipeId));
 
-        ImageUploadResponse uploadResponse = cloudinaryStorageService.uploadRecipeImage(file);
-        recipe.setImageUrl(uploadResponse.getImageUrl());
-        repository.save(recipe);
-        return uploadResponse;
+        recipe.setImageUrl(normalizeBlank(request.getImageUrl()));
+        Recipe savedRecipe = repository.save(recipe);
+        return toDetailResponse(savedRecipe, isFavorite(userId, recipeId));
     }
 
     @Transactional
-    public RecipeDetailResponse createRecipe(RecipeCreateRequest request, MultipartFile image, Long userId) {
+    public RecipeDetailResponse createRecipe(RecipeCreateRequest request, Long userId) {
         Recipe recipe = new Recipe();
         recipe.setName(normalizeBlank(request.getName()));
         recipe.setInstructions(normalizeBlank(request.getInstructions()));
         recipe.setReferenceLink(normalizeBlank(request.getReferenceLink()));
         recipe.setAuthor(normalizeBlank(request.getAuthor()));
+        recipe.setImageUrl(normalizeBlank(request.getImageUrl()));
         recipe.setPreferredMealTime(normalizeBlank(request.getPreferredMealTime()));
         recipe.setCookingTimeMinutes(request.getCookingTimeMinutes());
         recipe.setDisplayStatus(userId == null ? "SYSTEM" : "CUSTOM");
-
-        if (image != null && !image.isEmpty()) {
-            recipe.setImageUrl(cloudinaryStorageService.uploadRecipeImage(image).getImageUrl());
-        }
 
         Recipe savedRecipe = repository.save(recipe);
         saveIngredients(savedRecipe, request.getIngredients());
@@ -194,6 +187,10 @@ public class RecipeService {
                 .favorite(favorite)
                 .ingredients(ingredients)
                 .build();
+    }
+
+    private boolean isFavorite(Long userId, Long recipeId) {
+        return userId != null && repository.findFavoriteRecipeIds(userId).contains(recipeId);
     }
 
     private RecipeIngredientDetailResponse toIngredientResponse(RecipeIngredientDetailProjection projection) {
