@@ -1,43 +1,70 @@
 .login-container .login-form {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 2.5vh; 
 }
 
 .login-container .input-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0.8vh; 
 }
 
+/* Kế thừa trực tiếp style mượt từ file cấu hình AuthInput bên trên */
+.login-container .input-group input {
+  transition: background 0.2s ease;
+}
+
+.login-container .input-group input::placeholder {
+  color: #6B7280;
+}
+
+/* Viền đỏ hiển thị chuẩn xác khi có lỗi */
 .login-container .input-error {
   border: 1px solid #EF4444 !important;
 }
 
 .login-container .error-text {
   color: #EF4444;
-  font-size: 12px;
-  margin-left: 4px;
+  font-size: 0.75rem; 
+  margin-left: 0.25rem; 
+  margin-top: 0.4vh;
 }
 
 .login-container .forgot-pass {
-  font-size: 13px;
+  font-size: 0.8125rem; 
   color: #4D9A80;
   cursor: pointer;
   font-weight: 500;
 }
 
 .login-container .login-footer {
-  margin-top: 32px;
-  padding-top: 24px;
+  margin-top: 3.3vh; 
+  padding-top: 2.5vh; 
   border-top: 1px solid #F0F4F2;
   text-align: center;
-  font-size: 14px;
+  font-size: 0.875rem; 
 }
 
 .login-container .register-link {
   color: #4D9A80;
   font-weight: 700;
-  margin-left: 8px;
+  margin-left: 0.5vw; 
   cursor: pointer;
+}
+
+/* Triệt tiêu hoàn toàn viền focus/outline tự động bọc quanh cả cụm nhóm nhập liệu */
+.login-container .input-group:focus-within,
+.login-container .input-group:focus,
+.login-container .input-group *:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+}
+
+/* Đảm bảo trạng thái bình thường của khối div bọc ngoài không tự sinh màu nền lạ */
+.login-container .input-group {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
 }

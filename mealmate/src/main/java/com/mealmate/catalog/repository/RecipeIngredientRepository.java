@@ -11,6 +11,10 @@ import java.util.List;
 @Repository
 public interface RecipeIngredientRepository extends JpaRepository<RecipeIngredient, Long> {
 
+    List<RecipeIngredient> findByRecipeId(Long recipeId);
+
+    void deleteByRecipeId(Long recipeId);
+
     @Query("""
             select ri.recipe.id as recipeId, ri.food.name as foodName
             from RecipeIngredient ri
@@ -29,4 +33,22 @@ public interface RecipeIngredientRepository extends JpaRepository<RecipeIngredie
             order by ri.id
             """)
     List<RecipeIngredientDetailProjection> findIngredientDetailsByRecipeId(@Param("recipeId") Long recipeId);
+
+    @Query(value = """
+        SELECT
+            r.id AS recipeId,
+            r.name AS recipeName,
+            r.image_url AS imageUrl,
+            r.instructions AS instructions,
+            r.preferred_meal_time AS preferredMealTime,
+            ri.food_id AS foodId,
+            f.name AS foodName,
+            ri.quantity AS requiredQuantity,
+            COALESCE(ri.unit, f.unit) AS requiredUnit
+        FROM recipes r
+        JOIN recipe_ingredients ri ON ri.recipe_id = r.id
+        JOIN foods f ON f.id = ri.food_id
+        ORDER BY r.name ASC, ri.id ASC
+        """, nativeQuery = true)
+    List<RecipeSuggestionProjection> findRecipeSuggestionRows();
 }

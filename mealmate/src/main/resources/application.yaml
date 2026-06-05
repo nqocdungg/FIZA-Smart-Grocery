@@ -4,13 +4,13 @@ spring:
   application:
     name: mealmate
   datasource:
-    url: jdbc:postgresql://localhost:5432/mealmate
-    username: postgres
-    password: Duy080205
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/mealmate}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:Duy080205}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: none 
     show-sql: false
     properties:
       hibernate:

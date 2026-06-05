@@ -8,6 +8,7 @@ export interface RegisterRequest {
   password: string;
   fullName: string;
   phone?: string;
+  gender?: string;
 }
 
 export interface AuthResponse {
@@ -16,6 +17,7 @@ export interface AuthResponse {
   tokenType?: string;
   email: string;
   fullName: string;
+  role?: string;
 }
 
 export interface AuthSession {
@@ -24,6 +26,7 @@ export interface AuthSession {
   tokenType?: string;
   email: string;
   fullName: string;
+  role?: string;
 }
 
 export interface ApiResponse<T> {

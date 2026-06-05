@@ -237,22 +237,6 @@
   line-height: 1.5;
 }
 
-.recipe-status-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.recipe-status-pill {
-  border-radius: 999px;
-  padding: 4px 10px;
-  background: rgba(0, 107, 85, 0.1);
-  color: #006b55;
-  font-size: 11px;
-  font-weight: 800;
-}
-
 .recipe-edit-btn {
   margin-top: auto;
   border: none;
@@ -540,6 +524,20 @@
   padding: 10px 12px;
 }
 
+.menu-preview-slots {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.menu-preview-slot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 .menu-preview-recipe strong {
   display: block;
   overflow: hidden;
@@ -629,6 +627,10 @@
   background: #fff1f2;
 }
 
+.menu-tiny-icon-btn.add-slot {
+  background: rgba(109, 212, 180, 0.28);
+}
+
 .menu-tiny-add-btn {
   border-radius: 999px;
   padding: 0 12px;
@@ -642,7 +644,7 @@
 }
 
 .edit-controls {
-  grid-template-columns: repeat(3, minmax(160px, 1fr));
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
 }
 
 .edit-recipe-options,
@@ -762,6 +764,14 @@
   .menu-modal-controls,
   .menu-preview-meal {
     grid-template-columns: 1fr;
+  }
+
+  .menu-preview-slot {
+    grid-template-columns: 1fr;
+  }
+
+  .menu-preview-actions {
+    justify-content: flex-start;
   }
 
   .menu-calendar-strip {

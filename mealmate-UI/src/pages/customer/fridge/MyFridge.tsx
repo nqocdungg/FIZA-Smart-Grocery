@@ -66,6 +66,32 @@ type FridgeOverviewFromApi = {
   status: "EMPTY" | "HAPPY" | "NEEDS_ATTENTION";
 };
 
+type RecipeSuggestionIngredientFromApi = {
+  foodId: number;
+  foodName: string;
+  requiredQuantity?: number;
+  requiredUnit?: string;
+  availableQuantity?: number;
+  availableUnit?: string;
+  sufficientQuantity: boolean;
+  expiringSoon: boolean;
+  nearestExpiryDate?: string;
+};
+
+type RecipeSuggestionFromApi = {
+  recipeId: number;
+  name: string;
+  imageUrl?: string;
+  instructions?: string;
+  preferredMealTime?: string;
+  score: number;
+  coveragePercent: number;
+  canCook: boolean;
+  matchedIngredients: RecipeSuggestionIngredientFromApi[];
+  missingIngredients: RecipeSuggestionIngredientFromApi[];
+  expiringIngredients: RecipeSuggestionIngredientFromApi[];
+};
+
 type ToastState = {
   message: string;
   variant: "success" | "danger";
@@ -245,6 +271,19 @@ const getAlertEmptyText = (type: AlertType) => {
   return "Không có thực phẩm sắp hết số lượng.";
 };
 
+const formatSuggestionQuantity = (quantity?: number, unit?: string) => {
+  if (quantity === undefined || quantity === null) return "Chưa có";
+  const formattedQuantity = Number.isInteger(quantity) ? String(quantity) : String(Number(quantity.toFixed(2)));
+  return `${formattedQuantity}${unit ? ` ${unit}` : ""}`;
+};
+
+const getMealTimeText = (mealTime?: string) => {
+  if (mealTime === "BREAKFAST") return "Bữa sáng";
+  if (mealTime === "LUNCH") return "Bữa trưa";
+  if (mealTime === "DINNER") return "Bữa tối";
+  return "Linh hoạt";
+};
+
 const MyFridge: React.FC = () => {
   const [isAddingFood, setIsAddingFood] = useState(false);
   const [fridgeItems, setFridgeItems] = useState<FridgeItemFromApi[]>([]);
@@ -262,6 +301,11 @@ const MyFridge: React.FC = () => {
   const [activeAlertType, setActiveAlertType] = useState<AlertType | null>(null);
   const [alertItems, setAlertItems] = useState<FridgeItemFromApi[]>([]);
   const [isAlertLoading, setIsAlertLoading] = useState(false);
+  const [isSuggestionOpen, setIsSuggestionOpen] = useState(false);
+  const [recipeSuggestions, setRecipeSuggestions] = useState<RecipeSuggestionFromApi[]>([]);
+  const [isSuggestionLoading, setIsSuggestionLoading] = useState(false);
+  const [suggestionError, setSuggestionError] = useState("");
+  const [expandedSuggestionId, setExpandedSuggestionId] = useState<number | null>(null);
 
   useEffect(() => {
     const loadCategories = async () => {
@@ -387,6 +431,25 @@ const MyFridge: React.FC = () => {
   const handleSelectAlertItem = (item: FridgeItemFromApi) => {
     setActiveAlertType(null);
     setSelectedFood(item);
+  };
+
+  const handleOpenSuggestions = async () => {
+    setIsSuggestionOpen(true);
+    setIsSuggestionLoading(true);
+    setSuggestionError("");
+    setExpandedSuggestionId(null);
+
+    try {
+      const response = await api.get<RecipeSuggestionFromApi[]>("/api/fridge-items/recipe-suggestions", {
+        params: { limit: 10 },
+      });
+      setRecipeSuggestions(response.data);
+    } catch {
+      setRecipeSuggestions([]);
+      setSuggestionError("Không tải được danh sách món ăn gợi ý.");
+    } finally {
+      setIsSuggestionLoading(false);
+    }
   };
 
   const totalFridgeItemsCount = fridgeOverview.totalStored;
@@ -665,7 +728,7 @@ const MyFridge: React.FC = () => {
                   <img src={iconPlus} alt="" />
                   <span>Thêm thực phẩm</span>
                 </button>
-                <button className="round-action suggest" aria-label="Gợi ý món ăn">
+                <button className="round-action suggest" aria-label="Gợi ý món ăn" onClick={handleOpenSuggestions}>
                   <img src={iconRecipe} alt="" />
                   <span>Gợi ý món ăn</span>
                 </button>
@@ -731,6 +794,127 @@ const MyFridge: React.FC = () => {
                   );
                 })}
             </div>
+          </section>
+        </div>
+      )}
+
+      {isSuggestionOpen && (
+        <div className="recipe-suggestion-overlay" onClick={() => setIsSuggestionOpen(false)}>
+          <section className="recipe-suggestion-dialog" onClick={(event) => event.stopPropagation()}>
+            <header className="recipe-suggestion-header">
+              <div>
+                <h2>Gợi ý món ăn</h2>
+                <p>Ưu tiên công thức tận dụng thực phẩm đang có và sắp hết hạn trong tủ.</p>
+              </div>
+              <button type="button" onClick={() => setIsSuggestionOpen(false)} aria-label="Đóng gợi ý món ăn">
+                ×
+              </button>
+            </header>
+
+            {isSuggestionLoading && <div className="recipe-suggestion-state">Đang tìm món phù hợp...</div>}
+
+            {!isSuggestionLoading && suggestionError && (
+              <div className="recipe-suggestion-state error">{suggestionError}</div>
+            )}
+
+            {!isSuggestionLoading && !suggestionError && recipeSuggestions.length === 0 && (
+              <div className="recipe-suggestion-state">
+                Chưa có công thức phù hợp với thực phẩm hiện có trong tủ.
+              </div>
+            )}
+
+            {!isSuggestionLoading && !suggestionError && recipeSuggestions.length > 0 && (
+              <div className="recipe-suggestion-list">
+                {recipeSuggestions.map((suggestion, index) => {
+                  const isExpanded = expandedSuggestionId === suggestion.recipeId;
+
+                  return (
+                    <article className="recipe-suggestion-card" key={suggestion.recipeId}>
+                      <div className="recipe-suggestion-card-main">
+                        <div className="recipe-suggestion-rank">{index + 1}</div>
+                        <div className="recipe-suggestion-info">
+                          <div className="recipe-suggestion-title-row">
+                            <h3>{suggestion.name}</h3>
+                            <span className={suggestion.canCook ? "ready" : "partial"}>
+                              {suggestion.canCook ? "Có thể nấu" : "Cần bổ sung"}
+                            </span>
+                          </div>
+                          <p>
+                            {suggestion.coveragePercent}% nguyên liệu có sẵn · {getMealTimeText(suggestion.preferredMealTime)}
+                          </p>
+                        </div>
+                        <div className="recipe-suggestion-score">
+                          <strong>{suggestion.score}</strong>
+                          <span>điểm</span>
+                        </div>
+                      </div>
+
+                      <div className="recipe-suggestion-tags">
+                        <span>{suggestion.matchedIngredients.length} nguyên liệu đang có</span>
+                        <span>{suggestion.missingIngredients.length} cần bổ sung</span>
+                        {suggestion.expiringIngredients.length > 0 && (
+                          <span className="urgent">{suggestion.expiringIngredients.length} sắp hết hạn</span>
+                        )}
+                      </div>
+
+                      <div className="recipe-suggestion-ingredients">
+                        <div>
+                          <h4>Đang có</h4>
+                          {suggestion.matchedIngredients.length > 0 ? (
+                            suggestion.matchedIngredients.map((ingredient) => (
+                              <p key={`matched-${suggestion.recipeId}-${ingredient.foodId}`}>
+                                {ingredient.foodName}
+                                <span>
+                                  {formatSuggestionQuantity(ingredient.availableQuantity, ingredient.availableUnit)}
+                                </span>
+                              </p>
+                            ))
+                          ) : (
+                            <p>Chưa có nguyên liệu phù hợp</p>
+                          )}
+                        </div>
+
+                        <div>
+                          <h4>Cần thêm</h4>
+                          {suggestion.missingIngredients.length > 0 ? (
+                            suggestion.missingIngredients.map((ingredient) => (
+                              <p key={`missing-${suggestion.recipeId}-${ingredient.foodId}`}>
+                                {ingredient.foodName}
+                                <span>
+                                  {formatSuggestionQuantity(ingredient.requiredQuantity, ingredient.requiredUnit)}
+                                </span>
+                              </p>
+                            ))
+                          ) : (
+                            <p>Đã đủ nguyên liệu</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {suggestion.expiringIngredients.length > 0 && (
+                        <div className="recipe-suggestion-expiring">
+                          Nên dùng sớm: {suggestion.expiringIngredients.map((ingredient) => ingredient.foodName).join(", ")}
+                        </div>
+                      )}
+
+                      <button
+                        className="recipe-suggestion-detail-toggle"
+                        type="button"
+                        onClick={() => setExpandedSuggestionId(isExpanded ? null : suggestion.recipeId)}
+                      >
+                        {isExpanded ? "Ẩn hướng dẫn" : "Xem hướng dẫn nấu"}
+                      </button>
+
+                      {isExpanded && (
+                        <div className="recipe-suggestion-instructions">
+                          {suggestion.instructions || "Chưa có hướng dẫn nấu cho món này."}
+                        </div>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+            )}
           </section>
         </div>
       )}

@@ -2,15 +2,15 @@ package com.mealmate.catalog.service;
 
 import com.mealmate.catalog.model.Recipe;
 import com.mealmate.catalog.model.RecipeIngredient;
-import com.mealmate.catalog.model.dto.RecipeCreateRequest;
 import com.mealmate.catalog.model.dto.RecipeCatalogResponse;
+import com.mealmate.catalog.model.dto.RecipeCreateRequest;
 import com.mealmate.catalog.model.dto.RecipeDetailResponse;
 import com.mealmate.catalog.model.dto.RecipeImageUpdateRequest;
 import com.mealmate.catalog.model.dto.RecipeIngredientDetailResponse;
 import com.mealmate.catalog.model.dto.RecipeIngredientRequest;
 import com.mealmate.catalog.repository.FoodRepository;
-import com.mealmate.catalog.repository.RecipeIngredientRepository;
 import com.mealmate.catalog.repository.RecipeIngredientDetailProjection;
+import com.mealmate.catalog.repository.RecipeIngredientRepository;
 import com.mealmate.catalog.repository.RecipeIngredientSummaryProjection;
 import com.mealmate.catalog.repository.RecipeRepository;
 import lombok.RequiredArgsConstructor;
@@ -41,8 +41,48 @@ public class RecipeService {
         return repository.findAll();
     }
 
+    public Recipe findById(Long id) {
+        return repository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Recipe not found"));
+    }
+
+    @Transactional
     public Recipe save(Recipe entity) {
         return repository.save(entity);
+    }
+
+    @Transactional
+    public Recipe update(Long id, Recipe request) {
+        Recipe recipe = findById(id);
+        recipe.setName(request.getName());
+        recipe.setInstructions(request.getInstructions());
+        recipe.setReferenceLink(request.getReferenceLink());
+        recipe.setAuthor(request.getAuthor());
+        recipe.setPreferredMealTime(request.getPreferredMealTime());
+        recipe.setCookingTimeMinutes(request.getCookingTimeMinutes());
+        recipe.setDisplayStatus(request.getDisplayStatus());
+        recipe.setImageUrl(request.getImageUrl());
+        return repository.save(recipe);
+    }
+
+    @Transactional
+    public void delete(Long id) {
+        Recipe recipe = findById(id);
+        repository.delete(recipe);
+    }
+
+    public List<RecipeIngredient> findIngredientsByRecipeId(Long recipeId) {
+        return recipeIngredientRepository.findByRecipeId(recipeId);
+    }
+
+    @Transactional
+    public List<RecipeIngredient> saveIngredients(Long recipeId, List<RecipeIngredient> ingredients) {
+        Recipe recipe = findById(recipeId);
+        recipeIngredientRepository.deleteByRecipeId(recipeId);
+        for (RecipeIngredient ingredient : ingredients) {
+            ingredient.setRecipe(recipe);
+        }
+        return recipeIngredientRepository.saveAll(ingredients);
     }
 
     @Transactional(readOnly = true)
@@ -143,12 +183,12 @@ public class RecipeService {
         recipe.setDisplayStatus(userId == null ? "SYSTEM" : "CUSTOM");
 
         Recipe savedRecipe = repository.save(recipe);
-        saveIngredients(savedRecipe, request.getIngredients());
+        saveCreateIngredients(savedRecipe, request.getIngredients());
 
         return toDetailResponse(savedRecipe, false);
     }
 
-    private void saveIngredients(Recipe recipe, List<RecipeIngredientRequest> ingredientRequests) {
+    private void saveCreateIngredients(Recipe recipe, List<RecipeIngredientRequest> ingredientRequests) {
         if (ingredientRequests == null || ingredientRequests.isEmpty()) {
             return;
         }

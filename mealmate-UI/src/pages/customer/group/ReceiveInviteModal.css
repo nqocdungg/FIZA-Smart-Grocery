@@ -1,0 +1,101 @@
+.invite-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999; /* Đảm bảo nổi lên trên cùng tất cả các trang */
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  backdrop-filter: blur(2px); /* Làm mờ nhẹ nền đằng sau */
+}
+
+.invite-modal-card {
+  width: 100%;
+  max-width: 400px;
+  background: white;
+  border-radius: 24px;
+  padding: 30px;
+  text-align: center;
+  box-shadow: 0px 15px 40px rgba(0, 0, 0, 0.15);
+  animation: inviteScaleUp 0.25s ease-out;
+}
+
+@keyframes inviteScaleUp {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.invite-icon-bell {
+  font-size: 3rem;
+  margin-bottom: 15px;
+  animation: inviteWobble 1s ease infinite;
+}
+
+@keyframes inviteWobble {
+  0%, 100% { transform: rotate(0); }
+  15% { transform: rotate(-15deg); }
+  30% { transform: rotate(10deg); }
+  45% { transform: rotate(-10deg); }
+  60% { transform: rotate(5deg); }
+}
+
+.invite-modal-title {
+  color: #171D1A;
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.invite-modal-desc {
+  color: #3E4944;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin-bottom: 25px;
+}
+
+.invite-family-highlight {
+  color: #00513F;
+  font-size: 1.15rem;
+  display: inline-block;
+  margin-top: 5px;
+}
+
+.invite-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.invite-btn-accept {
+  width: 100%;
+  padding: 12px 0;
+  background: #00513F;
+  color: white;
+  border: none;
+  border-radius: 30px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.invite-btn-accept:hover {
+  background: #003c2f;
+}
+
+.invite-btn-decline {
+  width: 100%;
+  padding: 10px 0;
+  background: transparent;
+  color: #B3261E;
+  border: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.invite-btn-decline:hover {
+  text-decoration: underline;
+}

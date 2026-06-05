@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+// 🎯 GIỮ NGUYÊN: Sử dụng instance axios cấu hình chung của hệ thống
+import api from "@/services/api";
 import './FamilyGroup.css';
 
 import Sidebar from "@/components/layout/Sidebar";
 import Topbar from "@/components/layout/Topbar";
 import DeleteMember from "./DeleteMember"; 
+import AddMember from "./AddMember"; 
+// 🎯 BƯỚC NHÚNG GỐC: Gọi chính xác file ProfileModal của bạn vào trang cha
+import ProfileModal from "@/components/layout/ProfileModal"; 
 
 import iconEdit from "@/assets/icon/Icon-edit-eye.svg";  
 import iconDelete from "@/assets/icon/Icon-delete.svg";
@@ -14,12 +18,21 @@ interface MemberType {
   fullName: string;
   roleName: string; 
   avatarClass: string; 
+  email?: string;
+  phone?: string;
+  gender?: string;
+  avatarUrl?: string;
 }
 
 interface FamilyResponse {
   id?: number;
   name?: string;
   housekeeperId?: number;
+  ownerId?: number;
+  createdBy?: number;
+  housekeeper?: {
+    id?: number;
+  };
 }
 
 const FamilyGroup: React.FC = () => {
@@ -28,15 +41,26 @@ const FamilyGroup: React.FC = () => {
   
   const [familyId, setFamilyId] = useState<number | null>(null);
   const [isHousekeeper, setIsHousekeeper] = useState<boolean>(false);
-  const [editName, setEditName] = useState<string>("");
+  const [editName, setEditName] = useState<string>("Đang tải...");
   const [members, setMembers] = useState<MemberType[]>([]);
+  const [loggedUserId, setLoggedUserId] = useState<number | null>(null);
 
+  // State kiểm soát modal Xóa thành viên
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [selectedMemberName, setSelectedMemberName] = useState<string>("");
+  const [selectedMemberId, setSelectedMemberId] = useState<number | null>(null);
+  // State kiểm soát modal Thêm thành viên
+  const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
 
   const avatarColors = ["avatar-orange", "avatar-peach", "avatar-teal", "avatar-blue", "avatar-purple"];
 
-  // 🎯 SỬA DỨT ĐIỂM: Chuyển sang dùng async/await độc lập để chống nuốt log và crash luồng
+  
+  // =========================================================================
+  // 🎯 LUỒNG QUẢN LÝ PROFILE MODAL CHUẨN CỦA BẠN
+  // =========================================================================
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(false);
+  const [profileTargetMember, setProfileTargetMember] = useState<MemberType | null>(null);
+  
   useEffect(() => {
     const loadFamilyData = async () => {
       const token = localStorage.getItem("accessToken");
@@ -44,77 +68,109 @@ const FamilyGroup: React.FC = () => {
       
       let currentUserId: number | null = null;
 
-      // 1. Lấy ID an toàn, lỗi ở đây không làm chết luồng API bên dưới
       if (authUserString) {
         try {
           const parsedUser = JSON.parse(authUserString);
           const rawId = parsedUser.userId || parsedUser.id;
-          if (rawId) currentUserId = Number(rawId);
-          console.log("👉 [LOG] ID từ LocalStorage:", currentUserId);
+          if (rawId) {
+            currentUserId = Number(rawId);
+            setLoggedUserId(currentUserId);
+          }
+          console.log("👉 [FRONTEND DEBUG] ID người dùng đăng nhập từ LocalStorage:", currentUserId);
         } catch (e) {
-          console.error("❌ Lỗi đọc localStorage:", e);
+          console.error("❌ [FRONTEND DEBUG] Lỗi đọc localStorage:", e);
         }
       }
 
-      // 2. Gọi API lấy thông tin nhóm gia đình hiện tại
+      let dbHousekeeperId: number | null = null;
+
+      // =========================================================================
+      // LUỒNG A: LẤY CHI TIẾT NHÓM GIA ĐÌNH HIỆN TẠI
+      // =========================================================================
       try {
-        const resGroup = await axios.get('http://localhost:8080/api/v1/users/familys/current', {
+        const resGroup = await api.get('/api/v1/users/familys/current', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        
-        console.log("👉 [LOG] API Nhóm Gia Đình trả về:", resGroup.data);
         
         const groupData: FamilyResponse = resGroup.data.success ? resGroup.data.data : resGroup.data;
         
         if (groupData) {
           const cleanName = String(groupData.name || "Gia đình Fiza").trim();
+          const familyIdFromDb = groupData.id;
+          
           setFamilyName(cleanName);
           setEditName(cleanName);
-          setFamilyId(groupData.id ?? null);
+          localStorage.setItem("currentFamilyName", cleanName); // Đồng bộ tên gia đình lên local storage
+          setFamilyId(familyIdFromDb ?? null);
 
-          // Đọc đúng field housekeeperId từ DTO backend
-          const dbHousekeeperId = groupData.housekeeperId ?? null;
-          console.log("👉 [LOG] Đối chiếu ID:", currentUserId, "với Chủ nhà DB:", dbHousekeeperId);
+          dbHousekeeperId = groupData.housekeeperId
+            ?? groupData.ownerId
+            ?? groupData.createdBy
+            ?? groupData.housekeeper?.id
+            ?? null;
 
-          // Kiểm tra quyền: ID người dùng trùng khớp với ID chủ nhà thì mở khóa
           if (currentUserId && dbHousekeeperId && Number(currentUserId) === Number(dbHousekeeperId)) {
-            console.log("➔ MỞ KHÓA: Bạn là chủ nhà!");
             setIsHousekeeper(true);
           } else {
-            console.log("➔ KHÓA: Bạn là thành viên thường!");
             setIsHousekeeper(false);
           }
         }
       } catch (err) {
-        console.error("❌ Lỗi API luồng A (Chi tiết nhóm):", err);
+        console.error("❌ [FRONTEND DEBUG] Lỗi API luồng A (Chi tiết nhóm):", err);
         setFamilyName("Gia đình Fiza");
         setEditName("Gia đình Fiza");
       }
 
-      // 3. Gọi API lấy danh sách thành viên trong nhà
+      // =========================================================================
+      // LUỒNG B: TẢI DANH SÁCH THÀNH VIÊN HIỂN THỊ LÊN BẢNG (Đầy đủ thông tin)
+      // =========================================================================
       try {
-        const resMembers = await axios.get('http://localhost:8080/api/v1/users/users/family/members', {
+        console.log("👉 [FRONTEND DEBUG 1] Chuẩn bị gửi request lấy danh sách thành viên lên bảng...");
+        
+        const resMembers = await api.get('/api/v1/users/users/family/members', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
 
-        console.log("👉 [LOG] API Thành Viên trả về:", resMembers.data);
-
+        console.log("👉 [FRONTEND DEBUG 2] Dữ liệu thô (Raw Response) Server trả về:", resMembers.data);
+        
         const dbMembers = resMembers.data.success ? resMembers.data.data : resMembers.data;
+        console.log("👉 [FRONTEND DEBUG 3] Mảng dữ liệu sau khi bóc vỏ (.data):", dbMembers);
 
         if (Array.isArray(dbMembers)) {
+          console.log(`👉 [FRONTEND DEBUG 4] Xác nhận dữ liệu là một mảng gồm ${dbMembers.length} thành viên. Tiến hành format dữ liệu...`);
+          
           const formattedMembers = dbMembers.map((m: any, index: number) => {
-            const isOwner = m.roleName === "HOUSEKEEPER" || m.roleId === 3;
+            const roleNameFromDb = m.roleName || (m.role && typeof m.role === 'object' ? m.role.name : m.role);
+            
+            const isOwner = String(roleNameFromDb).toUpperCase().includes("ADMIN") || 
+                            String(roleNameFromDb).toUpperCase().includes("HOUSEKEEPER") || 
+                            String(roleNameFromDb).toUpperCase().includes("BOSS") ||
+                            String(roleNameFromDb).toUpperCase().includes("CHỦ NHÀ") ||
+                            m.roleId === 3 ||
+                            (dbHousekeeperId && Number(m.id) === Number(dbHousekeeperId));
+
             return {
               id: m.id,
-              fullName: m.fullName || "Thành viên ẩn danh",
+              fullName: m.fullName || m.full_name || "Thành viên ẩn danh",
               roleName: isOwner ? "Chủ nhà" : "Thành viên",
-              avatarClass: avatarColors[index % avatarColors.length]
+              avatarClass: avatarColors[index % avatarColors.length],
+              email: m.email || "Chưa cập nhật",
+              phone: m.phone || m.phoneNumber || "Chưa cập nhật",
+              gender: m.gender || "OTHER",
+              avatarUrl: m.avatarUrl || m.avatar_url   
             };
           });
+          
+          console.log("👉 [FRONTEND DEBUG 5] Cấu trúc mảng hoàn chỉnh chuẩn bị set vào State render lên UI:", formattedMembers);
           setMembers(formattedMembers);
+          
+          // Lưu lại bản sao đồng bộ xịn sò nhất vào bộ nhớ đệm
+          localStorage.setItem("familyMembersCache", JSON.stringify(formattedMembers));
+        } else {
+          console.warn("⚠️ [FRONTEND DEBUG CẢNH BÁO] Kết quả Server trả về không phải là một Mảng (Array)!");
         }
       } catch (err) {
-        console.error("❌ Lỗi API luồng B (Danh sách thành viên):", err);
+        console.error("❌ [FRONTEND DEBUG LỖI] API luồng B tải danh sách thành viên thất bại hoàn toàn:", err);
       }
     };
 
@@ -129,13 +185,14 @@ const FamilyGroup: React.FC = () => {
     }
 
     const token = localStorage.getItem("accessToken");
-    axios.put(`http://localhost:8080/api/v1/users/familys/${familyId}`, 
+    api.put(`/api/v1/users/familys/${familyId}`, 
       { id: familyId, name: cleanedName },
       { headers: { 'Authorization': `Bearer ${token}` } }
     )
     .then(() => {
       setFamilyName(cleanedName);
       setEditName(cleanedName);
+      localStorage.setItem("currentFamilyName", cleanedName); // Cập nhật tên gia đình đổi mới
       alert("🎉 Đã cập nhật tên nhóm thành công!");
     })
     .catch(error => {
@@ -144,10 +201,92 @@ const FamilyGroup: React.FC = () => {
     });
   };
 
-  const filteredMembers = members
+  const handleSearchUser = async (emailOrPhone: string) => {
+    const token = localStorage.getItem("accessToken");
+    console.log("🔍 [SEARCH DEBUG 1] Bắt đầu kích hoạt tìm kiếm với từ khóa:", emailOrPhone);
+    
+    try {
+      const res = await api.get(`/api/v1/users/users/search-member?keyword=${emailOrPhone}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      console.log("🔍 [SEARCH DEBUG 2] Phản hồi thô nhận từ Server:", res.data);
+      
+      if (res.data && (res.data.success || res.data.status === true)) {
+        console.log("🔍 [SEARCH DEBUG 3] Bóc tách dữ liệu thành công, Object User hợp lệ:", res.data.data);
+        return res.data.data; 
+      }
+      
+      console.warn("⚠️ [SEARCH DEBUG CẢNH BÁO] Server trả về thành công giả (success=false):", res.data.message);
+      return null;
+    } catch (err: any) {
+      console.error("❌ [SEARCH DEBUG LỖI] API luồng C tìm kiếm thành viên sập hoàn toàn:", err);
+      return null;
+    }
+  };
+
+  const handleAddMemberConfirm = async (userId: number) => {
+    const token = localStorage.getItem("accessToken");
+    if (!familyId) return;
+
+    try {
+      const res = await api.post(`/api/v1/users/familys/${familyId}/invite`, 
+        { userId: userId },
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+      if (res.data && res.data.success) {
+        alert("🎉 Đã gửi yêu cầu mời thành viên vào hệ thống thành công!");
+        setIsAddModalOpen(false);
+      }
+    } catch (err) {
+      console.error("Lỗi gửi lời mời:", err);
+    }
+  };
+
+  const filteredMembers = [...members]
     .filter(member => member.fullName.toLowerCase().includes(keyword.toLowerCase()))
     .sort((a, b) => a.id - b.id);
 
+  const handleDeleteMemberConfirm = async () => {
+    if (!selectedMemberId) return;
+    
+    const token = localStorage.getItem("accessToken");
+    try {
+      console.log(`👉 [REMOVE DEBUG] Đang gửi lệnh trục xuất thành viên ID: #${selectedMemberId}`);
+      
+      const res = await api.post('/api/v1/users/users/remove-member', 
+        { userId: selectedMemberId },
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+
+      if (res.data && res.data.success) {
+        alert("🎉 Đã trục xuất thành viên và trả về làm chủ nhà gốc thành công!");
+        setIsModalOpen(false);
+        
+        // 🎯 LOGIC TỰ ĐỘNG LOAD CHO CHÍNH MÌNH:
+        // Nếu người bị rời nhóm TRÙNG với ID của người đang đăng nhập -> Ép hệ thống reload dọn bối cảnh cũ
+        if (Number(selectedMemberId) === Number(loggedUserId)) {
+          console.log("👉 [RELOAD DEBUG] Chính mình rời nhóm, tiến hành dọn cache và làm mới hệ thống...");
+          
+          // Xóa tên gia đình cũ lưu trong bộ nhớ trình duyệt để luồng kế tiếp tự nạp lại tên nhà gốc
+          localStorage.removeItem("currentFamilyName");
+          localStorage.removeItem("familyMembersCache");
+          
+          // Tự động load lại trang ngay lập tức cho bạn, không bắt người dùng tự tay bấm F5 nữa
+          window.location.reload();
+        } else {
+          // Nếu là chủ nhà xóa thành viên khác -> Chỉ cần lọc mảng xóa dòng đó trên UI như cũ là xong
+          const updatedList = members.filter(m => Number(m.id) !== Number(selectedMemberId));
+          setMembers([...updatedList]);
+          localStorage.setItem("familyMembersCache", JSON.stringify(updatedList));
+        }
+        
+      }
+    } catch (err: any) {
+      console.error("❌ Lỗi gọi API remove-member:", err);
+      alert("Hệ thống từ chối xử lý hoặc lỗi kết nối mạng!");
+    }
+  };
   return (
     <div className="my-fridge-layout">
       <Sidebar />
@@ -156,7 +295,7 @@ const FamilyGroup: React.FC = () => {
           title="Nhóm gia đình" 
           searchPlaceholder="Tìm kiếm thành viên..."
           searchValue={keyword}
-          onSearchChange={(value) => setKeyword(value)}
+          onSearchChange={setKeyword}
           familyName={familyName} 
         />
 
@@ -174,24 +313,15 @@ const FamilyGroup: React.FC = () => {
                     className="info-value-name-input-blank"
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    
-                    // 🎯 THAY ĐỔI ĐỂ TEST: Nếu vẫn dính cấm, đổi thẳng thành disabled={false} để gõ chữ thoải mái
                     disabled={!isHousekeeper} 
-                    
                     onBlur={handleUpdateName} 
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') handleUpdateName(); 
                     }}
                     style={{
-                      border: 'none',
-                      background: 'transparent',
-                      fontFamily: 'inherit',
-                      fontSize: 'inherit',
-                      fontWeight: 'inherit',
-                      color: 'inherit',
-                      width: '100%',
-                      outline: 'none',
-                      cursor: isHousekeeper ? 'text' : 'not-allowed',
+                      border: 'none', background: 'transparent', fontFamily: 'inherit',
+                      fontSize: 'inherit', fontWeight: 'inherit', color: 'inherit',
+                      width: '100%', outline: 'none', cursor: isHousekeeper ? 'text' : 'not-allowed',
                       pointerEvents: 'auto'
                     }}
                   />
@@ -210,7 +340,7 @@ const FamilyGroup: React.FC = () => {
               </div>
             </div>
             
-            <button className="btn-add-member" onClick={() => alert('Chức năng thêm thành viên')}>
+            <button className="btn-add-member" onClick={() => setIsAddModalOpen(true)}>
               <div className="btn-shadow" />
               <div className="btn-text">Thêm thành viên</div>
             </button>
@@ -229,8 +359,8 @@ const FamilyGroup: React.FC = () => {
                 <div className="table-body">
                   {filteredMembers.map((member, index) => {
                     const showDeleteButton = isHousekeeper 
-                      ? member.roleName !== "Chủ nhà" 
-                      : member.roleName !== "Chủ nhà";
+                      ? member.id !== loggedUserId 
+                      : member.id === loggedUserId;
 
                     return (
                       <div className={index === 0 ? "table-row" : "table-row-bordered"} key={member.id}>
@@ -247,16 +377,28 @@ const FamilyGroup: React.FC = () => {
                           </div>
                         </div>
                         <div className="td-actions">
-                          <button className="action-btn-circle" title="Sửa">
-                            <img src={iconEdit} alt="Sửa" className="action-icon-img" />
+                          <button 
+                            className="action-btn-circle" 
+                            title="Xem chi tiết"
+                            onClick={() => {
+                              console.log("👁️ [PROFILE DEBUG 1] Bấm xem chi tiết thành viên dòng:", member);
+                              console.log(`👁️ [PROFILE DEBUG 2] Đối chiếu ID dòng (${member.id}) với ID đăng nhập đăng ký ở Local (${loggedUserId})`);
+                              setProfileTargetMember(member);
+                              setIsProfileModalOpen(true);
+                            }}
+                          >
+                            <img src={iconEdit} alt="Xem" className="action-icon-img" />
                           </button>
+                          
                           {showDeleteButton && (
                             <button 
                               className="action-btn-circle btn-delete" 
                               onClick={() => {
-                                setSelectedMemberName(member.fullName);
+                                setSelectedMemberName(member.id === loggedUserId ? "bản thân" : member.fullName);
+                                setSelectedMemberId(member.id);
                                 setIsModalOpen(true);
                               }}
+                              title={member.id === loggedUserId ? "Rời khỏi nhóm" : "Xóa khỏi nhóm"}
                             >
                               <img src={iconDelete} alt="Xóa" className="action-icon-img" />
                             </button>
@@ -274,9 +416,25 @@ const FamilyGroup: React.FC = () => {
 
       <DeleteMember
         isOpen={isModalOpen}
-        memberName={isHousekeeper ? selectedMemberName : "bản thân"}
+        memberName={selectedMemberName}
         onClose={() => setIsModalOpen(false)}
-        onConfirm={() => setIsModalOpen(false)}
+        onConfirm={handleDeleteMemberConfirm}
+      />
+
+      <AddMember
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onConfirm={handleAddMemberConfirm}
+        onSearchUser={handleSearchUser}
+        currentMemberCount={members.length}
+      />
+
+      <ProfileModal 
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        familyName={familyName}
+        memberData={profileTargetMember}
+        isMe={profileTargetMember?.id === loggedUserId}
       />
     </div>
   );

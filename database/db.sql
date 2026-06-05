@@ -205,14 +205,28 @@ CREATE TABLE shopping_list_items (
 -- Bảng công thức / món ăn
 CREATE TABLE recipes (
     id SERIAL PRIMARY KEY,
+
     name VARCHAR(255) NOT NULL,              -- Tên món ăn
-    instructions TEXT,                       -- Hướng dẫn chế biến
-    reference_link VARCHAR(500),             -- Link tham khảo (video, blog...)
+    description TEXT,                        -- Mô tả ngắn về món ăn hiển thị ở trang chi tiết
+
+    instructions TEXT,                       -- Hướng dẫn chế biến đầy đủ
+
+    cooking_time_minutes INT,                -- Thời gian nấu dự kiến (phút)
+    servings INT,                            -- Số khẩu phần ăn phù hợp
+    calories INT,                            -- Tổng năng lượng ước tính (kcal)
+
+    difficulty VARCHAR(20)
+        CHECK (difficulty IN ('EASY', 'MEDIUM', 'HARD')), -- Độ khó chế biến: EASY, MEDIUM, HARD
+
+    reference_link VARCHAR(500),             -- Link tham khảo (video, blog, website...)
     author VARCHAR(255),                     -- Tác giả công thức
-    preferred_meal_time VARCHAR(50),         -- Bữa ưu tiên: BREAKFAST (sáng), LUNCH (trưa), DINNER (tối)
-    cooking_time_minutes INT,                -- Thời gian nấu dự kiến, tính bằng phút
+
+    preferred_meal_time VARCHAR(20)
+        CHECK (preferred_meal_time IN ('BREAKFAST', 'LUNCH', 'DINNER')), -- Bữa ưu tiên: BREAKFAST, LUNCH, DINNER
+
     display_status VARCHAR(50) DEFAULT 'SYSTEM', -- Loại: SYSTEM (món hệ thống), CUSTOM (món tự tạo)
     image_url VARCHAR(500),                  -- Ảnh minh họa món ăn
+
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -229,18 +243,6 @@ CREATE TABLE recipe_ingredients (
     CONSTRAINT uq_recipe_food UNIQUE (recipe_id, food_id),
     CONSTRAINT fk_ri_recipe FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE CASCADE,
     CONSTRAINT fk_ri_food FOREIGN KEY (food_id) REFERENCES foods(id) ON DELETE CASCADE
-);
-
--- Bảng món ăn tự tạo của người dùng (liên kết user → recipe)
-CREATE TABLE custom_recipes (
-    id SERIAL PRIMARY KEY,
-    user_id INT NOT NULL,                    -- Người tạo
-    recipe_id INT NOT NULL,                  -- Món ăn
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT uq_custom_recipe UNIQUE (user_id, recipe_id),
-    CONSTRAINT fk_cr_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT fk_cr_recipe FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE CASCADE
 );
 
 -- Bảng yêu thích / nổi bật (liên kết N-N giữa người dùng và món ăn) — theo yêu cầu mục 4.3
@@ -273,7 +275,8 @@ CREATE TABLE meals (
     id SERIAL PRIMARY KEY,
     menu_id INT NOT NULL,                    -- Thuộc thực đơn nào
     meal_date DATE NOT NULL,                 -- Ngày ăn
-    meal_type VARCHAR(50) NOT NULL,          -- Loại bữa: BREAKFAST (sáng), LUNCH (trưa), DINNER (tối)
+    meal_type VARCHAR(20) NOT NULL
+        CHECK (meal_type IN ('BREAKFAST', 'LUNCH', 'DINNER')), -- Loại bữa ăn: BREAKFAST, LUNCH, DINNER
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_meal_menu FOREIGN KEY (menu_id) REFERENCES menus(id) ON DELETE CASCADE
@@ -305,7 +308,8 @@ CREATE TABLE invitations (
     id SERIAL PRIMARY KEY,
     family_id INT NOT NULL,                  -- Lời mời từ gia đình nào
     receiver_id INT NOT NULL,                -- Gửi lời mời tới User ID nào
-    status VARCHAR(50) DEFAULT 'PENDING',    -- Trạng thái: PENDING, ACCEPTED, DECLINED
+    status VARCHAR(20) DEFAULT 'PENDING'
+        CHECK (status IN ('PENDING', 'ACCEPTED', 'DECLINED')), -- Trạng thái lời mời: PENDING (đang chờ), ACCEPTED (đã chấp nhận), DECLINED (đã từ chối)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_invite_family FOREIGN KEY (family_id) REFERENCES families(id) ON DELETE CASCADE,

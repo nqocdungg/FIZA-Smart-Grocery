@@ -38,11 +38,16 @@ type ToastState = {
   variant: "success" | "error";
 };
 
-type DraftMeal = {
-  mealType: MealType;
+type DraftMealSlot = {
+  id: string;
   recommendation: RecipeRecommendation | null;
   existingMealItemId?: number;
   originalRecipeId?: number;
+};
+
+type DraftMeal = {
+  mealType: MealType;
+  slots: DraftMealSlot[];
 };
 
 type DraftDay = {
@@ -53,9 +58,12 @@ type DraftDay = {
 type EditMealForm = {
   mealItemId: number;
   currentRecipeId: number;
-  selectedRecipeId: number;
+  selectedRecipeId: number | null;
   mealType: MealType;
   date: string;
+  originalMealType: MealType;
+  originalDate: string;
+  originalRecipeName: string;
   status: "SUGGESTED" | "CONFIRMED";
   recipeName: string;
 };
@@ -63,6 +71,7 @@ type EditMealForm = {
 type DraftPickerTarget = {
   date: string;
   mealType: MealType;
+  slotId: string;
 };
 
 const mealTypes: MealType[] = ["BREAKFAST", "LUNCH", "DINNER"];
@@ -150,16 +159,37 @@ const getRecipeInitial = (name: string) => {
     .toUpperCase();
 };
 
+const createDraftSlotId = (date: string, mealType: MealType, suffix = `${Date.now()}-${Math.random().toString(36).slice(2)}`) => {
+  return `${date}-${mealType}-${suffix}`;
+};
+
+const createDraftSlot = (
+  date: string,
+  mealType: MealType,
+  suffix: string,
+  recommendation: RecipeRecommendation | null = null,
+  existingMealItemId?: number,
+  originalRecipeId?: number
+): DraftMealSlot => ({
+  id: createDraftSlotId(date, mealType, suffix),
+  recommendation,
+  existingMealItemId,
+  originalRecipeId,
+});
+
 const createEmptyDraftDays = (startDate: string, mode: MenuGenerateMode): DraftDay[] => {
   const totalDays = mode === "WEEK" ? 7 : 1;
   const start = parseDateOnly(startDate);
 
   return Array.from({ length: totalDays }, (_, dayIndex) => ({
     date: toDateOnly(addDays(start, dayIndex)),
-    meals: mealTypes.map((mealType) => ({
-      mealType,
-      recommendation: null,
-    })),
+    meals: mealTypes.map((mealType) => {
+      const date = toDateOnly(addDays(start, dayIndex));
+      return {
+        mealType,
+        slots: [createDraftSlot(date, mealType, "empty")],
+      };
+    }),
   }));
 };
 
@@ -181,14 +211,45 @@ const createDraftDaysFromMenuPlan = (startDate: string, mode: MenuGenerateMode, 
     return {
       ...draftDay,
       meals: draftDay.meals.map((draftMeal) => {
-        const savedRecipe = getMealFromDay(savedDay, draftMeal.mealType).recipes[0];
-        if (!savedRecipe) return draftMeal;
+        const savedRecipes = getMealFromDay(savedDay, draftMeal.mealType).recipes;
+        if (savedRecipes.length === 0) return draftMeal;
 
         return {
           ...draftMeal,
-          recommendation: menuPlanRecipeToRecommendation(savedRecipe),
-          existingMealItemId: savedRecipe.mealItemId,
-          originalRecipeId: savedRecipe.recipeId,
+          slots: savedRecipes.map((savedRecipe, recipeIndex) =>
+            createDraftSlot(
+              draftDay.date,
+              draftMeal.mealType,
+              `saved-${savedRecipe.mealItemId || recipeIndex}`,
+              menuPlanRecipeToRecommendation(savedRecipe),
+              savedRecipe.mealItemId,
+              savedRecipe.recipeId
+            )
+          ),
+        };
+      }),
+    };
+  });
+};
+
+const createDraftDaysFromGeneratedPlan = (startDate: string, mode: MenuGenerateMode, generatedDays: { date: string; meals: { mealType: MealType; recommendation: RecipeRecommendation | null }[] }[]): DraftDay[] => {
+  const emptyDays = createEmptyDraftDays(startDate, mode);
+
+  return emptyDays.map((emptyDay) => {
+    const generatedDay = generatedDays.find((day) => day.date === emptyDay.date);
+
+    return {
+      ...emptyDay,
+      meals: emptyDay.meals.map((emptyMeal) => {
+        const generatedMeal = generatedDay?.meals.find((meal) => meal.mealType === emptyMeal.mealType);
+        return {
+          ...emptyMeal,
+          slots: [
+            {
+              ...emptyMeal.slots[0],
+              recommendation: generatedMeal?.recommendation ?? null,
+            },
+          ],
         };
       }),
     };
@@ -204,12 +265,16 @@ const mergeGeneratedDraftWithSavedDraft = (generatedDays: DraftDay[], savedDraft
       meals: generatedDay.meals.map((generatedMeal) => {
         const savedMeal = savedDay?.meals.find((meal) => meal.mealType === generatedMeal.mealType);
         if (!savedMeal) return generatedMeal;
+        if (savedMeal.slots.some((slot) => slot.recommendation || slot.existingMealItemId)) return savedMeal;
 
         return {
           ...generatedMeal,
-          recommendation: generatedMeal.recommendation || savedMeal.recommendation,
-          existingMealItemId: savedMeal.existingMealItemId,
-          originalRecipeId: savedMeal.originalRecipeId,
+          slots: generatedMeal.slots.map((slot, index) => ({
+            ...slot,
+            recommendation: slot.recommendation || savedMeal.slots[index]?.recommendation || null,
+            existingMealItemId: savedMeal.slots[index]?.existingMealItemId,
+            originalRecipeId: savedMeal.slots[index]?.originalRecipeId,
+          })),
         };
       }),
     };
@@ -399,13 +464,14 @@ const MenuSuggestion: React.FC = () => {
         candidateLimit: 12,
       });
 
+      const generatedDraftDays = createDraftDaysFromGeneratedPlan(draftStartDate, draftMode, response.days);
       setDraftDays((currentDays) =>
         mergeGeneratedDraftWithSavedDraft(
-          response.days,
+          generatedDraftDays,
           currentDays.length > 0 ? currentDays : createDraftDaysFromMenuPlan(draftStartDate, draftMode, menuDays)
         )
       );
-      if (response.days.every((day) => day.meals.every((meal) => !meal.recommendation))) {
+      if (generatedDraftDays.every((day) => day.meals.every((meal) => meal.slots.every((slot) => !slot.recommendation)))) {
         showToast("Không tìm thấy món phù hợp với nguyên liệu hiện có.", "error");
       }
     } catch (error) {
@@ -420,7 +486,7 @@ const MenuSuggestion: React.FC = () => {
     setDraftPickerTarget(null);
   };
 
-  const updateDraftMeal = (date: string, mealType: MealType, recommendation: RecipeRecommendation | null) => {
+  const updateDraftMealSlot = (date: string, mealType: MealType, slotId: string, recommendation: RecipeRecommendation | null) => {
     setDraftDays((currentDays) => {
       const baseDays = currentDays.length > 0 ? currentDays : createDraftDaysFromMenuPlan(draftStartDate, draftMode, menuDays);
 
@@ -428,7 +494,58 @@ const MenuSuggestion: React.FC = () => {
         if (day.date !== date) return day;
         return {
           ...day,
-          meals: day.meals.map((meal) => (meal.mealType === mealType ? { ...meal, recommendation } : meal)),
+          meals: day.meals.map((meal) =>
+            meal.mealType === mealType
+              ? {
+                  ...meal,
+                  slots: meal.slots.map((slot) => (slot.id === slotId ? { ...slot, recommendation } : slot)),
+                }
+              : meal
+          ),
+        };
+      });
+    });
+  };
+
+  const addDraftMealSlot = (date: string, mealType: MealType) => {
+    const slot = createDraftSlot(date, mealType, `custom-${Date.now()}`);
+    setDraftDays((currentDays) => {
+      const baseDays = currentDays.length > 0 ? currentDays : createDraftDaysFromMenuPlan(draftStartDate, draftMode, menuDays);
+
+      return baseDays.map((day) => {
+        if (day.date !== date) return day;
+        return {
+          ...day,
+          meals: day.meals.map((meal) => (meal.mealType === mealType ? { ...meal, slots: [...meal.slots, slot] } : meal)),
+        };
+      });
+    });
+    void openDraftRecipePicker({ date, mealType, slotId: slot.id });
+  };
+
+  const removeDraftMealSlot = (date: string, mealType: MealType, slotId: string) => {
+    setDraftDays((currentDays) => {
+      const baseDays = currentDays.length > 0 ? currentDays : createDraftDaysFromMenuPlan(draftStartDate, draftMode, menuDays);
+
+      return baseDays.map((day) => {
+        if (day.date !== date) return day;
+        return {
+          ...day,
+          meals: day.meals.map((meal) => {
+            if (meal.mealType !== mealType) return meal;
+            const targetSlot = meal.slots.find((slot) => slot.id === slotId);
+            if (targetSlot?.existingMealItemId) {
+              return {
+                ...meal,
+                slots: meal.slots.map((slot) => (slot.id === slotId ? { ...slot, recommendation: null } : slot)),
+              };
+            }
+            const nextSlots = meal.slots.filter((slot) => slot.id !== slotId);
+            return {
+              ...meal,
+              slots: nextSlots.length > 0 ? nextSlots : [createDraftSlot(date, mealType, "empty")],
+            };
+          }),
         };
       });
     });
@@ -463,7 +580,7 @@ const MenuSuggestion: React.FC = () => {
 
   const selectDraftRecipe = (recipe: RecipeRecommendation) => {
     if (!draftPickerTarget) return;
-    updateDraftMeal(draftPickerTarget.date, draftPickerTarget.mealType, recipe);
+    updateDraftMealSlot(draftPickerTarget.date, draftPickerTarget.mealType, draftPickerTarget.slotId, recipe);
     setDraftPickerTarget(null);
     setDraftRecipeSearch("");
   };
@@ -474,18 +591,20 @@ const MenuSuggestion: React.FC = () => {
       return;
     }
 
-    const changedMeals = draftDays.flatMap((day) =>
-      day.meals
-        .map((meal) => ({ date: day.date, meal }))
-        .filter(({ meal }) => {
-          if (meal.existingMealItemId) {
-            return !meal.recommendation || meal.recommendation.recipeId !== meal.originalRecipeId;
-          }
-          return Boolean(meal.recommendation);
-        })
+    const changedMealSlots = draftDays.flatMap((day) =>
+      day.meals.flatMap((meal) =>
+        meal.slots
+          .map((slot) => ({ date: day.date, mealType: meal.mealType, slot }))
+          .filter(({ slot }) => {
+            if (slot.existingMealItemId) {
+              return !slot.recommendation || slot.recommendation.recipeId !== slot.originalRecipeId;
+            }
+            return Boolean(slot.recommendation);
+          })
+      )
     );
 
-    const hasAnyRecipe = draftDays.some((day) => day.meals.some((meal) => meal.recommendation));
+    const hasAnyRecipe = draftDays.some((day) => day.meals.some((meal) => meal.slots.some((slot) => slot.recommendation)));
     if (!hasAnyRecipe) {
       showToast("Chưa có món nào trong bản xem trước để lưu.", "error");
       return;
@@ -494,28 +613,28 @@ const MenuSuggestion: React.FC = () => {
     setIsSaving(true);
     try {
       await Promise.all(
-        changedMeals.map(({ date, meal }) => {
-          if (meal.existingMealItemId && !meal.recommendation) {
-            return recommendationApi.deleteMealItem(meal.existingMealItemId, {
+        changedMealSlots.map(({ date, mealType, slot }) => {
+          if (slot.existingMealItemId && !slot.recommendation) {
+            return recommendationApi.deleteMealItem(slot.existingMealItemId, {
               familyId: family.id,
               userId,
             });
           }
 
-          if (meal.existingMealItemId && meal.recommendation) {
-            return recommendationApi.updateMealItem(meal.existingMealItemId, {
+          if (slot.existingMealItemId && slot.recommendation) {
+            return recommendationApi.updateMealItem(slot.existingMealItemId, {
               familyId: family.id,
               userId,
-              recipeId: meal.recommendation.recipeId,
-              mealType: meal.mealType,
+              recipeId: slot.recommendation.recipeId,
+              mealType,
               date,
               status: "CONFIRMED",
             });
           }
 
-          return recommendationApi.addRecommendationToMeal(meal.recommendation?.recipeId as number, {
+          return recommendationApi.addRecommendationToMeal(slot.recommendation?.recipeId as number, {
             familyId: family.id,
-            mealType: meal.mealType,
+            mealType,
             date,
             status: "CONFIRMED",
           });
@@ -536,7 +655,7 @@ const MenuSuggestion: React.FC = () => {
   };
 
   const loadEditOptions = useCallback(
-    async (nextForm: EditMealForm) => {
+    async (nextForm: EditMealForm, autoSelectFirst = false) => {
       if (!family?.id || !userId) return;
 
       setIsLoadingEditOptions(true);
@@ -549,8 +668,36 @@ const MenuSuggestion: React.FC = () => {
           limit: 12,
         });
         setEditOptions(response.recommendations);
+        if (autoSelectFirst) {
+          const firstRecommendation = response.recommendations[0] ?? null;
+          setEditForm((current) => {
+            if (!current || current.mealItemId !== nextForm.mealItemId) {
+              return current;
+            }
+            if (current.date !== nextForm.date || current.mealType !== nextForm.mealType) {
+              return current;
+            }
+            return {
+              ...current,
+              selectedRecipeId: firstRecommendation?.recipeId ?? null,
+              recipeName: firstRecommendation?.recipeName ?? "",
+            };
+          });
+        }
       } catch (error) {
         setEditOptions([]);
+        if (autoSelectFirst) {
+          setEditForm((current) => {
+            if (!current || current.mealItemId !== nextForm.mealItemId) {
+              return current;
+            }
+            return {
+              ...current,
+              selectedRecipeId: null,
+              recipeName: "",
+            };
+          });
+        }
         showToast(getErrorMessage(error, "Không tải được danh sách món thay thế."), "error");
       } finally {
         setIsLoadingEditOptions(false);
@@ -566,6 +713,9 @@ const MenuSuggestion: React.FC = () => {
       selectedRecipeId: recipe.recipeId,
       mealType,
       date: selectedDate,
+      originalMealType: mealType,
+      originalDate: selectedDate,
+      originalRecipeName: recipe.recipeName,
       status: (recipe.status === "SUGGESTED" ? "SUGGESTED" : "CONFIRMED"),
       recipeName: recipe.recipeName,
     };
@@ -578,11 +728,18 @@ const MenuSuggestion: React.FC = () => {
   const updateEditForm = (nextValues: Partial<EditMealForm>) => {
     setEditForm((current) => {
       if (!current) return current;
-      const nextForm = { ...current, ...nextValues };
       if (nextValues.mealType || nextValues.date) {
+        const nextForm = {
+          ...current,
+          ...nextValues,
+          selectedRecipeId: null,
+          recipeName: "",
+        };
         setEditOptions([]);
-        void loadEditOptions(nextForm);
+        void loadEditOptions(nextForm, true);
+        return nextForm;
       }
+      const nextForm = { ...current, ...nextValues };
       return nextForm;
     });
   };
@@ -590,6 +747,10 @@ const MenuSuggestion: React.FC = () => {
   const saveMealItemEdit = async () => {
     if (!family?.id || !userId || !editForm) {
       showToast("Không đủ dữ liệu để chỉnh sửa món trong bữa.", "error");
+      return;
+    }
+    if (!editForm.selectedRecipeId) {
+      showToast("Vui lòng chọn một món thay thế trước khi lưu.", "error");
       return;
     }
 
@@ -711,10 +872,6 @@ const MenuSuggestion: React.FC = () => {
                             <article className="menu-recipe-card" key={recipe.mealItemId}>
                               <div className="menu-recipe-image">
                                 {recipe.imageUrl ? <img src={recipe.imageUrl} alt={recipe.recipeName} /> : getRecipeInitial(recipe.recipeName)}
-                              </div>
-                              <div className="recipe-status-row">
-                                <span className="recipe-status-pill">{recipe.status || "CONFIRMED"}</span>
-                                <Check size={16} color="#006b55" />
                               </div>
                               <h3>{recipe.recipeName}</h3>
                               <p>Đã được thêm vào {meta.label.toLowerCase()} ngày {formatDisplayDate(selectedDate)}.</p>
@@ -877,62 +1034,70 @@ const MenuSuggestion: React.FC = () => {
                                   {meta.label}
                                 </div>
 
-                                <div className="menu-preview-recipe">
-                                  {meal.recommendation ? (
-                                    <>
-                                      <strong>{meal.recommendation.recipeName}</strong>
-                                      {meal.recommendation.score > 0 ? (
-                                        <span>
-                                          Khớp {meal.recommendation.matchPercent}% nguyên liệu · Thiếu{" "}
-                                          {meal.recommendation.missingIngredients.length} nguyên liệu
-                                        </span>
-                                      ) : (
-                                        <span>{meal.existingMealItemId ? "Đã có trong thực đơn đã lưu." : "Món người dùng tự chọn."}</span>
-                                      )}
-                                    </>
-                                  ) : (
-                                    <span>Không có món phù hợp với slot này.</span>
-                                  )}
+                                <div className="menu-preview-slots">
+                                  {meal.slots.map((slot) => (
+                                    <div className="menu-preview-slot" key={slot.id}>
+                                      <div className="menu-preview-recipe">
+                                        {slot.recommendation ? (
+                                          <>
+                                            <strong>{slot.recommendation.recipeName}</strong>
+                                            {slot.recommendation.score > 0 ? (
+                                              <span>
+                                                Khớp {slot.recommendation.matchPercent}% nguyên liệu · Thiếu{" "}
+                                                {slot.recommendation.missingIngredients.length} nguyên liệu
+                                              </span>
+                                            ) : (
+                                              <span>{slot.existingMealItemId ? "Đã có trong thực đơn đã lưu." : "Món người dùng tự chọn."}</span>
+                                            )}
+                                          </>
+                                        ) : (
+                                          <span>Không có món phù hợp với slot này.</span>
+                                        )}
+                                      </div>
+
+                                      <div className="menu-preview-actions">
+                                        {slot.recommendation ? (
+                                          <>
+                                            <button
+                                              className="menu-tiny-icon-btn"
+                                              type="button"
+                                              onClick={() => openDraftRecipePicker({ date: day.date, mealType: meal.mealType, slotId: slot.id })}
+                                              aria-label={`Thay món ${meta.label.toLowerCase()}`}
+                                            >
+                                              <Edit3 size={14} />
+                                            </button>
+                                            <button
+                                              className="menu-tiny-icon-btn danger"
+                                              type="button"
+                                              onClick={() => removeDraftMealSlot(day.date, meal.mealType, slot.id)}
+                                              aria-label={`Xóa món ${meta.label.toLowerCase()}`}
+                                            >
+                                              <X size={14} />
+                                            </button>
+                                          </>
+                                        ) : (
+                                          <button
+                                            className="menu-tiny-add-btn"
+                                            type="button"
+                                            onClick={() => openDraftRecipePicker({ date: day.date, mealType: meal.mealType, slotId: slot.id })}
+                                          >
+                                            <Plus size={15} />
+                                            Chọn món
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
                                 </div>
 
-                                <div className="menu-preview-actions">
-                                  {meal.recommendation ? (
-                                    <>
-                                      <span className="menu-score-chip">
-                                        {meal.existingMealItemId
-                                          ? "Đã lưu"
-                                          : meal.recommendation.score > 0
-                                            ? `Score ${meal.recommendation.score}`
-                                            : "Tự chọn"}
-                                      </span>
-                                      <button
-                                        className="menu-tiny-icon-btn"
-                                        type="button"
-                                        onClick={() => openDraftRecipePicker({ date: day.date, mealType: meal.mealType })}
-                                        aria-label={`Thay món ${meta.label.toLowerCase()}`}
-                                      >
-                                        <Edit3 size={14} />
-                                      </button>
-                                      <button
-                                        className="menu-tiny-icon-btn danger"
-                                        type="button"
-                                        onClick={() => updateDraftMeal(day.date, meal.mealType, null)}
-                                        aria-label={`Xóa món ${meta.label.toLowerCase()}`}
-                                      >
-                                        <X size={14} />
-                                      </button>
-                                    </>
-                                  ) : (
-                                    <button
-                                      className="menu-tiny-add-btn"
-                                      type="button"
-                                      onClick={() => openDraftRecipePicker({ date: day.date, mealType: meal.mealType })}
-                                    >
-                                      <Plus size={15} />
-                                      Chọn món
-                                    </button>
-                                  )}
-                                </div>
+                                <button
+                                  className="menu-tiny-icon-btn add-slot"
+                                  type="button"
+                                  onClick={() => addDraftMealSlot(day.date, meal.mealType)}
+                                  aria-label={`Thêm món cho ${meta.label.toLowerCase()}`}
+                                >
+                                  <Plus size={15} />
+                                </button>
                               </div>
                             );
                           })}
@@ -1003,7 +1168,7 @@ const MenuSuggestion: React.FC = () => {
                       <button className="draft-picker-option" key={recipe.recipeId} type="button" onClick={() => selectDraftRecipe(recipe)}>
                         <strong>{recipe.recipeName}</strong>
                         <span>
-                          Score {recipe.score} · Khớp {recipe.matchPercent}% · Thiếu {recipe.missingIngredients.length} nguyên liệu
+                          Khớp {recipe.matchPercent}% · Thiếu {recipe.missingIngredients.length} nguyên liệu
                         </span>
                       </button>
                     ))}
@@ -1089,36 +1254,37 @@ const MenuSuggestion: React.FC = () => {
                   </select>
                 </div>
 
-                <div className="menu-field">
-                  <label htmlFor="edit-meal-status">Trạng thái</label>
-                  <select
-                    id="edit-meal-status"
-                    value={editForm.status}
-                    onChange={(event) => updateEditForm({ status: event.target.value as EditMealForm["status"] })}
-                  >
-                    <option value="CONFIRMED">CONFIRMED</option>
-                    <option value="SUGGESTED">SUGGESTED</option>
-                  </select>
-                </div>
               </div>
 
               <section className="menu-preview-panel">
                 <header className="menu-preview-header">
                   <h3>Món thay thế</h3>
                   <span className="menu-score-chip">
-                    <Info size={13} /> Đang chọn: {editForm.recipeName}
+                    <Info size={13} />{" "}
+                    {isLoadingEditOptions
+                      ? "Đang tải món phù hợp..."
+                      : editForm.recipeName
+                        ? `Đang chọn: ${editForm.recipeName}`
+                        : "Chưa có món phù hợp để chọn"}
                   </span>
                 </header>
 
                 <div className="edit-recipe-options">
-                  <button
-                    className={`edit-recipe-option ${editForm.selectedRecipeId === editForm.currentRecipeId ? "selected" : ""}`}
-                    type="button"
-                    onClick={() => updateEditForm({ selectedRecipeId: editForm.currentRecipeId })}
-                  >
-                    <strong>{editForm.recipeName}</strong>
-                    <span>Giữ món hiện tại</span>
-                  </button>
+                  {editForm.date === editForm.originalDate && editForm.mealType === editForm.originalMealType && (
+                    <button
+                      className={`edit-recipe-option ${editForm.selectedRecipeId === editForm.currentRecipeId ? "selected" : ""}`}
+                      type="button"
+                      onClick={() =>
+                        updateEditForm({
+                          selectedRecipeId: editForm.currentRecipeId,
+                          recipeName: editForm.originalRecipeName,
+                        })
+                      }
+                    >
+                      <strong>{editForm.originalRecipeName}</strong>
+                      <span>Giữ món hiện tại</span>
+                    </button>
+                  )}
 
                   {isLoadingEditOptions ? (
                     <div className="menu-modal-empty compact">
@@ -1140,7 +1306,7 @@ const MenuSuggestion: React.FC = () => {
                       >
                         <strong>{recipe.recipeName}</strong>
                         <span>
-                          Score {recipe.score} · Khớp {recipe.matchPercent}% · Thiếu {recipe.missingIngredients.length} nguyên liệu
+                          Khớp {recipe.matchPercent}% · Thiếu {recipe.missingIngredients.length} nguyên liệu
                         </span>
                       </button>
                     ))
