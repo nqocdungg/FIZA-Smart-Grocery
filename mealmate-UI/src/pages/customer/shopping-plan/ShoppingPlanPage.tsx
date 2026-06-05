@@ -1,3 +1,4 @@
+'use client';
 import DatePicker from '@/components/common/DatePicker';
 import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
@@ -7,57 +8,111 @@ import NoteSection from '@/components/shopping-plan/NoteSection';
 import ProgressSection from '@/components/shopping-plan/ProgressSection';
 // import { useAuth } from '@/context/AuthContext';
 
-import MOCK_DETAIL_DATA from '@/components/shopping-plan/mock';
+import ToggleSwitch from '@/components/common/ToggleSwitch';
 import ShoppingModal from '@/components/shopping-plan/popup-modal/ShoppingModal';
 import type { DailyPlanCardData } from '@/features/shopping-plan/shopping';
+import { getPlanDetail, getUserFamilies, getWeeklySummary } from '@/features/shopping-plan/shoppingApi';
 import { Plus } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import './ShoppingPlanPage.css';
 
 const ShoppingPlanPage: React.FC = () => {
-    // const { user } = useAuth();
-    const [selectedDate, setSelectedDate] = useState('2026-05-09');
-    const [isModalOpen, setIsModalOpen] = useState(false); // State để điều khiển mở/đóng modal
-    const [modalMode, setModalMode] = useState<'CREATE' | 'DETAIL'>('CREATE'); // State để xác định mode của modal
-    const [selectedListData, setSelectedListData] = useState<any>(null); // State để lưu data khi mở modal ở mode DETAIL
+    const [selectedDate, setSelectedDate] = useState('2026-06-01');
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [modalMode, setModalMode] = useState<'CREATE' | 'DETAIL'>('CREATE');
+    const [selectedListData, setSelectedListData] = useState<any>(null);
     // const canCreatePlan = user?.role === 'CUSTOMER'; // Thay đổi sau để pbiet với ng nội trợ
+    const [, setLoading] = useState(false);
+    const [familyId, setFamilyId] = useState<number | null>(null);
+    const [plans, setPlans] = useState<DailyPlanCardData[]>([]);
+    const [type, setType] = useState<'DAY' | 'WEEK'>('DAY');
 
-    const handleOpenCreateModal = () => {
-        setModalMode('CREATE');
-        setSelectedListData(null); // Tạo mới nên không có data cũ
-        setIsModalOpen(true);
+    const fetchFamilyInfo = async () => {
+        try {
+            const families = await getUserFamilies();
+            if (families && families.length > 0) {
+                setFamilyId(families[0].id);
+            }
+        } catch (error: any) {
+            console.error("Lỗi lấy gia đình:", error.message);
+        }
+    };
+    const fetchSummary = async () => {
+        if (!familyId) return;
+        try {
+            setLoading(true);
+            const data = await getWeeklySummary(familyId, selectedDate);
+            setPlans(data);
+        } catch (error: any) {
+            console.log(error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+    useEffect(() => {
+        fetchFamilyInfo();
+    }, []);
+    useEffect(() => {
+        if (familyId) {
+            fetchSummary();
+        }
+    }, [familyId, selectedDate]);
+    const fetchPlanDetail = async (date: string) => {
+        if (!familyId) return;
+        try {
+            setLoading(true);
+            const items = await getPlanDetail(familyId, date);
+            return items;
+        } catch (error: any) {
+            console.error("Lỗi khi lấy chi tiết kế hoạch:", error.message);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    const handleOpenCreateModal = async (date: string) => {
+        if (!familyId) return;
+        try {
+            setModalMode('CREATE');
+            setSelectedDate(date);
+            setIsModalOpen(true);
+            setSelectedListData({
+                planned_date: date,
+                items: []
+            });
+        }
+        catch (error: any) {
+            console.log("Lỗi khi lấy chi tiết kế hoạch: ", error.message);
+            setIsModalOpen(false);
+        }
+
     };
 
-    const handleOpenDetailModal = (date: string) => {
-        setModalMode('DETAIL');
-        // 3. Truyền data (sau này sẽ gọi API lấy detail theo listId)
-        // Tạm thời truyền mock hoặc object rỗng để test giao diện
-        setSelectedListData({
-            planned_date: date,
-            items: MOCK_DETAIL_DATA.items // Dùng mock data để hiện list món ăn
-        });
-
-        setIsModalOpen(true);
+    const handleOpenDetailModal = async (date: string) => {
+        if (!familyId) return;
+        try {
+            const planSummary = plans.find(p => p.plannedDate === date);
+            setModalMode('DETAIL');
+            setIsModalOpen(true);
+            setSelectedDate(date);
+            const items = await fetchPlanDetail(date);
+            setSelectedListData({
+                planned_date: date,
+                listId: planSummary?.listId,
+                items: items || []
+            });
+        } catch (error: any) {
+            console.log("Lỗi khi lấy chi tiết kế hoạch: ", error.message);
+            setIsModalOpen(false);
+        }
     };
 
-
-    // Mock data cho 7 ngày (sau này sẽ gọi từ shoppingApi.ts)
-    const [plans] = useState<DailyPlanCardData[]>([
-        { planned_date: '2026-05-04', dayOfWeek: 'Thứ 2', displayDate: '4/5', totalItems: 6, purchasedItems: 3, assigneeNames: ['Xuân'] },
-        { planned_date: '2026-05-05', dayOfWeek: 'Thứ 3', displayDate: '5/5', totalItems: 7, purchasedItems: 3, assigneeNames: ['Xuân'] },
-        { planned_date: '2026-05-06', dayOfWeek: 'Thứ 4', displayDate: '6/5', totalItems: 4, purchasedItems: 3, assigneeNames: ['Xuân'] },
-        { planned_date: '2026-05-07', dayOfWeek: 'Thứ 5', displayDate: '7/5', totalItems: 5, purchasedItems: 3, assigneeNames: ['Xuân'] },
-        { planned_date: '2026-05-08', dayOfWeek: 'Thứ 6', displayDate: '8/5', totalItems: 12, purchasedItems: 3, assigneeNames: ['Xuân'] },
-        { planned_date: '2026-05-09', dayOfWeek: 'Thứ 7', displayDate: '9/5', totalItems: 3, purchasedItems: 3, assigneeNames: ['Xuân'] },
-        { planned_date: '2026-05-09', dayOfWeek: 'CN', displayDate: '10/5', totalItems: 8, purchasedItems: 3, assigneeNames: ['Xuân'] },
-    ]);
 
     return (
         <>
             <div className="shopping-layout">
                 <Sidebar />
                 <div className="shopping-main-content">
-                    {/* 2. Topbar chung của dự án, cần thay đổi tham số vào */}
                     <Topbar />
                     {/* title="Kế hoạch đi chợ" */}
                     <div className="shopping-page-body">
@@ -67,10 +122,13 @@ const ShoppingPlanPage: React.FC = () => {
                                 value={selectedDate}
                                 onChange={(date) => setSelectedDate(date)}
                             />
+                            <div className="toolbar-center">
+                                <ToggleSwitch value={type} onChange={(val) => setType(val)} />
+                            </div>
                             {/* canCreatePlan &&  */}
                             {(
                                 <button className="btn-create-plan"
-                                    onClick={handleOpenCreateModal}>
+                                    onClick={() => handleOpenCreateModal(selectedDate)}>
                                     <Plus size={18} />
                                     <span></span>
                                     Lập kế hoạch mới
@@ -78,27 +136,29 @@ const ShoppingPlanPage: React.FC = () => {
                             )}
                         </div>
 
-                        {/* 4. Grid hiển thị 7 ngày */}
-                        <div className="grid-section">
-                            <DailyPlanGrid
-                                plans={plans}
-                                activeDate={selectedDate}
-                                onCardClick={(date) => {
-                                    setSelectedDate(date);
-                                    handleOpenDetailModal(date);
-                                }}
+                        <div className="shopping-plan-workspace">
+                            {/* 4. Grid hiển thị 7 ngày */}
+                            <div className="grid-section">
+                                <DailyPlanGrid
+                                    plans={plans}
+                                    activeDate={selectedDate}
+                                    onCardClick={(date) => {
+                                        setSelectedDate(date);
+                                        handleOpenDetailModal(date);
+                                    }}
 
-                            />
-                        </div>
+                                />
+                            </div>
 
-                        {/* 5. Widgets phía dưới (Progress, Frequent, Notes) */}
-                        <div className="dashboard-widgets">
-                            <ProgressSection
-                                percentage={45}
-                                message="Còn 6 danh mục cần hoàn thành cho hôm nay"
-                            />
-                            <FrequentItems />
-                            <NoteSection />
+                            {/* 5. Widgets bên cạnh board */}
+                            <div className="dashboard-widgets">
+                                <NoteSection />
+                                <FrequentItems />
+                                <ProgressSection
+                                    percentage={45}
+                                    message="Còn 6 danh mục cần hoàn thành cho hôm nay"
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -107,6 +167,8 @@ const ShoppingPlanPage: React.FC = () => {
                 isOpen={isModalOpen}
                 mode={modalMode}
                 data={selectedListData}
+                familyId={familyId}
+                onSuccess={fetchSummary}
                 onModeChange={(newMode) => setModalMode(newMode)}
                 onClose={() => setIsModalOpen(false)}
             />

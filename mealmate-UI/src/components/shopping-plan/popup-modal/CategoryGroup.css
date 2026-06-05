@@ -1,8 +1,9 @@
 .category-card {
     background: white;
-    border-radius: 24px;
-    padding: 20px;
+    border-radius: 32px; /* Tất cả Card dùng 32px */
+    padding: 24px;
     margin-bottom: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
 }
 
 .category-header {

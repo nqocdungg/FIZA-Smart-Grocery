@@ -1,0 +1,48 @@
+.toggle-container {
+  position: relative;
+  display: flex;
+  background-color: #DFF2EB; 
+  padding: 4px;
+  border-radius: 999px;
+  width: 180px; /* Độ rộng cố định để slider chạy chuẩn */
+  height: 40px;
+  align-items: center;
+  user-select: none;
+}
+
+.toggle-btn {
+  flex: 1;
+  z-index: 2; /* Nằm trên lớp slider */
+  background: none;
+  border: none;
+  padding: 8px 0;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #6E7A74; /* Màu chữ khi không chọn */
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.toggle-btn.active {
+  color: #4D9A80; 
+}
+
+.toggle-slider {
+  position: absolute;
+  width: calc(50% - 4px);
+  height: calc(100% - 8px);
+  background-color: #FFFFFF;
+  border-radius: 999px;
+  box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.05);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1;
+}
+
+.toggle-slider.is-day {
+  transform: translateX(0);
+}
+
+.toggle-slider.is-week {
+  transform: translateX(100%);
+}

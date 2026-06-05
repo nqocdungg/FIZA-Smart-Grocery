@@ -9,10 +9,9 @@ interface FrequentItemsProps {
 }
 
 const FrequentItems: React.FC<FrequentItemsProps> = ({ items, onAdd }) => {
-    // Mock data nếu không có props truyền vào
-    const displayItems = items || [
-        { food_id: 1, name: 'Sữa tươi nguyên chất', unit: '2L', standard_quantity: 1 },
-        { food_id: 2, name: 'Trứng gà ta', unit: '10 quả', standard_quantity: 1 },
+    const displayItems: FrequentItemSuggestion[] = items || [
+        { foodId: 1, foodName: 'Sữa tươi nguyên chất', unit: '2L', standardQuantity: 1 },
+        { foodId: 2, foodName: 'Trứng gà ta', unit: '10 quả', standardQuantity: 1 },
     ];
 
     return (
@@ -28,12 +27,12 @@ const FrequentItems: React.FC<FrequentItemsProps> = ({ items, onAdd }) => {
             {/* List Items */}
             <div className="frequent-list">
                 {displayItems.map((item) => (
-                    <div key={item.food_id} className="frequent-row">
+                    <div key={item.foodId} className="frequent-row">
                         <div className="frequent-row-left">
                             <div className="frequent-item-check">
                                 <div className="check-dot"></div>
                             </div>
-                            <span className="frequent-item-name">{item.name}</span>
+                            <span className="frequent-item-name">{item.foodName}</span>
                         </div>
 
                         <div className="frequent-row-right">

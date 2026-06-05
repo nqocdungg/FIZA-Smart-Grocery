@@ -11,11 +11,11 @@ interface RowProps {
 }
 
 const ShoppingItemRow: React.FC<RowProps> = ({ item, mode, onUpdate, onDelete, onToggleStatus }) => {
-    // --- GIAO DIỆN LÚC TẠO MỚI (CÓ INPUT) ---
+
     if (mode === 'CREATE') {
         return (
             <div className="shopping-row-edit">
-                <span className="food-name">{item.food?.name || 'Thực phẩm'}</span>
+                <span className="food-name">{item.foodName || 'Thực phẩm'}</span>
 
                 <div className="input-group">
                     <input
@@ -40,15 +40,15 @@ const ShoppingItemRow: React.FC<RowProps> = ({ item, mode, onUpdate, onDelete, o
 
     // --- GIAO DIỆN LÚC XEM CHI TIẾT (CÓ CHECKBOX) ---
     return (
-        <div className={`shopping-row-view ${item.is_purchased ? 'completed' : ''}`}>
+        <div className={`shopping-row-view ${item.isPurchased ? 'completed' : ''}`}>
             <div
-                className={`checkbox ${item.is_purchased ? 'checked' : ''}`}
+                className={`checkbox ${item.isPurchased ? 'checked' : ''}`}
                 onClick={() => onToggleStatus?.(item.id)}
             >
-                {item.is_purchased && <Check size={14} color="white" />}
+                {item.isPurchased && <Check size={14} color="white" />}
             </div>
 
-            <span className="food-name-display">{item.food?.name}</span>
+            <span className="food-name-display">{item.foodName}</span>
 
             <div className="quantity-display">
                 {item.quantity} {item.unit}

@@ -1,18 +1,18 @@
-import React, { useState } from "react"; 
-import { useLocation, Link, useNavigate } from "react-router-dom";
+import React, { useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import "./Sidebar.css";
 
-import { useAuth } from "@/context/AuthContext"; 
-import ProfileModal from "./ProfileModal";
+import { useAuth } from "@/context/AuthContext";
 import api from "@/services/api";
+import ProfileModal from "./ProfileModal";
 
-import iconGroup from "@/assets/icon/Icon-group.svg";
 import fridgeMenuIcon from "@/assets/icon/Icon-fridge.svg";
+import iconGroup from "@/assets/icon/Icon-group.svg";
 import iconLogo from "@/assets/icon/Icon-logo.svg";
 import iconRecipe from "@/assets/icon/Icon-recipe.svg";
 import iconSchedule from "@/assets/icon/Icon-schedule.svg";
-import iconStatistic from "@/assets/icon/Icon-statistic.svg";
 import iconShopping from "@/assets/icon/Icon-shopping.svg";
+import iconStatistic from "@/assets/icon/Icon-statistic.svg";
 
 import defaultAvatar from "@/assets/avatar/26.svg";
 
@@ -20,7 +20,7 @@ const Sidebar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(false);
-  
+
   const authContext = useAuth();
   const userFromContext = authContext?.user;
 
@@ -39,14 +39,14 @@ const Sidebar: React.FC = () => {
   const getRoleLabel = (userObj: any) => {
     if (!userObj) return "Thành viên";
     const roleObj = userObj.role;
-    const roleName = (typeof roleObj === "object" && roleObj !== null ? roleObj.name : roleObj) 
-                     || userObj.roleName 
-                     || "";
+    const roleName = (typeof roleObj === "object" && roleObj !== null ? roleObj.name : roleObj)
+      || userObj.roleName
+      || "";
     const normalizedRole = String(roleName).toUpperCase();
     if (
-      normalizedRole.includes("ADMIN") || 
-      normalizedRole.includes("HOUSEKEEPER") || 
-      normalizedRole.includes("BOSS") || 
+      normalizedRole.includes("ADMIN") ||
+      normalizedRole.includes("HOUSEKEEPER") ||
+      normalizedRole.includes("BOSS") ||
       normalizedRole.includes("CHỦ NHÀ")
     ) {
       return "Nội trợ";
@@ -75,7 +75,7 @@ const Sidebar: React.FC = () => {
       refinedUserData = {
         id: foundFullProfile.id,
         fullName: foundFullProfile.fullName,
-        roleName: foundFullProfile.roleName, 
+        roleName: foundFullProfile.roleName,
         email: foundFullProfile.email,
         phone: foundFullProfile.phone,
         gender: foundFullProfile.gender,
@@ -103,7 +103,7 @@ const Sidebar: React.FC = () => {
       if (token) {
         await api.post("/api/auth/logout", {}, {
           headers: { Authorization: `Bearer ${token}` }
-        }).catch(() => {});
+        }).catch(() => { });
       }
     } finally {
       authContext?.logout();
@@ -123,8 +123,8 @@ const Sidebar: React.FC = () => {
       </div>
 
       <nav className="sidebar-nav">
-        <Link 
-          className={`sidebar-menu-item ${location.pathname === "/family" ? "active" : ""}`} 
+        <Link
+          className={`sidebar-menu-item ${location.pathname === "/family" ? "active" : ""}`}
           to="/family"
         >
           <span className="sidebar-icon-wrap">
@@ -133,8 +133,8 @@ const Sidebar: React.FC = () => {
           <span className="sidebar-menu-text">Nhóm gia đình</span>
         </Link>
 
-        <Link 
-          className={`sidebar-menu-item ${location.pathname === "/fridge" || location.pathname === "/" ? "active" : ""}`} 
+        <Link
+          className={`sidebar-menu-item ${location.pathname === "/fridge" || location.pathname === "/" ? "active" : ""}`}
           to="/fridge"
         >
           <span className="sidebar-icon-wrap">
@@ -143,8 +143,8 @@ const Sidebar: React.FC = () => {
           <span className="sidebar-menu-text">Tủ lạnh nhà tôi</span>
         </Link>
 
-        <Link 
-          className={`sidebar-menu-item ${location.pathname === "/shopping" ? "active" : ""}`} 
+        <Link
+          className={`sidebar-menu-item ${location.pathname === "/shopping" ? "active" : ""}`}
           to="/shopping"
         >
           <span className="sidebar-icon-wrap">
@@ -153,8 +153,8 @@ const Sidebar: React.FC = () => {
           <span className="sidebar-menu-text">Kế hoạch đi chợ</span>
         </Link>
 
-        <Link 
-          className={`sidebar-menu-item ${location.pathname === "/suggestions" ? "active" : ""}`} 
+        <Link
+          className={`sidebar-menu-item ${location.pathname === "/suggestions" ? "active" : ""}`}
           to="/suggestions"
         >
           <span className="sidebar-icon-wrap">
@@ -173,8 +173,8 @@ const Sidebar: React.FC = () => {
           <span className="sidebar-menu-text">Thư viện công thức</span>
         </Link>
 
-        <Link 
-          className={`sidebar-menu-item ${location.pathname === "/reports" ? "active" : ""}`} 
+        <Link
+          className={`sidebar-menu-item ${location.pathname === "/reports" ? "active" : ""}`}
           to="/reports"
         >
           <span className="sidebar-icon-wrap">
@@ -186,7 +186,7 @@ const Sidebar: React.FC = () => {
 
       {/* Profile + Logout section */}
       <div className="sidebar-bottom">
-        <div 
+        <div
           className="sidebar-profile-section"
           onClick={() => setIsProfileModalOpen(true)}
           style={{ cursor: 'pointer' }}
@@ -194,9 +194,9 @@ const Sidebar: React.FC = () => {
           <div className="sidebar-profile">
             <div className="sidebar-avatar">
               <div className="sidebar-avatar-line" />
-              <img 
-                src={rawAvatar || defaultAvatar} 
-                alt="Avatar" 
+              <img
+                src={rawAvatar || defaultAvatar}
+                alt="Avatar"
                 onError={(e) => {
                   (e.target as HTMLImageElement).src = defaultAvatar;
                 }}
@@ -226,11 +226,11 @@ const Sidebar: React.FC = () => {
         </button>
       </div>
 
-      <ProfileModal 
+      <ProfileModal
         isOpen={isProfileModalOpen}
         onClose={() => setIsProfileModalOpen(false)}
         familyName={localStorage.getItem("currentFamilyName") || "Gia đình My My"}
-        isMe={true} 
+        isMe={true}
         memberData={refinedUserData}
       />
     </aside>

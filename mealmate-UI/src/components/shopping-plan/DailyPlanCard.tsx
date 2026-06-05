@@ -20,24 +20,32 @@ const DailyPlanCard = ({ data, isActive, onClick }: DailyPlanCardProps) => {
             </div>
 
             <div className="shopping-card-body">
-                <div className="shopping-card-row">
+                {/* Hàng 1 (Icon thực phẩm + số món) */}
+                <div className="shopping-card-row row-food">
                     <div className="icon-carrot-wrapper">🥕</div> {/* sau sẽ import svg icon vào cho đồng bộ */}
                     <span className="item-count-text">{data.totalItems} món</span>
                 </div>
 
-                <div className="shopping-card-row">
+                {/* Hàng 2 (Icon người + 'Phụ trách' + Tên người + nút ...) */}
+                <div className="shopping-card-row row-assignee">
                     <div className="assignee-label">
-                        <div className="avatar-mini-placeholder"></div>
+                        <div className="avatar-mini-placeholder">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        </div>
                         <span>Phụ trách</span>
                     </div>
-                    {/* Hiển thị tên người đầu tiên trong mảng hoặc báo 'Chưa giao' */}
-                    <div className="name-tag">
-                        {data.assigneeNames && data.assigneeNames.length > 0 ? data.assigneeNames[0] : 'Chưa giao'}
+
+                    <div className="assignee-actions">
+                        <div className="name-tag">
+                            {data.assigneeNames && data.assigneeNames.length > 0 ? data.assigneeNames[0] : 'Chưa giao'}
+                        </div>
+                        <div className="more-icon">•••</div>
                     </div>
-                    <div className="more-icon">•••</div>
                 </div>
-                {/* Badge Trạng thái Đã mua */}
+
+                {/* Hàng 3 Badge Trạng thái Đã mua */}
                 <div className="shopping-card-status-badge">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
                     Đã mua {data.purchasedItems}/{data.totalItems}
                 </div>
             </div>

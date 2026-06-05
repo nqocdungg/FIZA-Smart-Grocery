@@ -1,14 +1,16 @@
 .note-section-container {
-    width: 265px;
-    height: 282px;
-    padding: 20px;
-    background: rgba(255, 175, 134, 0.31);
-    border-radius: 30px;
+    width: 100%;
+    min-height: 270px;
+    height: auto;
+    padding: 18px;
+    background: #fff8f0;
+    border: 1px solid #e8cdb9;
+    border-radius: 18px;
     display: flex;
     flex-direction: column;
     gap: 15px;
     position: relative;
-    box-shadow: 0px 10px 30px -10px rgba(0, 0, 0, 0.04);
+    box-shadow: none;
     margin-top: 0px;
 }
 
@@ -18,26 +20,26 @@
     align-items: center;
     width: 100%;
     position: relative;
-    margin-top: 10px;
+    margin-top: 0;
 }
 
 .note-icon-wrapper {
     position: absolute;
-    top: -65px;
+    top: -38px;
     left: 0;
 }
 
 .note-floating-icon {
     width: 61px;
     height: 61px;
-    filter: drop-shadow(0px 2px 4px rgba(0, 0, 0, 0.2));
+    filter: none;
 }
 
 .note-title {
     color: #A2400B;
-    font-size: 16px;
+    font-size: 15px;
     font-family: 'Plus Jakarta Sans', sans-serif;
-    font-weight: 400;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.8px;
     margin: 0;
@@ -46,9 +48,10 @@
 .note-content-box {
     align-self: stretch;
     padding: 16px;
-    background: #F7FAFC;
-    border-radius: 16px;
-    border-left: 4px #FDAF87 solid;
+    background: #fffdf8;
+    border-radius: 14px;
+    border: 1px solid #f0dcc9;
+    border-left: 4px #d98b59 solid;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -59,7 +62,7 @@
     color: #171D1A;
     font-size: 14px;
     font-family: 'Plus Jakarta Sans', sans-serif;
-    font-weight: 400;
+    font-weight: 500;
     line-height: 20px;
     word-wrap: break-word;
 }

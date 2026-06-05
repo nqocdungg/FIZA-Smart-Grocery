@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-MealmateApplication<mealmate>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.mealmate.MealmateApplication",
+            "projectName": "mealmate",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}

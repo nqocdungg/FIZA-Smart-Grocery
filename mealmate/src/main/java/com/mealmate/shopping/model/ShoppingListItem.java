@@ -1,12 +1,17 @@
 package com.mealmate.shopping.model;
 
+import com.mealmate.catalog.model.Food;
 import com.mealmate.common.base.BaseEntity;
-import jakarta.persistence.*;
-import lombok.*;
 
-import com.mealmate.fridge.model.FridgeItem;
-
-import java.time.LocalDateTime;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "shopping_list_items")
@@ -15,44 +20,17 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ShoppingListItem extends BaseEntity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "shopping_list_id", nullable = false)
-    private ShoppingList shoppingList; // Thuộc danh sách nào
+    private ShoppingList shoppingList; // Thuộc danh sách
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "food_id", nullable = false)
-    private com.mealmate.catalog.model.Food food; // Thực phẩm cần mua
+    private Food food;
 
-    @Column(name = "custom_name")
-    private String customName;
-
-    @Column(name = "order_number")
-    private Integer orderNumber; // Số thứ tự
-
-    @Column(nullable = false)
-    private Double quantity; // Số lượng cần mua
-
-    @Column(name = "unit")
-    private String unit; // Đơn vị tính
-
-    @Column(columnDefinition = "TEXT")
-    private String note; // Ghi chú thêm
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "assigned_to")
-    private com.mealmate.user.model.User assignedTo; // Người được giao mua
-
-    @Column(name = "is_purchased")
-    private Boolean isPurchased = false; // Đã mua chưa
-
-    @Column(name = "imported_to_fridge_at")
-    private LocalDateTime importedToFridgeAt;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "fridge_item_id")
-    private FridgeItem fridgeItem;
+    private Double quantity;
+    private String unit;
+    private String note;
+    private Long assignedTo;
+    private Boolean isPurchased = false;
 }

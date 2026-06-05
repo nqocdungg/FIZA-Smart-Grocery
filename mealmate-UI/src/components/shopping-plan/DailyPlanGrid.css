@@ -1,58 +1,215 @@
-/* Container bao quanh toàn bộ khu vực Grid */
-.daily-plan-grid-wrapper {
-  background: rgba(109, 212, 180, 0.19); 
-  border-radius: 20px;
-  padding: 20px 20px 20px 20px; 
+.daily-plan-board {
   position: relative;
-  max-height: 600px; 
-  display: flex;
-  gap: 15px;
-  /* QUAN TRỌNG: Thêm padding-top đủ lớn (tầm 50px - 60px) */
-    padding-top: 20px !important; 
-    
-    /* Đảm bảo không bị cắt nội dung trồi ra */
-    overflow: visible !important; 
+  width: 100%;
+  min-width: 0;
+  padding: 34px 54px 42px;
+  border-radius: 30px;
+  overflow: hidden;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.3) 1px, transparent 1px) 0 0 / 42px 42px,
+    linear-gradient(0deg, rgba(255, 255, 255, 0.22) 1px, transparent 1px) 0 0 / 42px 42px,
+    linear-gradient(135deg, #d9eee8 0%, #c7e2dc 46%, #edf3ee 100%);
+  border: 1px solid rgba(124, 154, 148, 0.28);
+  box-shadow: none;
 }
 
-/* lưới 3 cột */
+.daily-plan-board::before,
+.daily-plan-board::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 98px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.daily-plan-board::before {
+  left: 0;
+  background: linear-gradient(90deg, rgba(210, 231, 226, 0.88), rgba(210, 231, 226, 0));
+}
+
+.daily-plan-board::after {
+  right: 0;
+  background: linear-gradient(270deg, rgba(237, 243, 238, 0.88), rgba(237, 243, 238, 0));
+}
+
+.daily-plan-scroll-wrapper {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 50px 18px 44px;
+  cursor: grab;
+  scroll-behavior: smooth;
+  scroll-padding: 0 28%;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  touch-action: pan-x;
+  user-select: none;
+}
+
+.daily-plan-scroll-wrapper::-webkit-scrollbar {
+  display: none;
+}
+
+.daily-plan-scroll-wrapper.is-dragging {
+  cursor: grabbing;
+  scroll-snap-type: none;
+}
+
+.daily-plan-scroll-wrapper::before {
+  content: '';
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  top: 36px;
+  height: 12px;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 16px 50%, rgba(88, 103, 99, 0.34) 0 3px, transparent 4px) 0 0 / 92px 12px,
+    linear-gradient(90deg, rgba(72, 88, 84, 0.16), rgba(255, 255, 255, 0.52), rgba(72, 88, 84, 0.16));
+  opacity: 0.7;
+  pointer-events: none;
+}
+
 .daily-plan-grid-container {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 40px 20px; 
-  overflow-y: auto; /* Cho phép cuộn dọc */
-  padding-right: 10px;
-  flex: 1;
-  padding-top: 15px; 
-    
-    /* Nếu bạn đang dùng overflow-y: auto để scroll, 
-       hãy đảm bảo nó không cắt ngang badge */
-    /* overflow: visible;  */
+  display: flex;
+  align-items: center;
+  gap: clamp(20px, 2.5vw, 34px);
+  min-height: 300px;
+  width: max-content;
 }
 
-/* Tùy chỉnh thanh cuộn */
-.daily-plan-grid-container::-webkit-scrollbar {
-  width: 6px;
+.daily-plan-card-shell {
+  --focus-scale: 0.94;
+  --note-rotation: 0deg;
+  flex: 0 0 clamp(250px, 25vw, 322px);
+  transform: translateY(6px) rotate(var(--note-rotation)) scale(var(--focus-scale));
+  transform-origin: center 42%;
+  transition:
+    transform 260ms ease,
+    filter 260ms ease,
+    opacity 260ms ease;
+  scroll-snap-align: center;
+  opacity: 0.82;
+  filter: saturate(0.96);
+  will-change: transform;
 }
 
-.daily-plan-grid-container::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 10px;
+.daily-plan-card-shell.is-centered {
+  opacity: 1;
+  filter: saturate(1);
+  z-index: 3;
 }
 
-.daily-plan-grid-container::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.15);
-  border-radius: 10px;
+.daily-plan-card-shell.is-edge-affordance {
+  transform: translateY(-8px) rotate(var(--note-rotation)) scale(calc(var(--focus-scale) + 0.06));
+  opacity: 1;
+  filter: saturate(1.02);
+  z-index: 4;
 }
 
-/* Responsive: thay đổi số cột với màn nhỏ */
-@media (max-width: 1200px) {
-  .daily-plan-grid-container {
-    grid-template-columns: repeat(2, 1fr);
+.daily-plan-nav {
+  position: absolute;
+  top: 50%;
+  z-index: 5;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(73, 103, 96, 0.18);
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #315a51;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: none;
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition: transform 180ms ease, background 180ms ease, box-shadow 180ms ease;
+}
+
+.daily-plan-nav:hover {
+  background: #ffffff;
+  box-shadow: none;
+  transform: translateY(-50%) scale(1.06);
+}
+
+.daily-plan-nav:active {
+  transform: translateY(-50%) scale(0.96);
+}
+
+.daily-plan-nav-left {
+  left: 18px;
+}
+
+.daily-plan-nav-right {
+  right: 18px;
+}
+
+@media (max-width: 1280px) {
+  .daily-plan-board {
+    padding-left: 48px;
+    padding-right: 48px;
+  }
+
+  .daily-plan-card-shell {
+    flex-basis: clamp(244px, 31vw, 304px);
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
+  .daily-plan-board {
+    padding: 28px 42px 34px;
+    border-radius: 24px;
+  }
+
+  .daily-plan-scroll-wrapper {
+    padding: 46px 10px 38px;
+    scroll-padding: 0 18%;
+  }
+
+  .daily-plan-card-shell {
+    flex-basis: clamp(236px, 44vw, 292px);
+  }
+
+  .daily-plan-nav {
+    width: 38px;
+    height: 38px;
+  }
+
+  .daily-plan-nav-left {
+    left: 10px;
+  }
+
+  .daily-plan-nav-right {
+    right: 10px;
+  }
+}
+
+@media (max-width: 640px) {
+  .daily-plan-board {
+    padding: 22px 8px 30px;
+  }
+
+  .daily-plan-board::before,
+  .daily-plan-board::after,
+  .daily-plan-nav {
+    display: none;
+  }
+
+  .daily-plan-scroll-wrapper {
+    padding: 42px 14px 34px;
+    scroll-padding: 0 12%;
+  }
+
   .daily-plan-grid-container {
-    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .daily-plan-card-shell {
+    flex-basis: min(78vw, 288px);
   }
 }

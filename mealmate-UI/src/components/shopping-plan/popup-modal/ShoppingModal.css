@@ -16,13 +16,14 @@
 /* Khung Modal chính */
 .modal-container {
     background: #F1F5F9; /* Màu nền xám nhạt */
-    width: 700px;
+    width: 750px; /* Rộng 750px theo yêu cầu */
     max-height: 90vh;    /* Không cao quá màn hình */
-    border-radius: 30px;
+    border-radius: 32px;
     display: flex;
     flex-direction: column;
-    overflow: hidden;    /* Cắt các góc bo tròn */
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04); /* Đổ bóng mới */
+    position: relative; /* Dành cho FAB lơ lửng */
 }
 
 .modal-header {
@@ -32,6 +33,7 @@
     justify-content: space-between;
     align-items: flex-start; /* Để Tiêu đề và Search bar nằm thẳng đỉnh */
     border-bottom: 1px solid #f1f5f9;
+    overflow: visible; 
 }
 
 /* Khối bên trái: Tiêu đề & Date */
@@ -106,6 +108,13 @@
     display: flex;
     flex-direction: column;
     gap: 20px;
+    /* Không dùng position: relative để FAB bám theo modal-container */
+}
+
+/* Ẩn scrollbar dư thừa cho sang trọng */
+.modal-body::-webkit-scrollbar {
+    width: 0px;
+    background: transparent;
 }
 
 .modal-footer {
@@ -133,16 +142,16 @@
     background: #44BD97;
     color: white;
     padding: 10px 30px;
-    border-radius: 99px;
+    border-radius: 999px; /* Bo góc 999px cho nút */
     border: none;
     font-weight: bold;
     cursor: pointer;
 }
 .cancel-btn {
-    background: #F0F5F1;
-    color: #3E4944;
+    background: white; /* Nền nhạt */
+    color: #171D1A; /* Text chuẩn */
     padding: 10px 30px;
-    border-radius: 99px;
+    border-radius: 999px; /* Bo góc 999px cho nút */
     border: none;
     font-weight: bold;
     cursor: pointer;
@@ -178,27 +187,134 @@
     height: 56px !important;
     min-width: 56px !important;
     min-height: 56px !important;
-    border-radius: 50% !important;
+    border-radius: 999px !important; /* Bo góc 999px / hình tròn */
 
     /* Vị trí "ghim" lại trên khung modal */
     position: absolute;
-    bottom: 24px;  /* Cách đáy vùng thân 24px */
+    bottom: 100px;  /* Cách đáy 1 chút để tránh đè footer */
     right: 32px;   /* Cách lề phải vùng thân 32px */
     
     /* Hiển thị */
-    background: #6DD4B4;
+    background: #44BD97; /* Primary Green */
     color: white;
     border: none;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 8px 25px rgba(69, 212, 180, 0.5); /* Đổ bóng mạnh để trông lơ lửng */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04); /* Bóng theo rule */
     cursor: pointer;
     z-index: 100; /* Luôn nằm trên cùng các card */
     
     transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
-.floating-edit-btn:hover {
+.fab-edit-btn:hover {
     transform: scale(1.1);
-    background: #44BD97;
+    background: #6DD4B4; /* Soft Green */
+}
+
+/* --- Search Results & Popover Alignment --- */
+
+.modal-search-outer {
+    position: relative;
+    overflow: visible;
+}
+
+.search-results-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 280px; /* Make it slightly wider or same as popover for consistency */
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    padding: 8px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 240px;
+    overflow-y: auto;
+    border: 1px solid #f1f5f9;
+}
+
+.search-result-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.search-result-item:hover {
+    background-color: #F8FAFC;
+    transform: translateX(4px);
+}
+
+.result-icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    background-color: #CCECD7; /* Icon danh mục tròn #CCECD7 */
+    font-size: 16px;
+}
+
+.result-name {
+    font-weight: 700; /* Tên thực phẩm (Bold) */
+    font-size: 14px;
+    color: #171D1A;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.result-unit {
+    font-size: 12px;
+    color: #6E7A74;
+    font-weight: 500;
+    margin-right: 4px;
+}
+
+.add-btn-small {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 999px; /* Nút cộng (+) phải tròn, nhỏ gọn */
+    background-color: #44BD97; /* màu trắng trên nền xanh #44BD97 */
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    padding: 0;
+}
+
+.add-btn-small:hover {
+    background-color: #37a884;
+    transform: scale(1.05);
+}
+
+.add-btn-small:active {
+    transform: scale(0.95);
+}
+
+.no-result {
+    padding: 12px;
+    text-align: center;
+    color: #6E7A74;
+    font-size: 14px;
+}
+
+.popover-anchor {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 1010;
+    overflow: visible;
 }

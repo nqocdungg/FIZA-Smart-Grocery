@@ -22,24 +22,27 @@ export interface UserSummary {
 // Chi tiết thực phẩm
 export interface Food {
   id: number;
-  name: string;
+  foodName: string;
   category?: string;
-  image_url?: string;
+  imageUrl?: string;
 }
 
 // Bảng shopping_list_items
 export interface ShoppingListItem {
   id: number;
-  shopping_list_id: number;
-  food_id: number;
+  shoppingListId: number;
+  foodId: number;
   custom_name?: string;
   food?: Food;
+  foodName?: string;
+  categoryName?: string;
   quantity: number;
   unit: string;
   note?: string;
-  assigned_to?: number; // ID users
+  assignedTo?: number; // ID users
   assignee?: UserSummary;
-  is_purchased: boolean;
+  isPurchased: boolean;
+  orderNumber?: number;
   imported_to_fridge_at?: string;
   fridge_item_id?: number;
   order_number?: number;
@@ -48,10 +51,10 @@ export interface ShoppingListItem {
 // Bảng shopping_lists
 export interface ShoppingList {
   id: number;
-  created_by: number;
-  family_id: number;
-  created_date: string;
-  planned_date: string;
+  createdBy: number;
+  familyId: number;
+  createdDate: string;
+  plannedDate: string;
   note?: string;
   items: ShoppingListItem[];
 }
@@ -59,17 +62,17 @@ export interface ShoppingList {
 // Bảng fridge_items (Dùng để gợi ý mua sắm hoặc kiểm tra tồn kho)
 export interface FridgeItem {
   id: number;
-  food_id: number;
+  foodId: number;
   food?: Food;
   quantity: number;
-  storage_location: StorageLocation;
-  expiry_date?: string;
+  storageLocation: StorageLocation;
+  expiryDate?: string;
   status: FridgeItemStatus;
 }
 
 // 1. Cho các ô "Thứ x - Ngày y" trong Grid
 export interface DailyPlanCardData {
-  planned_date: string; // Dùng để filter
+  plannedDate: string; // YYYY-MM-DD
   dayOfWeek: string; // "Thứ 2", "Thứ 3"...
   displayDate: string; // "4/5"
   totalItems: number; // Count items
@@ -81,11 +84,11 @@ export interface DailyPlanCardData {
 // 2. Cho phần "Thực phẩm thường mua" (FrequentItems)
 // Logic: Có thể lấy từ các món trong tủ lạnh đang sắp hết hoặc mua nhiều lần trong lịch sử
 export interface FrequentItemSuggestion {
-  food_id: number;
-  name: string;
+  foodId: number;
+  foodName: string;
   unit: string;
-  standard_quantity: number; // Số lượng gợi ý thường mua
-  image_url?: string;
+  standardQuantity: number;
+  imageUrl?: string;
 }
 
 // 3. Cho phần "Tiến độ mua sắm" (ProgressSection)
@@ -93,5 +96,5 @@ export interface ShoppingProgressStats {
   percentage: number; // 45
   completedCategories: number;
   totalCategories: number;
-  message: string; // "Còn 6 danh mục cần hoàn thành..."
+  message: string;
 }

@@ -2,71 +2,128 @@
   display: flex;
   width: 100vw;
   min-height: 100vh;
-  background-color: #F1F5F9; /* Nền xám nhạt từ Figma */
+  background-color: #f1f5f9;
 }
 
 .shopping-main-content {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  margin-left: 96px; /* Khoảng cách từ sidebar */
+  margin-left: 96px;
 }
 
 .shopping-page-body {
-  padding: 0 48px 48px 48px;
+  padding: 0 40px 40px 40px;
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
 .plan-toolbar {
-  height: 72px;
+  min-height: 72px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 16px;
   position: relative;
 }
 
 .btn-create-plan {
-  background: #45BD97;
+  background: #45bd97;
   color: white;
-  padding: 14px 32px;
+  padding: 13px 28px;
   border-radius: 9999px;
   border: none;
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 600;
-  font-size: 18px;
+  font-size: 17px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 12px;
-  box-shadow: 0px 4px 15px rgba(69, 189, 151, 0.2);
+  gap: 10px;
+  box-shadow: none;
 }
 
 .plus-icon-placeholder {
   width: 31px;
   height: 16px;
-  background: white; /* Sau này thay bằng icon SVG dấu cộng */
-  /* mask: url('@/assets/icons/plus.svg') no-repeat center; */
+  background: white;
 }
 
-/* Section chứa Grid 7 ngày */
+.shopping-plan-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(280px, 3fr);
+  align-items: start;
+  gap: 20px;
+  width: 100%;
+  min-width: 0;
+}
+
 .grid-section {
   width: 100%;
-  margin-bottom: 24px;
+  min-width: 0;
 }
 
-/* Row cuối cùng chứa 3 Widget */
 .dashboard-widgets {
-  display: flex;
-  justify-content: flex-start;
+  display: grid;
+  grid-template-columns: 1fr;
   align-items: stretch;
-  gap: 16px;
+  gap: 14px;
   width: 100%;
-  margin-top: 20px;
+  min-width: 0;
 }
 
-/* Kích thước các widget theo Figma */
-.dashboard-widgets > :first-child { width: 522px; } /* Progress */
-.dashboard-widgets > :nth-child(2) { width: 265px; } /* Frequent */
-.dashboard-widgets > :last-child { width: 265px; }  /* Notes */
+.dashboard-widgets > * {
+  width: 100% !important;
+  min-width: 0;
+}
+
+@media (max-width: 1280px) {
+  .shopping-page-body {
+    padding: 0 28px 36px 28px;
+  }
+
+  .shopping-plan-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboard-widgets {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .plan-toolbar {
+    height: auto;
+    flex-wrap: wrap;
+  }
+
+  .toolbar-center {
+    order: 3;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+
+  .dashboard-widgets {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .shopping-main-content {
+    margin-left: 0;
+  }
+
+  .shopping-page-body {
+    padding: 0 14px 32px 14px;
+  }
+
+  .btn-create-plan {
+    width: 100%;
+    justify-content: center;
+    padding: 13px 20px;
+    font-size: 16px;
+  }
+}

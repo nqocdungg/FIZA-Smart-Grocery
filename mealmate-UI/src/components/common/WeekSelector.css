@@ -1,0 +1,30 @@
+.week-selector {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.nav-btn {
+  background: transparent;
+  border: none;
+  color: #171D1A;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  transition: opacity 0.2s;
+}
+
+.nav-btn:hover {
+  opacity: 0.6;
+}
+
+.week-label {
+  color: #4D9A80;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  min-width: 150px;
+  text-align: center;
+}

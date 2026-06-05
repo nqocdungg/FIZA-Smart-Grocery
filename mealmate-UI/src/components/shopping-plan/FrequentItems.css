@@ -1,13 +1,15 @@
 .frequent-items-container {
-    width: 265px;
-    height: 282px;
-    padding: 24px 20px;
-    background: white;
-    border-radius: 30px;
+    width: 100%;
+    min-height: 270px;
+    height: auto;
+    padding: 18px;
+    background: #fffdf8;
+    border: 1px solid #e4cfc8;
+    border-radius: 18px;
     display: flex;
     flex-direction: column;
     gap: 16px;
-    box-shadow: 0px 10px 30px -10px rgba(0, 0, 0, 0.04);
+    box-shadow: none;
 }
 
 .frequent-header {
@@ -22,7 +24,8 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    border: 2px solid #FF6B6B;
+    background: #f8efeb;
+    border: 1px solid #d55958;
     border-radius: 6px;
 }
 
@@ -32,7 +35,7 @@
 
 .frequent-title {
     color: #D55958;
-    font-size: 14px;
+    font-size: 15px;
     font-family: 'Plus Jakarta Sans', sans-serif;
     font-weight: 700;
     text-transform: uppercase;
@@ -51,16 +54,17 @@
 .frequent-row {
     align-self: stretch;
     padding: 12px 16px;
-    background: #FFEFEF; 
-    border-radius: 20px;
+    background: #fbf2ef; 
+    border: 1px solid #efd9d2;
+    border-radius: 14px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    transition: transform 0.2s;
+    transition: background 0.2s;
 }
 
 .frequent-row:hover {
-    transform: translateX(4px);
+    background: #f4e6df;
 }
 
 .frequent-row-left {
@@ -73,7 +77,7 @@
 .frequent-item-check {
     width: 24px;
     height: 24px;
-    background: white;
+    background: #fffdf8;
     border-radius: 50%;
     display: flex;
     justify-content: center;
@@ -92,7 +96,7 @@
     color: #171D1A;
     font-size: 14px;
     font-family: 'Plus Jakarta Sans', sans-serif;
-    font-weight: 400;
+    font-weight: 600;
     line-height: 1.4;
 }
 
@@ -116,16 +120,16 @@
     height: 24px;
     border-radius: 50%;
     border: none;
-    background: #FF6B6B;
+    background: #d55958;
     color: white;
     font-weight: bold;
     cursor: pointer;
     display: flex;
     justify-content: center;
     align-items: center;
-    transition: opacity 0.2s;
+    transition: background 0.2s;
 }
 
 .frequent-add-btn:hover {
-    opacity: 0.8;
+    background: #bf4848;
 }
