@@ -166,9 +166,9 @@ const Sidebar: React.FC = () => {
           <span className="sidebar-menu-text">Kế hoạch bữa ăn</span>
         </Link>
 
-        <Link 
-          className={`sidebar-menu-item ${location.pathname === "/recipes" ? "active" : ""}`} 
-          to="#"
+        <Link
+          className={`sidebar-menu-item ${location.pathname === "/recipes" ? "active" : ""}`}
+          to="/recipes"
         >
           <span className="sidebar-icon-wrap">
             <img src={iconRecipe} alt="" className="sidebar-menu-icon" />

@@ -25,14 +25,37 @@
 }
 
 .my-fridge-main {
-  padding-top: 32px;
+  padding-top: 8px;
   padding-left: 32px;
   padding-right: 23.98px;
+  padding-bottom: 40px;
   display: flex;
   flex-direction: column;
   gap: 23.98px;
-  overflow: hidden;
   min-width: 0;
+}
+
+/* Cố định cụm toggle + bộ lọc khi cuộn để luôn thao tác nhanh được. */
+.my-fridge-sticky-head {
+  position: sticky;
+  top: 80px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 0 14px;
+  background: var(--fiza-background);
+}
+
+.my-fridge-sticky-head::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 14px;
+  background: linear-gradient(180deg, var(--fiza-background) 0%, rgba(241, 245, 249, 0) 100%);
+  pointer-events: none;
 }
 
 .my-fridge-toolbar {
@@ -169,7 +192,12 @@
   background: linear-gradient(180deg, #ffffff 0%, #fffafa 100%);
 }
 
-.my-fridge-card.stock-alert:not(.expiry-alert) {
+.my-fridge-card.expired-alert {
+  border-color: #cbd5e1;
+  background: #f5f9fe;
+}
+
+.my-fridge-card.stock-alert:not(.expiry-alert):not(.expired-alert) {
   border-color: #fde68a;
   background: linear-gradient(180deg, #ffffff 0%, #fffdf5 100%);
 }
@@ -208,9 +236,10 @@
   font-size: 15px;
   font-weight: 600;
   line-height: 22.5px;
-  overflow: visible;
-  white-space: normal;
-  word-break: break-word;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .my-fridge-food-info {
@@ -260,6 +289,11 @@
   color: #b91c1c;
 }
 
+.fridge-item-badge.expired {
+  background: #d7dde6;
+  color: #475569;
+}
+
 .fridge-item-badge.warning {
   background: #fef3c7;
   color: #a16207;
@@ -269,6 +303,10 @@
   width: 14px;
   height: 14px;
   object-fit: contain;
+}
+
+.fridge-item-badge.expired img {
+  filter: brightness(0) saturate(100%) invert(37%) sepia(15%) saturate(704%) hue-rotate(176deg) brightness(91%) contrast(88%);
 }
 
 .my-fridge-food-meta {
@@ -297,7 +335,13 @@
   line-height: 16.5px;
 }
 
+.my-fridge-card.expired-alert .expiry-date,
+.my-fridge-card.expired-alert .my-fridge-progress-area p {
+  color: #64748b;
+}
+
 .my-fridge-progress-area {
+  margin-top: auto;
   display: flex;
   flex-direction: column;
   gap: 5.99px;
@@ -487,16 +531,38 @@
   filter: saturate(1.04);
 }
 
+/* Đồng bộ màu thẻ cảnh báo với màu trạng thái của thẻ thực phẩm tương ứng:
+   - Sắp hết hạn  -> đỏ nhạt (giống badge "danger" trên thẻ)
+   - Đã hết hạn   -> đỏ đậm hơn (cùng nhóm cảnh báo hạn sử dụng)
+   - Sắp hết SL   -> vàng hổ phách (giống badge "warning" trên thẻ) */
 .alert-card.danger {
-  background: #ffe5e5;
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
 }
 
 .alert-card.neutral {
-  background: #dbe0e5;
+  background: #dbe2eb;
+  color: #334155;
+  border: 1px solid #c5ceda;
 }
 
 .alert-card.success {
-  background: #e8f5e9;
+  background: #fef3c7;
+  color: #a16207;
+  border: 1px solid #fde68a;
+}
+
+.alert-card.danger .alert-icon {
+  filter: brightness(0) saturate(100%) invert(17%) sepia(83%) saturate(3107%) hue-rotate(353deg) brightness(93%) contrast(95%);
+}
+
+.alert-card.neutral .alert-icon {
+  filter: brightness(0) saturate(100%) invert(37%) sepia(15%) saturate(704%) hue-rotate(176deg) brightness(91%) contrast(88%);
+}
+
+.alert-card.success .alert-icon {
+  filter: brightness(0) saturate(100%) invert(38%) sepia(73%) saturate(900%) hue-rotate(5deg) brightness(92%) contrast(92%);
 }
 
 .alert-icon {

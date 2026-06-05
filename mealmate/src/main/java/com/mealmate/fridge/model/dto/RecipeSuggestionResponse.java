@@ -15,15 +15,29 @@ public class RecipeSuggestionResponse {
 
     private String imageUrl;
 
+    private String description;
+
     private String instructions;
 
+    private Integer cookingTimeMinutes;
+
+    private Integer servings;
+
+    private Integer calories;
+
+    private String difficulty;
+
     private String preferredMealTime;
+
+    private int ingredientCount;
 
     private int score;
 
     private int coveragePercent;
 
     private Boolean canCook;
+
+    private Boolean favorite;
 
     private List<RecipeSuggestionIngredientResponse> matchedIngredients;
 

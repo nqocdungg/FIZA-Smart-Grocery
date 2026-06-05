@@ -12,6 +12,16 @@ public interface RecipeSuggestionProjection {
 
     String getInstructions();
 
+    String getDescription();
+
+    Integer getCookingTimeMinutes();
+
+    Integer getServings();
+
+    Integer getCalories();
+
+    String getDifficulty();
+
     String getPreferredMealTime();
 
     Long getFoodId();

@@ -415,17 +415,19 @@ const AddFoodToFridgeScreen: React.FC<AddFoodToFridgeScreenProps> = ({ onCancel,
         </div>
       </header>
 
-      <div className="add-fridge-tabs" role="tablist" aria-label="Cách thêm thực phẩm">
-        <button
-          className={mode === "SHOPPING_PLAN" ? "active" : ""}
-          type="button"
-          onClick={() => setMode("SHOPPING_PLAN")}
-        >
-          Từ kế hoạch đi chợ
-        </button>
-        <button className={mode === "MANUAL" ? "active" : ""} type="button" onClick={() => setMode("MANUAL")}>
-          Thêm thủ công
-        </button>
+      <div className="add-fridge-tabs-bar">
+        <div className="add-fridge-tabs" role="tablist" aria-label="Cách thêm thực phẩm">
+          <button
+            className={mode === "SHOPPING_PLAN" ? "active" : ""}
+            type="button"
+            onClick={() => setMode("SHOPPING_PLAN")}
+          >
+            Từ kế hoạch đi chợ
+          </button>
+          <button className={mode === "MANUAL" ? "active" : ""} type="button" onClick={() => setMode("MANUAL")}>
+            Thêm thủ công
+          </button>
+        </div>
       </div>
 
       {mode === "SHOPPING_PLAN" ? (

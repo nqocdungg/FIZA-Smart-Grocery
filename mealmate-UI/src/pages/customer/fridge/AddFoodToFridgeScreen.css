@@ -53,16 +53,26 @@
   line-height: 21px;
 }
 
+/* Cố định hàng toggle "Từ kế hoạch đi chợ / Thêm thủ công" khi cuộn. */
+.add-fridge-tabs-bar {
+  position: sticky;
+  top: 80px;
+  z-index: 30;
+  margin-top: 8px;
+  padding: 10px 0 12px;
+  background: var(--fiza-background, #f1f5f9);
+}
+
 .add-fridge-tabs {
   width: 280px;
   height: 43.44px;
-  margin-top: 1px;
   padding: 3.99px;
   border-radius: 16px;
   background: #ffffff;
   display: flex;
   gap: 7.98px;
   box-sizing: border-box;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
 }
 
 .add-fridge-tabs button {
@@ -76,15 +86,17 @@
   font-weight: 500;
   line-height: 19.5px;
   cursor: pointer;
+  transition: background 160ms ease, color 160ms ease, transform 160ms ease;
 }
 
 .add-fridge-tabs button.active {
   background: #6ed4b4;
   color: #ffffff;
+  transform: translateY(-1px);
 }
 
 .add-fridge-plan-layout {
-  margin-top: 20px;
+  margin-top: 8px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
   gap: 23.97px;
@@ -364,10 +376,11 @@
 }
 
 .add-fridge-summary {
-  min-height: 653.56px;
   padding: 23.98px;
   position: sticky;
-  top: 104px;
+  top: 150px;
+  max-height: calc(100vh - 174px);
+  overflow-y: auto;
 }
 
 .add-fridge-summary h2 {

@@ -278,16 +278,32 @@
 
 .food-detail-quantity-value {
   flex: 1;
+  width: 100%;
+  min-width: 0;
   height: 44px;
+  border: 1.6px solid transparent;
   background: #f1f5f9;
   border-radius: 12px;
   color: #1f2937;
   font-size: 16px;
   font-weight: 600;
   line-height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  text-align: center;
+  font-family: var(--fiza-font-main);
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 160ms ease, background 160ms ease;
+  -moz-appearance: textfield;
+}
+
+.food-detail-quantity-value:focus {
+  border-color: var(--fiza-primary-light, #0e9a7e);
+  background: #ffffff;
+}
+
+.food-detail-quantity-value:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
 }
 
 .food-detail-unit {
