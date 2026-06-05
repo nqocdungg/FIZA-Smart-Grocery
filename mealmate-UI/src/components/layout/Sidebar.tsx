@@ -1,14 +1,11 @@
 import React, { useState } from "react"; 
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link, useNavigate } from "react-router-dom";
 import "./Sidebar.css";
 
-// 🎯 GIỮ NGUYÊN: Import useAuth hệ thống để bốc thông tin đăng nhập thực tế
 import { useAuth } from "@/context/AuthContext"; 
-
-// 🎯 GIỮ NGUYÊN: Import Component ProfileModal chuẩn của bạn
 import ProfileModal from "./ProfileModal";
+import api from "@/services/api";
 
-// Giữ lại toàn bộ hệ thống icon điều hướng
 import iconGroup from "@/assets/icon/Icon-group.svg";
 import fridgeMenuIcon from "@/assets/icon/Icon-fridge.svg";
 import iconLogo from "@/assets/icon/Icon-logo.svg";
@@ -17,20 +14,16 @@ import iconSchedule from "@/assets/icon/Icon-schedule.svg";
 import iconStatistic from "@/assets/icon/Icon-statistic.svg";
 import iconShopping from "@/assets/icon/Icon-shopping.svg";
 
-// Avatar mặc định phòng trường hợp tài khoản chưa cài ảnh
 import defaultAvatar from "@/assets/avatar/26.svg";
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
-  
-  // 🎯 GIỮ NGUYÊN: State kiểm soát việc hiển thị Modal thông tin cá nhân
+  const navigate = useNavigate();
   const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(false);
   
-  // Lấy dữ liệu từ Context (Bây giờ đã cực kỳ giàu trường sau khi sửa file Login)
   const authContext = useAuth();
   const userFromContext = authContext?.user;
 
-  // Phòng vệ chống lệch máy: Bốc thêm từ LocalStorage
   let userFromLocalStorage = null;
   const authUserString = localStorage.getItem("authUser");
   if (authUserString) {
@@ -41,17 +34,14 @@ const Sidebar: React.FC = () => {
     }
   }
 
-  // Gốc dữ liệu đăng nhập cơ bản
   const baseAuthUser = userFromContext || userFromLocalStorage;
 
-  // Phân quyền hiển thị vai trò tiếng Việt tốc hành vùng chân Sidebar
   const getRoleLabel = (userObj: any) => {
     if (!userObj) return "Thành viên";
     const roleObj = userObj.role;
     const roleName = (typeof roleObj === "object" && roleObj !== null ? roleObj.name : roleObj) 
                      || userObj.roleName 
                      || "";
-
     const normalizedRole = String(roleName).toUpperCase();
     if (
       normalizedRole.includes("ADMIN") || 
@@ -64,11 +54,7 @@ const Sidebar: React.FC = () => {
     return "Thành viên";
   };
 
-  // =========================================================================
-  // 🎯 TÍNH TOÁN REAL-TIME: Không dùng useEffect để loại bỏ tình trạng render ra null
-  // =========================================================================
   let refinedUserData = null;
-
   if (baseAuthUser) {
     const currentUserId = Number(baseAuthUser.id || baseAuthUser.userId);
     const cachedMembersString = localStorage.getItem("familyMembersCache");
@@ -85,7 +71,6 @@ const Sidebar: React.FC = () => {
       }
     }
 
-    // Ưu tiên 1: Dữ liệu đồng bộ từ cache xịn của bảng thành viên
     if (foundFullProfile) {
       refinedUserData = {
         id: foundFullProfile.id,
@@ -97,7 +82,6 @@ const Sidebar: React.FC = () => {
         avatarUrl: foundFullProfile.avatarUrl
       };
     } else {
-      // Ưu tiên 2: Dữ liệu siêu đầy đủ từ Context mới (đã bao gồm phone, gender, roleName từ Login mới)
       refinedUserData = {
         id: currentUserId,
         fullName: baseAuthUser.fullName || baseAuthUser.full_name || baseAuthUser.name || "Thành viên Fiza",
@@ -110,9 +94,22 @@ const Sidebar: React.FC = () => {
     }
   }
 
-  // Quét sạch thuộc tính phục vụ hiển thị nhanh vùng chân Sidebar thô
   const rawName = baseAuthUser?.fullName || baseAuthUser?.full_name || baseAuthUser?.name || "Thành viên Fiza";
   const rawAvatar = baseAuthUser?.avatarUrl || baseAuthUser?.avatar_url || baseAuthUser?.avatar;
+
+  const handleLogout = async () => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (token) {
+        await api.post("/api/auth/logout", {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        }).catch(() => {});
+      }
+    } finally {
+      authContext?.logout();
+      navigate("/login", { replace: true });
+    }
+  };
 
   return (
     <aside className="sidebar">
@@ -166,9 +163,9 @@ const Sidebar: React.FC = () => {
           <span className="sidebar-menu-text">Kế hoạch bữa ăn</span>
         </Link>
 
-        <Link 
-          className={`sidebar-menu-item ${location.pathname === "/recipes" ? "active" : ""}`} 
-          to="#"
+        <Link
+          className={`sidebar-menu-item ${location.pathname === "/recipes" ? "active" : ""}`}
+          to="/recipes"
         >
           <span className="sidebar-icon-wrap">
             <img src={iconRecipe} alt="" className="sidebar-menu-icon" />
@@ -187,37 +184,48 @@ const Sidebar: React.FC = () => {
         </Link>
       </nav>
 
-      {/* Sự kiện onClick mở Modal khi bấm vào vùng Profile */}
-      <div 
-        className="sidebar-profile-section"
-        onClick={() => {
-          console.log("👤 [SIDEBAR DEBUG] Đã click vào Avatar vùng chân Sidebar để mở Profile tài khoản chính mình.");
-          setIsProfileModalOpen(true);
-        }}
-        style={{ cursor: 'pointer' }}
-      >
-        <div className="sidebar-profile">
-          <div className="sidebar-avatar">
-            <div className="sidebar-avatar-line" />
-            <img 
-              src={rawAvatar || defaultAvatar} 
-              alt="Avatar" 
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = defaultAvatar;
-              }}
-            />
-          </div>
-
-          <div className="sidebar-profile-text">
-            <p>{rawName}</p>
-            <span>{getRoleLabel(baseAuthUser)}</span>
+      {/* Profile + Logout section */}
+      <div className="sidebar-bottom">
+        <div 
+          className="sidebar-profile-section"
+          onClick={() => setIsProfileModalOpen(true)}
+          style={{ cursor: 'pointer' }}
+        >
+          <div className="sidebar-profile">
+            <div className="sidebar-avatar">
+              <div className="sidebar-avatar-line" />
+              <img 
+                src={rawAvatar || defaultAvatar} 
+                alt="Avatar" 
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = defaultAvatar;
+                }}
+              />
+            </div>
+            <div className="sidebar-profile-text">
+              <p>{rawName}</p>
+              <span>{getRoleLabel(baseAuthUser)}</span>
+            </div>
           </div>
         </div>
+
+        <button
+          type="button"
+          className="sidebar-logout-btn"
+          onClick={handleLogout}
+          aria-label="Đăng xuất"
+        >
+          <span className="sidebar-icon-wrap">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+          </span>
+          <span className="sidebar-menu-text">Đăng xuất</span>
+        </button>
       </div>
 
-      {/* =========================================================================
-      // 🎯 ĐÃ ĐỒNG BỘ TUYỆT ĐỐI: Dữ liệu được tính trực tiếp, render phát ăn ngay lập tức!
-      // ========================================================================= */}
       <ProfileModal 
         isOpen={isProfileModalOpen}
         onClose={() => setIsProfileModalOpen(false)}

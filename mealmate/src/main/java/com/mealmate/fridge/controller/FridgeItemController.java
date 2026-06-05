@@ -72,9 +72,16 @@ public class FridgeItemController {
 
     @GetMapping("/recipe-suggestions")
     public List<RecipeSuggestionResponse> getRecipeSuggestions(
-            @RequestParam(defaultValue = "10") int limit
+            @RequestParam(defaultValue = "30") int limit
     ) {
         return fridgeItemService.getRecipeSuggestions(limit);
+    }
+
+    @GetMapping("/recipe-library")
+    public List<RecipeSuggestionResponse> getRecipeLibrary(
+            @RequestParam(defaultValue = "100") int limit
+    ) {
+        return fridgeItemService.getRecipeLibrary(limit);
     }
 
     @GetMapping("/import-candidates")

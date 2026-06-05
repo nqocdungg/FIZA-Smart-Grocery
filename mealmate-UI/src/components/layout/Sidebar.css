@@ -148,7 +148,6 @@
 
 .sidebar-profile-section {
   width: 100%;
-  padding-top: 24px;
 }
 
 .sidebar-profile {
@@ -215,4 +214,60 @@
   color: var(--fiza-gray-400);
   font-family: "Plus Jakarta Sans", "Inter", "Segoe UI", sans-serif;
   font-size: 12px;
+}
+
+/* Bottom section: profile + logout stacked */
+.sidebar-bottom {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-top: 16px;
+}
+
+.sidebar-logout-btn {
+  width: 100%;
+  height: 48px;
+  margin-left: 8px;
+  margin-right: 8px;
+  width: calc(100% - 16px);
+  border: none;
+  border-radius: 9999px;
+  background: transparent;
+  color: #ef4444;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  text-align: left;
+  transition: background 0.2s ease, color 0.2s ease;
+
+  /* Hidden when sidebar is collapsed */
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: max-height 0.3s ease, opacity 0.25s ease, background 0.2s ease;
+}
+
+.sidebar:hover .sidebar-logout-btn {
+  max-height: 56px;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.sidebar-logout-btn:hover {
+  background: #fee2e2;
+}
+
+.sidebar-logout-btn .sidebar-icon-wrap {
+  min-width: 48px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #ef4444;
+}
+
+.sidebar-logout-btn .sidebar-menu-text {
+  color: #ef4444;
+  font-weight: 600;
 }

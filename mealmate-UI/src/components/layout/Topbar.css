@@ -1,15 +1,16 @@
 .topbar {
   align-self: stretch;
-  height: 80px;
+  min-height: 80px;
+  height: auto;
   position: sticky;
   top: 0;
   z-index: 90;
-  padding-left: 48px;
-  padding-right: 48px;
+  padding: 16px 48px;
   background: var(--fiza-background);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  box-sizing: border-box;
 }
 
 .topbar-title-wrapper {
@@ -17,20 +18,26 @@
   flex-direction: column;
   justify-content: flex-start;
   align-items: flex-start;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .topbar-title {
-  width: 270px;
-  height: 32px;
+  width: auto;
+  min-width: 0;
+  max-width: 520px;
+  height: auto;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   justify-content: center;
   color: var(--fiza-primary);
   font-size: 32px;
   font-family: "Plus Jakarta Sans", "Inter", "Segoe UI", sans-serif;
   font-weight: 700;
   line-height: 32px;
-  word-wrap: break-word;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.2;
 }
 
 .topbar-actions {
@@ -38,6 +45,7 @@
   justify-content: flex-start;
   align-items: center;
   gap: 24px;
+  flex-shrink: 0;
 }
 
 .topbar-search {
@@ -94,6 +102,8 @@
   object-fit: contain;
 }
 
+
+
 .topbar-notification {
   width: 40px;
   height: 40px;
@@ -102,42 +112,32 @@
   display: flex;
   justify-content: center;
   align-items: center;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: #475569;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.topbar-notification:hover {
+  background: #f1f5f9;
+  color: var(--fiza-primary);
 }
 
 .topbar-bell-icon {
-  width: 16px;
-  height: 20px;
-  object-fit: contain;
+  width: 22px;
+  height: 22px;
 }
 
-.topbar-notification-badge {
-  width: 16px;
-  height: 19px;
-  left: 16px;
-  top: 6px;
+.topbar-notification-dot {
   position: absolute;
-  background: #ba1a1a;
+  top: 7px;
+  right: 7px;
+  width: 9px;
+  height: 9px;
+  background: #ef4444;
   border-radius: 9999px;
-  outline: 2px var(--fiza-background) solid;
-  outline-offset: -2px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.topbar-notification-badge div {
-  width: 6.13px;
-  height: 15px;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  color: var(--fiza-white);
-  font-size: 10px;
-  font-family: "Plus Jakarta Sans", "Inter", "Segoe UI", sans-serif;
-  font-weight: 700;
-  line-height: 15px;
-  word-wrap: break-word;
+  border: 2px solid var(--fiza-background);
 }
 
 .topbar-family-button {
@@ -160,8 +160,4 @@
   justify-content: center;
   color: var(--fiza-white);
   font-size: 14px;
-  font-family: "Plus Jakarta Sans", "Inter", "Segoe UI", sans-serif;
-  font-weight: 600;
-  line-height: 20px;
-  word-wrap: break-word;
-}
+  font-family: "Plu

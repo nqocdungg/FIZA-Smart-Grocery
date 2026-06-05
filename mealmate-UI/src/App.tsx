@@ -9,6 +9,7 @@ import ProfileDetail from '@/pages/profile/ProfileDetail';
 import FamilyGroup from '@/pages/customer/group/FamilyGroup';
 import MyFridge from '@/pages/customer/fridge/MyFridge';
 import MenuSuggestion from '@/pages/customer/MenuSuggestion';
+import RecipeLibrary from '@/pages/customer/recipes/RecipeLibrary';
 import Reports from '@/pages/customer/Reports';
 import ShoppingPlanPage from '@/pages/customer/shopping-plan/ShoppingPlanPage';
 
@@ -74,6 +75,7 @@ const App: React.FC = () => {
       <Route path="/family" element={<RequireAuth><FamilyGroup /></RequireAuth>} />
       <Route path="/shopping" element={<RequireAuth><ShoppingPlanPage /></RequireAuth>} />
       <Route path="/fridge" element={<RequireAuth><MyFridge /></RequireAuth>} />
+      <Route path="/recipes" element={<RequireAuth><RecipeLibrary /></RequireAuth>} />
       <Route path="/suggestions" element={<RequireAuth><MenuSuggestion /></RequireAuth>} />
       <Route path="/reports" element={<RequireAuth><Reports /></RequireAuth>} />
 

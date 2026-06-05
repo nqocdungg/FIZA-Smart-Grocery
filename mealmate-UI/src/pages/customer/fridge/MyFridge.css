@@ -25,14 +25,37 @@
 }
 
 .my-fridge-main {
-  padding-top: 32px;
+  padding-top: 8px;
   padding-left: 32px;
   padding-right: 23.98px;
+  padding-bottom: 40px;
   display: flex;
   flex-direction: column;
   gap: 23.98px;
-  overflow: hidden;
   min-width: 0;
+}
+
+/* Cố định cụm toggle + bộ lọc khi cuộn để luôn thao tác nhanh được. */
+.my-fridge-sticky-head {
+  position: sticky;
+  top: 80px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 0 14px;
+  background: var(--fiza-background);
+}
+
+.my-fridge-sticky-head::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 14px;
+  background: linear-gradient(180deg, var(--fiza-background) 0%, rgba(241, 245, 249, 0) 100%);
+  pointer-events: none;
 }
 
 .my-fridge-toolbar {
@@ -169,7 +192,12 @@
   background: linear-gradient(180deg, #ffffff 0%, #fffafa 100%);
 }
 
-.my-fridge-card.stock-alert:not(.expiry-alert) {
+.my-fridge-card.expired-alert {
+  border-color: #cbd5e1;
+  background: #f5f9fe;
+}
+
+.my-fridge-card.stock-alert:not(.expiry-alert):not(.expired-alert) {
   border-color: #fde68a;
   background: linear-gradient(180deg, #ffffff 0%, #fffdf5 100%);
 }
@@ -184,7 +212,7 @@
   display: flex;
   align-items: flex-start;
   gap: 11.98px;
-  padding-right: 72px;
+  padding-right: 48px;
   box-sizing: border-box;
 }
 
@@ -208,9 +236,13 @@
   font-size: 15px;
   font-weight: 600;
   line-height: 22.5px;
-  overflow: visible;
+  max-width: 100%;
+  overflow: hidden;
   white-space: normal;
   word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .my-fridge-food-info {
@@ -260,6 +292,11 @@
   color: #b91c1c;
 }
 
+.fridge-item-badge.expired {
+  background: #d7dde6;
+  color: #475569;
+}
+
 .fridge-item-badge.warning {
   background: #fef3c7;
   color: #a16207;
@@ -269,6 +306,10 @@
   width: 14px;
   height: 14px;
   object-fit: contain;
+}
+
+.fridge-item-badge.expired img {
+  filter: brightness(0) saturate(100%) invert(37%) sepia(15%) saturate(704%) hue-rotate(176deg) brightness(91%) contrast(88%);
 }
 
 .my-fridge-food-meta {
@@ -297,7 +338,13 @@
   line-height: 16.5px;
 }
 
+.my-fridge-card.expired-alert .expiry-date,
+.my-fridge-card.expired-alert .my-fridge-progress-area p {
+  color: #64748b;
+}
+
 .my-fridge-progress-area {
+  margin-top: auto;
   display: flex;
   flex-direction: column;
   gap: 5.99px;
@@ -487,16 +534,38 @@
   filter: saturate(1.04);
 }
 
+/* Đồng bộ màu thẻ cảnh báo với màu trạng thái của thẻ thực phẩm tương ứng:
+   - Sắp hết hạn  -> đỏ nhạt (giống badge "danger" trên thẻ)
+   - Đã hết hạn   -> đỏ đậm hơn (cùng nhóm cảnh báo hạn sử dụng)
+   - Sắp hết SL   -> vàng hổ phách (giống badge "warning" trên thẻ) */
 .alert-card.danger {
-  background: #ffe5e5;
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
 }
 
 .alert-card.neutral {
-  background: #dbe0e5;
+  background: #dbe2eb;
+  color: #334155;
+  border: 1px solid #c5ceda;
 }
 
 .alert-card.success {
-  background: #e8f5e9;
+  background: #fef3c7;
+  color: #a16207;
+  border: 1px solid #fde68a;
+}
+
+.alert-card.danger .alert-icon {
+  filter: brightness(0) saturate(100%) invert(17%) sepia(83%) saturate(3107%) hue-rotate(353deg) brightness(93%) contrast(95%);
+}
+
+.alert-card.neutral .alert-icon {
+  filter: brightness(0) saturate(100%) invert(37%) sepia(15%) saturate(704%) hue-rotate(176deg) brightness(91%) contrast(88%);
+}
+
+.alert-card.success .alert-icon {
+  filter: brightness(0) saturate(100%) invert(38%) sepia(73%) saturate(900%) hue-rotate(5deg) brightness(92%) contrast(92%);
 }
 
 .alert-icon {
@@ -542,6 +611,7 @@
   height: 20px;
   object-fit: contain;
   flex-shrink: 0;
+  filter: brightness(0) invert(1);
 }
 
 .round-action span {
@@ -576,7 +646,7 @@
 }
 
 .round-action.suggest {
-  background: #ffb4a2;
+  background: var(--fiza-primary);
 }
 
 .my-fridge-toast {
@@ -1044,125 +1114,4 @@
 .recipe-suggestion-detail-toggle {
   align-self: flex-start;
   min-height: 36px;
-  border: none;
-  border-radius: 9999px;
-  background: var(--fiza-primary);
-  color: #ffffff;
-  cursor: pointer;
-  padding: 0 14px;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.recipe-suggestion-instructions {
-  border-radius: 14px;
-  background: #f8fffc;
-  border: 1px solid #cbfbf1;
-  color: #334155;
-  padding: 12px;
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 20px;
-  white-space: pre-wrap;
-}
-
-@media (max-width: 720px) {
-  .recipe-suggestion-dialog {
-    width: calc(100vw - 24px);
-    max-height: calc(100vh - 24px);
-    padding: 18px;
-  }
-
-  .recipe-suggestion-card-main,
-  .recipe-suggestion-ingredients {
-    grid-template-columns: 1fr;
-  }
-
-  .recipe-suggestion-rank,
-  .recipe-suggestion-score {
-    width: 100%;
-  }
-}
-
-@keyframes fridgeCardEnter {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes fridgeProgressReveal {
-  from {
-    transform: scaleX(0);
-  }
-  to {
-    transform: scaleX(1);
-  }
-}
-
-@keyframes fridgeFloat {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-5px);
-  }
-}
-
-@keyframes fridgeToastIn {
-  from {
-    opacity: 0;
-    transform: translateX(18px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes fridgeOverlayIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes fridgeDialogIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .my-fridge-card,
-  .my-fridge-progress-bar,
-  .fridge-status-visual img,
-  .my-fridge-toast,
-  .fridge-alert-overlay,
-  .fridge-alert-dialog,
-  .recipe-suggestion-overlay,
-  .recipe-suggestion-dialog {
-    animation: none;
-  }
-
-  .my-fridge-card,
-  .alert-card,
-  .round-action,
-  .fridge-alert-item,
-  .my-fridge-filter-tabs button,
-  .my-fridge-view-tabs button {
-    transition: none;
-  }
-}
+ 

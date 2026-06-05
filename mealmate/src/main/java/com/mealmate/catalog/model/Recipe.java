@@ -19,7 +19,22 @@ public class Recipe extends BaseEntity {
     private String name; // Tên món ăn
 
     @Column(columnDefinition = "TEXT")
+    private String description; // Mô tả ngắn hiển thị ở trang chi tiết
+
+    @Column(columnDefinition = "TEXT")
     private String instructions; // Hướng dẫn chế biến
+
+    @Column(name = "cooking_time_minutes")
+    private Integer cookingTimeMinutes; // Thời gian nấu dự kiến (phút)
+
+    @Column(name = "servings")
+    private Integer servings; // Số khẩu phần
+
+    @Column(name = "calories")
+    private Integer calories; // Tổng năng lượng ước tính (kcal)
+
+    @Column(name = "difficulty")
+    private String difficulty; // Độ khó: EASY, MEDIUM, HARD
 
     @Column(name = "reference_link")
     private String referenceLink; // Link tham khảo

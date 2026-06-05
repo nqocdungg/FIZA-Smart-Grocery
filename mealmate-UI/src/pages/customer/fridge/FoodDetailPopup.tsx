@@ -183,7 +183,10 @@ const FoodDetailPopup: React.FC<FoodDetailPopupProps> = ({
   onSaveQuantity,
   onRemoveFood,
 }) => {
-  const [quantityValue, setQuantityValue] = useState(food.quantity);
+  const formatQuantityInput = (value: number) =>
+    Number.isInteger(value) ? String(value) : String(Number(value.toFixed(2)));
+
+  const [quantityInput, setQuantityInput] = useState<string>(formatQuantityInput(food.quantity));
   const [isRemoveConfirmOpen, setIsRemoveConfirmOpen] = useState(false);
   const [removeReason, setRemoveReason] = useState<RemoveReasonCode | "">("");
   const [customRemoveReason, setCustomRemoveReason] = useState("");
@@ -193,17 +196,46 @@ const FoodDetailPopup: React.FC<FoodDetailPopupProps> = ({
   const daysLeft = getDaysLeft(food.expiryDate);
   const expiryStatusClass = getExpiryStatusClass(daysLeft);
   const step = food.unit === "g" ? 50 : 1;
+  const minQuantity = step === 50 ? 0 : 1;
   const isConfirmDisabled = !removeReason || (removeReason === "OTHER" && !customRemoveReason.trim());
 
+  const quantityValue = Number(quantityInput);
+  const quantityIsValid = Number.isFinite(quantityValue) && quantityValue > 0;
+
   const handleDecrease = () => {
-    setQuantityValue((prev) => Math.max(step === 50 ? 0 : 1, prev - step));
+    const current = Number.isFinite(quantityValue) ? quantityValue : 0;
+    setQuantityInput(formatQuantityInput(Math.max(minQuantity, current - step)));
+    setActionError("");
   };
 
   const handleIncrease = () => {
-    setQuantityValue((prev) => prev + step);
+    const current = Number.isFinite(quantityValue) ? quantityValue : 0;
+    setQuantityInput(formatQuantityInput(current + step));
+    setActionError("");
+  };
+
+  const handleQuantityInputChange = (raw: string) => {
+    // Cho phép nhập tự do bằng bàn phím (kể cả ô trống tạm thời và số thập phân).
+    if (raw === "" || /^\d*([.,]\d{0,2})?$/.test(raw)) {
+      setQuantityInput(raw.replace(",", "."));
+      setActionError("");
+    }
+  };
+
+  const handleQuantityInputBlur = () => {
+    if (!quantityIsValid) {
+      setQuantityInput(formatQuantityInput(Math.max(minQuantity || 1, 1)));
+    } else {
+      setQuantityInput(formatQuantityInput(quantityValue));
+    }
   };
 
   const handleSave = async () => {
+    if (!quantityIsValid) {
+      setActionError("Số lượng phải lớn hơn 0.");
+      return;
+    }
+
     setIsSaving(true);
     setActionError("");
 
@@ -329,7 +361,16 @@ const FoodDetailPopup: React.FC<FoodDetailPopupProps> = ({
                 <img src={iconMinus} alt="" className="food-detail-quantity-icon" />
               </button>
 
-              <div className="food-detail-quantity-value">{quantityValue}</div>
+              <input
+                className="food-detail-quantity-value"
+                type="text"
+                inputMode="decimal"
+                value={quantityInput}
+                onChange={(event) => handleQuantityInputChange(event.target.value)}
+                onBlur={handleQuantityInputBlur}
+                aria-label="Nhập số lượng"
+                disabled={isSaving}
+              />
 
               <div className="food-detail-unit" aria-label="Đơn vị">
                 {food.unit || "Đơn vị"}
@@ -347,7 +388,7 @@ const FoodDetailPopup: React.FC<FoodDetailPopupProps> = ({
                 Hủy
               </button>
 
-              <button className="food-detail-save-button" onClick={handleSave} disabled={isSaving || quantityValue <= 0}>
+              <button className="food-detail-save-button" onClick={handleSave} disabled={isSaving || !quantityIsValid}>
                 {isSaving ? "Đang lưu..." : "Lưu thay đổi"}
               </button>
             </div>
