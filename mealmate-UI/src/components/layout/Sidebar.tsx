@@ -44,12 +44,13 @@ const Sidebar: React.FC = () => {
       || "";
     const normalizedRole = String(roleName).toUpperCase();
     if (
-      normalizedRole.includes("ADMIN") ||
       normalizedRole.includes("HOUSEKEEPER") ||
-      normalizedRole.includes("BOSS") ||
       normalizedRole.includes("CHỦ NHÀ")
     ) {
       return "Nội trợ";
+    }
+    if (normalizedRole.includes("ADMIN")) {
+      return "Admin";
     }
     return "Thành viên";
   };
@@ -84,7 +85,7 @@ const Sidebar: React.FC = () => {
     } else {
       refinedUserData = {
         id: currentUserId,
-        fullName: baseAuthUser.fullName || baseAuthUser.full_name || baseAuthUser.name || "Thành viên Fiza",
+        fullName: baseAuthUser.fullName || baseAuthUser.full_name || baseAuthUser.name || "Thành viên",
         roleName: baseAuthUser.roleName || (getRoleLabel(baseAuthUser) === "Nội trợ" ? "Chủ nhà" : "Thành viên"),
         email: baseAuthUser.email || "Chưa cập nhật",
         phone: baseAuthUser.phone || "Chưa cập nhật",
@@ -94,7 +95,7 @@ const Sidebar: React.FC = () => {
     }
   }
 
-  const rawName = baseAuthUser?.fullName || baseAuthUser?.full_name || baseAuthUser?.name || "Thành viên Fiza";
+  const rawName = baseAuthUser?.fullName || baseAuthUser?.full_name || baseAuthUser?.name || "Thành viên";
   const rawAvatar = baseAuthUser?.avatarUrl || baseAuthUser?.avatar_url || baseAuthUser?.avatar;
 
   const handleLogout = async () => {
@@ -229,7 +230,7 @@ const Sidebar: React.FC = () => {
       <ProfileModal
         isOpen={isProfileModalOpen}
         onClose={() => setIsProfileModalOpen(false)}
-        familyName={localStorage.getItem("currentFamilyName") || "Gia đình My My"}
+        familyName={localStorage.getItem("currentFamilyName") || "Chưa có gia đình"}
         isMe={true}
         memberData={refinedUserData}
       />

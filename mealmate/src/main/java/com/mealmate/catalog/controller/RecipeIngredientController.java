@@ -5,6 +5,7 @@ import com.mealmate.catalog.service.RecipeIngredientService;
 import com.mealmate.common.dto.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
@@ -21,6 +22,7 @@ public class RecipeIngredientController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<RecipeIngredient>> create(@RequestBody RecipeIngredient entity) {
         return ResponseEntity.ok(new ApiResponse<>(true, "Created", service.save(entity)));
     }

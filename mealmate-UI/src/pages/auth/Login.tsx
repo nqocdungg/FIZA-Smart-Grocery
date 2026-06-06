@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { login as loginRequest } from '@/features/auth/api/authApi';
 import { AuthInput, AuthButton, AuthLayout } from '@/components/auth/AuthComponents';
+import { getAuthRedirectPath } from '@/features/auth/role';
 import api from "@/services/api"; // 🎯 GIỮ NGUYÊN: Sử dụng instance axios cấu hình chung để gọi các API bổ sung
 import './Login.css';
 
@@ -64,7 +65,8 @@ const Login: React.FC = () => {
       // Đặt các biến cục bộ bọc lót dữ liệu chi tiết
       let detailedPhone = "Chưa cập nhật";
       let detailedGender = "OTHER";
-      let detailedRoleName = "Thành viên";
+      let detailedRoleName = response.role;
+      let detailedFamilyId: number | undefined;
 
       // 🎯 Ép kiểu trung gian sang 'any' để bypass qua bộ lọc TypeScript của AuthResponse gốc
       const rawResponse = response as any;
@@ -80,6 +82,11 @@ const Login: React.FC = () => {
           const groupData = resGroup.data.success ? resGroup.data.data : resGroup.data;
           if (groupData?.name) {
             localStorage.setItem("currentFamilyName", String(groupData.name).trim());
+          } else {
+            localStorage.removeItem("currentFamilyName");
+          }
+          if (groupData?.id) {
+            detailedFamilyId = Number(groupData.id);
           }
 
           // B. Tải danh sách thành viên đầy đủ trường để bóc tách thông tin cá nhân của chính mình
@@ -92,7 +99,7 @@ const Login: React.FC = () => {
             // Định dạng và lưu bộ nhớ đệm danh sách thành viên phục vụ hệ thống
             const formattedMembers = dbMembers.map((m: any) => {
               const rName = String(m.roleName || m.role?.name || m.role).toUpperCase();
-              const isOwner = rName.includes("BOSS") || rName.includes("CHỦ NHÀ") || rName.includes("ADMIN") || rName.includes("HOUSEKEEPER");
+              const isOwner = rName.includes("CHỦ NHÀ") || rName.includes("HOUSEKEEPER");
               return {
                 id: m.id,
                 fullName: m.fullName || m.full_name || "Thành viên ẩn danh",
@@ -130,15 +137,12 @@ const Login: React.FC = () => {
         phone: detailedPhone,
         gender: detailedGender,
         roleName: detailedRoleName,
+        familyId: detailedFamilyId,
         avatarUrl: detailedAvatar 
       });
 
       // 4. KIỂM TRA PHÂN QUYỀN VÀ ĐIỀU HƯỚNG CHUẨN XÁC
-      if (response.role === 'ADMIN') {
-        navigate('/admin/users', { replace: true });
-      } else {
-        navigate('/fridge', { replace: true });
-      }
+      navigate(getAuthRedirectPath(response.role), { replace: true });
       
     } catch (error) {
       setSubmitError(getErrorMessage(error));

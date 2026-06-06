@@ -84,7 +84,7 @@ const FamilyGroup: React.FC = () => {
         const groupData = resGroup.data.success ? resGroup.data.data : resGroup.data;
         
         if (groupData) {
-          const cleanName = String(groupData.name || "Gia đình Fiza").trim();
+          const cleanName = String(groupData.name || "Chưa có gia đình").trim();
           const familyIdFromDb = groupData.id;
           
           setFamilyName(cleanName);
@@ -102,8 +102,9 @@ const FamilyGroup: React.FC = () => {
         }
       } catch (err) {
         console.error("❌ [FRONTEND DEBUG] Lỗi API luồng A (Chi tiết nhóm):", err);
-        setFamilyName("Gia đình Fiza");
-        setEditName("Gia đình Fiza");
+        setFamilyName("Chưa có gia đình");
+        setEditName("Chưa có gia đình");
+        localStorage.removeItem("currentFamilyName");
       }
 
       // =========================================================================
@@ -127,9 +128,7 @@ const FamilyGroup: React.FC = () => {
           const formattedMembers = dbMembers.map((m: any, index: number) => {
             const roleNameFromDb = m.roleName || (m.role && typeof m.role === 'object' ? m.role.name : m.role);
             
-            const isOwner = String(roleNameFromDb).toUpperCase().includes("ADMIN") || 
-                            String(roleNameFromDb).toUpperCase().includes("HOUSEKEEPER") || 
-                            String(roleNameFromDb).toUpperCase().includes("BOSS") ||
+            const isOwner = String(roleNameFromDb).toUpperCase().includes("HOUSEKEEPER") ||
                             String(roleNameFromDb).toUpperCase().includes("CHỦ NHÀ") ||
                             (dbHousekeeperId && Number(m.id) === Number(dbHousekeeperId));
 

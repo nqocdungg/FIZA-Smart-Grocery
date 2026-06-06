@@ -24,7 +24,7 @@ const Topbar: React.FC<TopbarProps> = ({
   showSearch = true
 }) => {
   const navigate = useNavigate();
-  const [localFamilyName, setLocalFamilyName] = useState<string>("Gia đình Fiza");
+  const [localFamilyName, setLocalFamilyName] = useState<string>(() => (familyName && familyName !== "Đang tải..." ? familyName : localStorage.getItem("currentFamilyName") || "Chưa có gia đình"));
   const [inviteInfo, setInviteInfo] = useState<{ isOpen: boolean; familyName: string; familyId: number | null }>({
     isOpen: false,
     familyName: "",
@@ -51,14 +51,20 @@ const Topbar: React.FC<TopbarProps> = ({
       if (response.data) {
         if (response.data.success && response.data.data && response.data.data.name) {
           setLocalFamilyName(response.data.data.name);
+          localStorage.setItem("currentFamilyName", response.data.data.name);
         } else if (response.data.name) {
           setLocalFamilyName(response.data.name);
+          localStorage.setItem("currentFamilyName", response.data.name);
+        } else {
+          setLocalFamilyName("Chưa có gia đình");
+          localStorage.removeItem("currentFamilyName");
         }
       }
     })
     .catch(error => {
       console.error("Topbar tự gọi API lấy tên gia đình bị lỗi:", error);
-      setLocalFamilyName("Gia đình Fiza"); 
+      setLocalFamilyName("Chưa có gia đình");
+      localStorage.removeItem("currentFamilyName");
     });
   }, [familyName]);
 

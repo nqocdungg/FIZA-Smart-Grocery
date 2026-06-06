@@ -298,10 +298,11 @@ CREATE TABLE meal_items (
 -- 8. DỮ LIỆU MẶC ĐỊNH
 -- ==========================================
 
--- Tạo 2 vai trò mặc định
+-- Tạo 3 vai trò mặc định
 INSERT INTO roles (name, description) VALUES
 ('ADMIN', 'Quản trị viên hệ thống - toàn quyền truy cập'),
-('CUSTOMER', 'Khách hàng / thành viên gia đình');
+('CUSTOMER', 'Khách hàng / thành viên gia đình'),
+('HOUSEKEEPER', 'Chủ nhà hoặc người nội trợ chính, quản lý gia đình và kế hoạch ăn uống');
 
 CREATE TABLE invitations (
     id SERIAL PRIMARY KEY,

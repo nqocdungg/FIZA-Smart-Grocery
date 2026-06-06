@@ -3,6 +3,7 @@ package com.mealmate.user.controller;
 import com.mealmate.user.model.User;
 import com.mealmate.user.model.Invitation;
 import com.mealmate.user.model.Family;
+import com.mealmate.user.model.dto.UserResponse;
 import com.mealmate.user.service.UserService;
 import com.mealmate.user.service.FamilyService;
 import com.mealmate.user.repository.InvitationRepository;
@@ -34,8 +35,19 @@ public class UserController {
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<List<User>>> getAll() {
-        return ResponseEntity.ok(new ApiResponse<>(true, "Success", service.findAll()));
+    public ResponseEntity<ApiResponse<List<UserResponse>>> getAll() {
+        List<UserResponse> users = service.findAll().stream()
+                .map(user -> UserResponse.builder()
+                        .id(user.getId())
+                        .email(user.getEmail())
+                        .fullName(user.getFullName())
+                        .phone(user.getPhone())
+                        .gender(user.getGender())
+                        .avatarUrl(user.getAvatarUrl())
+                        .roleName(user.getRole() != null ? user.getRole().getName() : null)
+                        .build())
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(new ApiResponse<>(true, "Success", users));
     }
 
     @PostMapping
@@ -270,7 +282,7 @@ public class UserController {
             System.out.println("=================================");
 
             // 2. Kích hoạt câu lệnh UPDATE thô native xuống PostgreSQL
-            // Gán family_id = 3 (targetFamilyId), role_id = 3 (BOSS) cho user_id = 5
+            // Gán user về gia đình gốc và role_id = 3 (HOUSEKEEPER).
             userRepository.updateFamilyAndRoleDirectlyNative(targetUserId, targetFamilyId, 3L);
 
             return ResponseEntity.ok(new ApiResponse<>(true, "Đã trục xuất thành viên và trả về làm chủ nhà gốc thành công!", null));

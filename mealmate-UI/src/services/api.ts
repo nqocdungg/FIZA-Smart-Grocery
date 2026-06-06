@@ -35,7 +35,7 @@ api.interceptors.response.use(
   (error) => {
     const hasStoredToken = Boolean(localStorage.getItem('accessToken'));
 
-    if (hasStoredToken && (error.response?.status === 401 || error.response?.status === 403)) {
+    if (hasStoredToken && error.response?.status === 401) {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('authUser');
       window.location.href = '/login';

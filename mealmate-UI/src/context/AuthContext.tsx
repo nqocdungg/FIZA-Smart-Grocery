@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { AuthSession } from '@/features/auth/types/auth';
+import { getAuthRoleName } from '@/features/auth/role';
 
 // 🎯 ĐÃ BỔ SUNG: Định nghĩa các trường dữ liệu chi tiết (Bao gồm cả avatarUrl)
 interface ExtendedAuthFields {
@@ -32,7 +33,13 @@ const readStoredUser = (): ExtendedAuthSession | null => {
 
   try {
     const parsedUser = JSON.parse(storedUser) as ExtendedAuthSession;
-    return parsedUser?.accessToken ? parsedUser : null;
+    const normalizedRole = getAuthRoleName(parsedUser);
+    if (!parsedUser?.accessToken || !normalizedRole) {
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+      localStorage.removeItem('accessToken');
+      return null;
+    }
+    return { ...parsedUser, role: normalizedRole };
   } catch {
     localStorage.removeItem(AUTH_STORAGE_KEY);
     return null;
@@ -43,9 +50,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<ExtendedAuthSession | null>(() => readStoredUser());
 
   const login = (userData: ExtendedAuthSession) => {
-    setUser(userData);
-    localStorage.setItem('accessToken', userData.accessToken);
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userData));
+    const normalizedUser = { ...userData, role: getAuthRoleName(userData) };
+    setUser(normalizedUser);
+    localStorage.setItem('accessToken', normalizedUser.accessToken);
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(normalizedUser));
   };
 
   const logout = () => {
