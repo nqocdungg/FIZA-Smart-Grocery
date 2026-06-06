@@ -124,8 +124,14 @@
 }
 
 /* Tên thực phẩm */
-.food-name-display {
+.food-info-display {
     flex: 1; /* Chiếm hết khoảng trống để đẩy số lượng và badge về bên phải */
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.food-name-display {
     font-size: 16px;
     color: #171D1A;
     font-weight: 500;

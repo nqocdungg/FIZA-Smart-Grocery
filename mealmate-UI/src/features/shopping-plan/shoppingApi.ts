@@ -137,6 +137,27 @@ export const deleteShoppingList = async (listId: number): Promise<void> => {
   }
 };
 
+export const updateShoppingListNote = async (listId: number, note: string): Promise<void> => {
+  const response = await api.patch<ApiResponse<void>>(
+    `/api/v1/shopping/${listId}/note`,
+    { note }
+  );
+  if (!response.data.success) {
+    throw new Error(response.data.message || "Cập nhật ghi chú thất bại.");
+  }
+};
+
+export const getFrequentItems = async (familyId: number): Promise<any[]> => {
+  const response = await api.get<ApiResponse<any[]>>(
+    "/api/v1/shopping/frequent",
+    { params: { familyId } }
+  );
+  if (!response.data.success) {
+    throw new Error(response.data.message || "Lấy danh sách thực phẩm thường mua thất bại.");
+  }
+  return response.data.data;
+};
+
 export const getFamilyMembers = async (): Promise<UserSummary[]> => {
   const response = await api.get(`/api/v1/users/users/family/members`);
   if (!response.data.success) {

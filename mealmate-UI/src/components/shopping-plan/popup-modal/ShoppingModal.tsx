@@ -64,37 +64,43 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
         'Đồ khô': '🍞'
     };
 
-    const groupedItems = localItems.reduce((acc: any, item: any) => {
+    useEffect(() => {
+        if (!isHousekeeper) return;
+        const delayDebounceFn = setTimeout(async () => {
+            if (searchTerm.trim().length > 1) {
+                try {
+                    const results = await searchFoods(searchTerm);
+                    setSearchResults(results);
+                    setShowResults(true);
+                } catch (error) {
+                    console.error("Lỗi search:", error);
+                    setSearchResults([]);
+                }
+            } else {
+                setSearchResults([]);
+                setShowResults(false);
+            }
+        }, 300);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchTerm, isHousekeeper]);
+
+    const getFilteredLocalItems = () => {
+        if (!searchTerm.trim()) return localItems;
+
+        return localItems.filter(item =>
+            item.foodName?.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    };
+    const groupedItems = getFilteredLocalItems().reduce((acc: any, item: any) => {
         const category = item.categoryName || item.category || 'Khác';
         if (!acc[category]) acc[category] = [];
         acc[category].push(item);
         return acc;
     }, {});
-
-    useEffect(() => {
-        const delayDebounceFn = setTimeout(async () => {
-            if (searchTerm.trim().length > 1) {
-                try {
-                    // Nhập xong thì gọi API tìm kiếm thực phẩm thực tế
-                    const results = await searchFoods(searchTerm);
-                    setSearchResults(results);
-                } catch (error) {
-                    console.error("Lỗi khi tìm kiếm thực phẩm:", error);
-                    // Fallback to mock data if API fails
-                    setSearchResults([
-                        { id: 101, name: 'Cà rốt Đà Lạt', unit: 'kg', category: 'Rau củ' },
-                        { id: 102, name: 'Cà chua bi', unit: 'kg', category: 'Rau củ' }
-                    ]);
-                }
-                setShowResults(true);
-            } else {
-                setSearchResults([]);
-                setShowResults(false);
-            }
-        }, 300); // Đợi 300ms sau khi ngừng gõ mới gọi API
-
-        return () => clearTimeout(delayDebounceFn);
-    }, [searchTerm]);
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchTerm(e.target.value);
+    };
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -260,16 +266,16 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
                                 <input
                                     ref={searchInputRef}
                                     type="text"
-                                    placeholder="Tìm kiếm thực phẩm"
+                                    placeholder={isHousekeeper ? "Tìm để thêm món mới..." : "Tìm món trong danh sách..."}
                                     value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    onFocus={() => searchTerm.length > 1 && setShowResults(true)}
+                                    onChange={handleSearchChange}
+                                    onFocus={() => isHousekeeper && searchTerm.length > 1 && setShowResults(true)}
                                 />
                                 {searchTerm && <X size={14} className="clear-search" onClick={() => setSearchTerm('')} />}
                             </div>
 
                             {/* 3. RENDER SEARCH RESULTS (Dropdown nổi) */}
-                            {showResults && (
+                            {isHousekeeper && showResults && (
                                 <div className="search-results-dropdown">
                                     {searchResults.map(food => (
                                         <div key={food.id} className="search-result-item" onClick={() => handleAddClick(food)}>
@@ -291,7 +297,7 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
                             )}
 
                             {/* 4. HIỂN THỊ POPOVER KHI CÓ ACTIVE FOOD */}
-                            {activeFood && (
+                            {isHousekeeper && activeFood && (
                                 <div className="popover-anchor">
                                     <AddItemPopover
                                         foodName={activeFood.name || activeFood.foodName}

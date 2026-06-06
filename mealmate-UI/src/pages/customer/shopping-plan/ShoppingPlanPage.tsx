@@ -153,8 +153,16 @@ const ShoppingPlanPage: React.FC = () => {
 
                             {/* 5. Widgets bên cạnh board */}
                             <div className="dashboard-widgets">
-                                <NoteSection />
-                                <FrequentItems />
+                                <NoteSection
+                                    note={plans.find(p => p.plannedDate === selectedDate)?.note || ''}
+                                    listId={plans.find(p => p.plannedDate === selectedDate)?.listId}
+                                    onSaveSuccess={fetchSummary}
+                                />
+                                <FrequentItems
+                                    familyId={familyId}
+                                    plans={plans}
+                                    onAddSuccess={fetchSummary}
+                                />
                                 <ProgressSection
                                     percentage={45}
                                     message="Còn 6 danh mục cần hoàn thành cho hôm nay"

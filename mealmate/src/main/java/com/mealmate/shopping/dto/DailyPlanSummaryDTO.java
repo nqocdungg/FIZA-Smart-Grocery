@@ -16,4 +16,5 @@ public class DailyPlanSummaryDTO {
     private int purchasedItems;
     private List<String> assigneeNames = new ArrayList<>();
     private Long listId;
+    private String note;
 }

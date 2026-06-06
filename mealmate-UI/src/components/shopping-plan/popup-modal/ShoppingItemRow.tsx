@@ -68,14 +68,21 @@ const ShoppingItemRow: React.FC<RowProps> = ({ item, mode, members = [], onUpdat
                 {item.isPurchased && <Check size={14} color="white" />}
             </div>
 
-            <span className="food-name-display">{item.foodName}</span>
+            <div className="food-info-display">
+                <span className="food-name-display">{item.foodName}</span>
+                {item.note && item.note.trim() !== "" && (
+                    <p style={{ color: "#94A3B8", fontSize: "12px", margin: "2px 0 0 0", fontWeight: 500 }}>
+                        {item.note.startsWith("Lưu ý") ? item.note : `Lưu ý: ${item.note}`}
+                    </p>
+                )}
+            </div>
 
             <div className="quantity-display">
                 {item.quantity} {item.unit}
             </div>
 
             <div className="assignee-badge">
-                {item.assigneeName || 'Chưa giao'}
+                {item.assignee?.name || 'Chưa giao'}
             </div>
         </div>
     );

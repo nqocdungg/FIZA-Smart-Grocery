@@ -42,6 +42,7 @@ export interface ShoppingListItem {
   note?: string;
   assignedTo?: number; // ID users
   assigneeName?: string;
+  assignee?: { id?: number; name?: string };
   isPurchased: boolean;
   orderNumber?: number;
   imported_to_fridge_at?: string;
@@ -79,6 +80,7 @@ export interface DailyPlanCardData {
   purchasedItems: number;
   assigneeNames: string[];
   listId?: number;
+  note?: string;
 }
 
 // 2. Cho phần "Thực phẩm thường mua" (FrequentItems)

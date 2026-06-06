@@ -125,4 +125,22 @@ public interface ShoppingListItemRepository extends JpaRepository<ShoppingListIt
     Optional<ShoppingListItem> findImportableByIdAndFamilyId(
             @Param("id") Long id,
             @Param("familyId") Long familyId);
+
+    interface FrequentItemProjection {
+        Long getId();
+        String getFoodName();
+        String getUnit();
+    }
+
+    @Query(value = """
+            SELECT f.id AS id, f.name AS foodName, COALESCE(sli.unit, f.unit) AS unit, COUNT(sli.id) as count
+            FROM shopping_list_items sli
+            JOIN foods f ON sli.food_id = f.id
+            JOIN shopping_lists sl ON sli.shopping_list_id = sl.id
+            WHERE sl.familyId = :familyId
+            GROUP BY f.id, f.name, f.unit, sli.unit
+            ORDER BY count DESC
+            LIMIT 5
+            """, nativeQuery = true)
+    List<FrequentItemProjection> findFrequentItems(@Param("familyId") Long familyId);
 }
