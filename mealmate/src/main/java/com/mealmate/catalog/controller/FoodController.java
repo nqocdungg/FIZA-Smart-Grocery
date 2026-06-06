@@ -4,6 +4,7 @@ import com.mealmate.catalog.model.dto.FoodRequest;
 import com.mealmate.catalog.model.dto.FoodResponse;
 import com.mealmate.catalog.service.FoodService;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -40,6 +41,7 @@ public class FoodController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public FoodResponse create(
             @Valid @RequestBody FoodRequest request
     ) {
@@ -47,6 +49,7 @@ public class FoodController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public FoodResponse update(
             @PathVariable Long id,
             @Valid @RequestBody FoodRequest request
@@ -55,6 +58,7 @@ public class FoodController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public void delete(
             @PathVariable Long id
     ) {

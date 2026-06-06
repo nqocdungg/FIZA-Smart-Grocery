@@ -31,7 +31,7 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
     const searchInputRef = useRef<HTMLInputElement>(null);
     const [members, setMembers] = useState<any[]>([]);
     const [localItems, setLocalItems] = useState<any[]>([]);
-    const isHousekeeper = user?.role === 'HOUSEKEEPER' || user?.role === 'ADMIN';
+    const isHousekeeper = user?.role === 'HOUSEKEEPER';
 
     useEffect(() => {
         if (data && data.items) {

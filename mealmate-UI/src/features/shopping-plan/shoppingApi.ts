@@ -37,6 +37,14 @@ export const getUserFamilies = async (): Promise<any[]> => {
   return response.data.data;
 };
 
+export const getCurrentFamily = async (): Promise<any | null> => {
+  const response = await api.get("/api/v1/users/familys/current");
+  if (!response.data.success) {
+    return null;
+  }
+  return response.data.data;
+};
+
 /**
  * 1. Lấy tóm tắt 7 ngày trong tuần (cho Grid)
  */

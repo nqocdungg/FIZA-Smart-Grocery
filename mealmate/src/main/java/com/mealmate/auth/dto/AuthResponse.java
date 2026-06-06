@@ -18,4 +18,6 @@ public class AuthResponse {
     private String fullName;
     private String role;
     private String gender;
+    private Long familyId;
+    private String familyName;
 }

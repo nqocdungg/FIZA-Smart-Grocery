@@ -6,6 +6,30 @@ import "./Topbar.css";
 import iconSearch from "@/assets/icon/Icon-search.svg";
 import ReceiveInviteModal from "@/pages/customer/group/ReceiveInviteModal"; 
 
+const getStoredFamilyName = () => {
+  const cachedName = localStorage.getItem("currentFamilyName");
+  if (hasRealFamilyName(cachedName || undefined)) return cachedName as string;
+
+  const authUserString = localStorage.getItem("authUser");
+  if (!authUserString) return "";
+  try {
+    const authUser = JSON.parse(authUserString);
+    return authUser.familyName || "";
+  } catch {
+    return "";
+  }
+};
+
+const hasRealFamilyName = (value?: string) => {
+  return Boolean(
+    value &&
+    !value.includes("Đang tải") &&
+    !value.includes("Äang") &&
+    !value.includes("Chưa có gia đình") &&
+    !value.includes("ChÆ°a")
+  );
+};
+
 interface TopbarProps {
   title?: string;
   searchPlaceholder?: string;
@@ -24,7 +48,7 @@ const Topbar: React.FC<TopbarProps> = ({
   showSearch = true
 }) => {
   const navigate = useNavigate();
-  const [localFamilyName, setLocalFamilyName] = useState<string>("Gia đình Fiza");
+  const [localFamilyName, setLocalFamilyName] = useState<string>(() => (hasRealFamilyName(familyName) ? familyName as string : getStoredFamilyName() || "Chưa có gia đình"));
   const [inviteInfo, setInviteInfo] = useState<{ isOpen: boolean; familyName: string; familyId: number | null }>({
     isOpen: false,
     familyName: "",
@@ -36,8 +60,8 @@ const Topbar: React.FC<TopbarProps> = ({
 
   // Luồng lấy tên gia đình hiện tại
   useEffect(() => {
-    if (familyName && familyName !== "Đang tải...") {
-      setLocalFamilyName(familyName);
+    if (hasRealFamilyName(familyName)) {
+      setLocalFamilyName(familyName as string);
       return;
     }
 
@@ -51,14 +75,20 @@ const Topbar: React.FC<TopbarProps> = ({
       if (response.data) {
         if (response.data.success && response.data.data && response.data.data.name) {
           setLocalFamilyName(response.data.data.name);
+          localStorage.setItem("currentFamilyName", response.data.data.name);
         } else if (response.data.name) {
           setLocalFamilyName(response.data.name);
+          localStorage.setItem("currentFamilyName", response.data.name);
+        } else {
+          const storedFamilyName = getStoredFamilyName();
+          setLocalFamilyName(storedFamilyName || "Chưa có gia đình");
         }
       }
     })
     .catch(error => {
       console.error("Topbar tự gọi API lấy tên gia đình bị lỗi:", error);
-      setLocalFamilyName("Gia đình Fiza"); 
+      const storedFamilyName = getStoredFamilyName();
+      setLocalFamilyName(storedFamilyName || "Chưa có gia đình");
     });
   }, [familyName]);
 

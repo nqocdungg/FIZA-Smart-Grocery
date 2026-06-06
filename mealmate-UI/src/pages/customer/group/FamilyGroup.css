@@ -102,6 +102,31 @@
   cursor: pointer;
 }
 
+.family-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.btn-leave-family {
+  height: 40px;
+  padding: 0 22px;
+  background: #FEF2F2;
+  color: #B91C1C;
+  border: 1px solid #FECACA;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.btn-leave-family:hover {
+  background: #FEE2E2;
+  border-color: #FCA5A5;
+}
+
 .btn-shadow {
   width: 100%;
   height: 100%;

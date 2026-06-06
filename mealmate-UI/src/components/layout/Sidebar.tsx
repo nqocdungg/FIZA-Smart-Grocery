@@ -16,6 +16,16 @@ import iconStatistic from "@/assets/icon/Icon-statistic.svg";
 
 import defaultAvatar from "@/assets/avatar/26.svg";
 
+const hasRealFamilyName = (value?: string | null) => {
+  return Boolean(
+    value &&
+    !value.includes("Đang tải") &&
+    !value.includes("Äang") &&
+    !value.includes("Chưa có gia đình") &&
+    !value.includes("ChÆ°a")
+  );
+};
+
 const Sidebar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -44,12 +54,13 @@ const Sidebar: React.FC = () => {
       || "";
     const normalizedRole = String(roleName).toUpperCase();
     if (
-      normalizedRole.includes("ADMIN") ||
       normalizedRole.includes("HOUSEKEEPER") ||
-      normalizedRole.includes("BOSS") ||
       normalizedRole.includes("CHỦ NHÀ")
     ) {
       return "Nội trợ";
+    }
+    if (normalizedRole.includes("ADMIN")) {
+      return "Admin";
     }
     return "Thành viên";
   };
@@ -84,7 +95,7 @@ const Sidebar: React.FC = () => {
     } else {
       refinedUserData = {
         id: currentUserId,
-        fullName: baseAuthUser.fullName || baseAuthUser.full_name || baseAuthUser.name || "Thành viên Fiza",
+        fullName: baseAuthUser.fullName || baseAuthUser.full_name || baseAuthUser.name || "Thành viên",
         roleName: baseAuthUser.roleName || (getRoleLabel(baseAuthUser) === "Nội trợ" ? "Chủ nhà" : "Thành viên"),
         email: baseAuthUser.email || "Chưa cập nhật",
         phone: baseAuthUser.phone || "Chưa cập nhật",
@@ -94,8 +105,14 @@ const Sidebar: React.FC = () => {
     }
   }
 
-  const rawName = baseAuthUser?.fullName || baseAuthUser?.full_name || baseAuthUser?.name || "Thành viên Fiza";
+  const rawName = baseAuthUser?.fullName || baseAuthUser?.full_name || baseAuthUser?.name || "Thành viên";
   const rawAvatar = baseAuthUser?.avatarUrl || baseAuthUser?.avatar_url || baseAuthUser?.avatar;
+  const cachedFamilyName = localStorage.getItem("currentFamilyName");
+  const displayFamilyName = hasRealFamilyName(cachedFamilyName)
+    ? cachedFamilyName as string
+    : hasRealFamilyName(baseAuthUser?.familyName)
+      ? baseAuthUser.familyName
+      : "Chưa có gia đình";
 
   const handleLogout = async () => {
     try {
@@ -229,7 +246,7 @@ const Sidebar: React.FC = () => {
       <ProfileModal
         isOpen={isProfileModalOpen}
         onClose={() => setIsProfileModalOpen(false)}
-        familyName={localStorage.getItem("currentFamilyName") || "Gia đình My My"}
+        familyName={displayFamilyName}
         isMe={true}
         memberData={refinedUserData}
       />

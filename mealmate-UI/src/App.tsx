@@ -18,10 +18,25 @@ import PerformanceManagement from '@/pages/admin/PerformanceManagement';
 import RecipeManagement from '@/pages/admin/RecipeManagement';
 import UserManagement from '@/pages/admin/UserManagement';
 import { Toaster } from 'react-hot-toast';
+import { getAuthRedirectPath, isAdminRole } from '@/features/auth/role';
 
 const RequireAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAuth();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+};
+
+const RequireUser: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated, user } = useAuth();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (isAdminRole(user)) {
+    return <Navigate to="/admin/users" replace />;
+  }
+
   return <>{children}</>;
 };
 
@@ -32,8 +47,8 @@ const RequireAdmin: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     return <Navigate to="/login" replace />;
   }
 
-  if (user?.role !== 'ADMIN') {
-    return <Navigate to="/fridge" replace />;
+  if (!isAdminRole(user)) {
+    return <Navigate to={getAuthRedirectPath(user)} replace />;
   }
 
   return <>{children}</>;
@@ -43,7 +58,7 @@ const PublicOnlyRoute: React.FC<{ children: React.ReactNode }> = ({ children }) 
   const { isAuthenticated, user } = useAuth();
 
   if (isAuthenticated) {
-    return <Navigate to={user?.role === 'ADMIN' ? '/admin/users' : '/fridge'} replace />;
+    return <Navigate to={getAuthRedirectPath(user)} replace />;
   }
 
   return <>{children}</>;
@@ -56,7 +71,7 @@ const HomeRedirect: React.FC = () => {
     return <Navigate to="/login" replace />;
   }
 
-  return <Navigate to={user?.role === 'ADMIN' ? '/admin/users' : '/fridge'} replace />;
+  return <Navigate to={getAuthRedirectPath(user)} replace />;
 };
 
 const App: React.FC = () => {
@@ -75,12 +90,12 @@ const App: React.FC = () => {
 
         <Route path="/profile" element={<RequireAuth><ProfileDetail /></RequireAuth>} />
 
-        <Route path="/family" element={<RequireAuth><FamilyGroup /></RequireAuth>} />
-        <Route path="/shopping" element={<RequireAuth><ShoppingPlanPage /></RequireAuth>} />
-        <Route path="/fridge" element={<RequireAuth><MyFridge /></RequireAuth>} />
-        <Route path="/recipes" element={<RequireAuth><RecipeLibrary /></RequireAuth>} />
-        <Route path="/suggestions" element={<RequireAuth><MenuSuggestion /></RequireAuth>} />
-        <Route path="/reports" element={<RequireAuth><Reports /></RequireAuth>} />
+        <Route path="/family" element={<RequireUser><FamilyGroup /></RequireUser>} />
+        <Route path="/shopping" element={<RequireUser><ShoppingPlanPage /></RequireUser>} />
+        <Route path="/fridge" element={<RequireUser><MyFridge /></RequireUser>} />
+        <Route path="/recipes" element={<RequireUser><RecipeLibrary /></RequireUser>} />
+        <Route path="/suggestions" element={<RequireUser><MenuSuggestion /></RequireUser>} />
+        <Route path="/reports" element={<RequireUser><Reports /></RequireUser>} />
 
         {/* Admin Routes */}
         <Route path="/admin/users" element={<RequireAdmin><UserManagement /></RequireAdmin>} />

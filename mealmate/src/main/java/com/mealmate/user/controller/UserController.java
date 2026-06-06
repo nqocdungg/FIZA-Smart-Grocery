@@ -3,6 +3,7 @@ package com.mealmate.user.controller;
 import com.mealmate.user.model.User;
 import com.mealmate.user.model.Invitation;
 import com.mealmate.user.model.Family;
+import com.mealmate.user.model.dto.UserResponse;
 import com.mealmate.user.service.UserService;
 import com.mealmate.user.service.FamilyService;
 import com.mealmate.user.repository.InvitationRepository;
@@ -34,8 +35,22 @@ public class UserController {
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<List<User>>> getAll() {
-        return ResponseEntity.ok(new ApiResponse<>(true, "Success", service.findAll()));
+    public ResponseEntity<ApiResponse<List<UserResponse>>> getAll() {
+        List<UserResponse> users = userRepository.findAllWithFamilyAndRole().stream()
+                .map(user -> UserResponse.builder()
+                        .id(user.getId())
+                        .email(user.getEmail())
+                        .fullName(user.getFullName())
+                        .phone(user.getPhone())
+                        .gender(user.getGender())
+                        .avatarUrl(user.getAvatarUrl())
+                        .emailVerified(user.getEmailVerified())
+                        .familyId(user.getFamilyId())
+                        .familyName(user.getFamily() != null ? user.getFamily().getName() : null)
+                        .roleName(user.getRole() != null ? user.getRole().getName() : null)
+                        .build())
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(new ApiResponse<>(true, "Success", users));
     }
 
     @PostMapping
@@ -74,6 +89,8 @@ public class UserController {
             if (cleanCurrentUser == null || cleanCurrentUser.getFamilyId() == null) {
                 return ResponseEntity.ok(new ApiResponse<>(true, "Chưa tham gia gia đình nào", List.of()));
             }
+
+            Family currentFamily = familyService.findByFamilyId(cleanCurrentUser.getFamilyId());
             
             List<Object[]> rawRows = userRepository.findRawMembersByFamilyId(cleanCurrentUser.getFamilyId());
             
@@ -86,6 +103,9 @@ public class UserController {
                 map.put("gender", row[4] != null ? row[4].toString() : "OTHER");
                 map.put("avatarUrl", row[5] != null ? row[5].toString() : "");
                 map.put("roleName", row[6] != null ? row[6].toString() : "Thành viên");
+                map.put("familyId", currentFamily.getId());
+                map.put("familyName", currentFamily.getName());
+                map.put("housekeeperId", currentFamily.getHousekeeperId());
                 return map;
             }).collect(Collectors.toList());
             
@@ -247,7 +267,7 @@ public class UserController {
     }
 
     @PostMapping("/remove-member")
-    @org.springframework.transaction.annotation.Transactional // Bắt buộc để chạy lệnh ghi DB
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<ApiResponse<Void>> removeMemberFromFamily(@RequestBody Map<String, Object> body) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -258,25 +278,52 @@ public class UserController {
             if (body == null || !body.containsKey("userId") || body.get("userId") == null) {
                 return ResponseEntity.badRequest().body(new ApiResponse<>(false, "Thiếu tham số userId", null));
             }
-            Long targetUserId = Long.valueOf(body.get("userId").toString()); // Người bị xóa (ID = 5)
 
-            // 1. Dò tìm chính xác ID của ngôi nhà mà người này đứng tên quản lý (Sẽ trả ra số 3)
-            Long targetFamilyId = userRepository.findActualFamilyIdByHousekeeperId(targetUserId);
+            Long targetUserId = Long.valueOf(body.get("userId").toString());
+            String currentEmail = authentication.getName();
+            User currentUser = userRepository.findByEmail(currentEmail).orElse(null);
+            User targetUser = userRepository.findById(targetUserId).orElse(null);
 
-            // 🎯 IN LOG ĐỂ KIỂM TRÁI CHUẨN XÁC CON SỐ TRÊN CONSOLE SERVER
-            System.out.println("====== 🔍 TRỤC XUẤT DEBUG ======");
-            System.out.println("-> Người bị xóa (targetUserId): " + targetUserId);
-            System.out.println("-> ID Nhà gốc bốc được từ DB (targetFamilyId): " + targetFamilyId);
-            System.out.println("=================================");
+            if (currentUser == null || targetUser == null) {
+                return ResponseEntity.status(404).body(new ApiResponse<>(false, "Không tìm thấy người dùng", null));
+            }
 
-            // 2. Kích hoạt câu lệnh UPDATE thô native xuống PostgreSQL
-            // Gán family_id = 3 (targetFamilyId), role_id = 3 (BOSS) cho user_id = 5
-            userRepository.updateFamilyAndRoleDirectlyNative(targetUserId, targetFamilyId, 3L);
+            Long currentFamilyId = currentUser.getFamilyId();
+            Long targetCurrentFamilyId = targetUser.getFamilyId();
+            if (currentFamilyId == null || targetCurrentFamilyId == null || !currentFamilyId.equals(targetCurrentFamilyId)) {
+                return ResponseEntity.status(403).body(new ApiResponse<>(false, "Người dùng không thuộc cùng nhóm gia đình", null));
+            }
 
-            return ResponseEntity.ok(new ApiResponse<>(true, "Đã trục xuất thành viên và trả về làm chủ nhà gốc thành công!", null));
+            Family currentFamily = familyService.findByFamilyId(currentFamilyId);
+            boolean isSelfLeave = currentUser.getId().equals(targetUserId);
+            boolean isHousekeeper = currentFamily.getHousekeeperId() != null
+                    && currentFamily.getHousekeeperId().equals(currentUser.getId());
+
+            if (!isSelfLeave && !isHousekeeper) {
+                return ResponseEntity.status(403).body(new ApiResponse<>(false, "Chỉ chủ nhà mới có quyền xóa thành viên", null));
+            }
+            if (currentFamily.getHousekeeperId() != null && currentFamily.getHousekeeperId().equals(targetUserId)) {
+                return ResponseEntity.status(400).body(new ApiResponse<>(false, "Chủ nhà không thể rời nhóm bằng thao tác này", null));
+            }
+
+            Long restoredFamilyId = userRepository.findActualFamilyIdByHousekeeperId(targetUserId);
+            if (restoredFamilyId == null || restoredFamilyId.equals(currentFamilyId)) {
+                Family personalFamily = new Family();
+                personalFamily.setName("Gia đình " + targetUser.getFullName());
+                personalFamily.setHousekeeperId(targetUserId);
+                restoredFamilyId = familyService.save(personalFamily).getId();
+            }
+
+            userRepository.updateFamilyAndRoleDirectlyNative(targetUserId, restoredFamilyId, 3L);
+
+            return ResponseEntity.ok(new ApiResponse<>(
+                    true,
+                    isSelfLeave ? "Đã rời nhóm thành công!" : "Đã xóa thành viên khỏi nhóm thành công!",
+                    null
+            ));
 
         } catch (Exception e) {
-            System.err.println("❌ LỖI API TRỤC XUẤT THÀNH VIÊN: " + e.getMessage());
+            System.err.println("Lỗi API remove-member: " + e.getMessage());
             return ResponseEntity.status(500).body(new ApiResponse<>(false, "Lỗi hệ thống khi xóa: " + e.getMessage(), null));
         }
     }

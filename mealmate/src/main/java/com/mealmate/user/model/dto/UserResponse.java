@@ -14,5 +14,8 @@ public class UserResponse {
     private String phone;
     private String gender;
     private String avatarUrl;
+    private Boolean emailVerified;
+    private Long familyId;
+    private String familyName;
     private String roleName; 
 }

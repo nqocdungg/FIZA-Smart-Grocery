@@ -26,6 +26,7 @@ export const AuthInput: React.FC<AuthInputProps> = ({ label, rightLabel, ...prop
           border: 'none', /* Sạch bóng viền thẫm mặc định */
           borderRadius: '0.75rem', /* Bo góc 12px theo tỷ lệ rem */
           fontSize: '1rem',
+          textAlign: 'left',
           outline: 'none',
           boxSizing: 'border-box',
           fontFamily: "'Plus Jakarta Sans', sans-serif",

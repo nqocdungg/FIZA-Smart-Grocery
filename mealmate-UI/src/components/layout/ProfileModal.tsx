@@ -71,11 +71,11 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, familyName
   const roleName = (typeof roleObj === "object" && roleObj !== null ? roleObj.name : roleObj) 
                     || displayUser?.roleName 
                     || "";
-  const isHousekeeperRole = String(roleName).toUpperCase().includes("ADMIN") || 
-                            String(roleName).toUpperCase().includes("HOUSEKEEPER") ||
-                            String(roleName).toUpperCase().includes("BOSS") ||
-                            String(roleName).toUpperCase().includes("CHỦ NHÀ");
-  const roleLabel = isHousekeeperRole ? "Chủ nhà" : "Thành viên";
+  const normalizedRoleName = String(roleName).toUpperCase();
+  const isAdminRole = normalizedRoleName.includes("ADMIN");
+  const isHousekeeperRole = normalizedRoleName.includes("HOUSEKEEPER") ||
+                            normalizedRoleName.includes("CHỦ NHÀ");
+  const roleLabel = isAdminRole ? "Quản trị viên" : isHousekeeperRole ? "Chủ nhà" : "Thành viên";
 
   const handleLogoutClick = () => {
     const confirmLogout = window.confirm("Bạn có chắc chắn muốn đăng xuất tài khoản khỏi hệ thống không?");
@@ -241,9 +241,9 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, familyName
               <div className="profile-modal-info-col">
                 <span className="profile-modal-info-label">Gia đình</span>
                 {isEditing ? (
-                  <input type="text" className="profile-modal-input-disabled" value={familyName || "Gia đình Fiza"} disabled />
+                  <input type="text" className="profile-modal-input-disabled" value={familyName || "Chưa có gia đình"} disabled />
                 ) : (
-                  <span className="profile-modal-info-value">{familyName || "Gia đình Fiza"}</span>
+                  <span className="profile-modal-info-value">{familyName || "Chưa có gia đình"}</span>
                 )}
               </div>
 

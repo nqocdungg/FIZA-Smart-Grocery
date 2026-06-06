@@ -18,6 +18,9 @@ export interface AuthResponse {
   email: string;
   fullName: string;
   role?: string;
+  gender?: string;
+  familyId?: number;
+  familyName?: string;
 }
 
 export interface AuthSession {
@@ -27,6 +30,7 @@ export interface AuthSession {
   email: string;
   fullName: string;
   familyId?: number;
+  familyName?: string;
   role?: string;
 }
 

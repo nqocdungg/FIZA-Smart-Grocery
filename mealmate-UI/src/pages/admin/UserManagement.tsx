@@ -17,9 +17,11 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { NavLink } from 'react-router-dom';
+import AdminSidebar from '../../components/admin/AdminSidebar';
 import SharedModal from '../../components/admin/Modal';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { AUTH_ROLES, getAuthRoleName, getRoleId, getRoleLabel } from '../../features/auth/role';
 
 
 interface Role {
@@ -36,8 +38,39 @@ export interface User {
   gender?: 'MALE' | 'FEMALE' | 'OTHER';
   avatarUrl?: string;
   emailVerified?: boolean;
+  familyId?: number;
+  familyName?: string;
   role?: Role;
+  roleName?: string;
 }
+
+const ROLE_FILTER_ALL = 'ALL';
+const ROLE_OPTIONS = [
+  { value: AUTH_ROLES.ADMIN, label: getRoleLabel(AUTH_ROLES.ADMIN) },
+  { value: AUTH_ROLES.HOUSEKEEPER, label: getRoleLabel(AUTH_ROLES.HOUSEKEEPER) },
+  { value: AUTH_ROLES.CUSTOMER, label: getRoleLabel(AUTH_ROLES.CUSTOMER) },
+];
+
+const readUsersResponse = (payload: any): User[] => {
+  const users = payload?.success ? payload.data : payload;
+  if (!Array.isArray(users)) return [];
+
+  return users
+    .filter((user) => user && typeof user === 'object')
+    .map((user) => {
+      const rawRole = user.role ?? user.roleName;
+      const role = typeof rawRole === 'string' ? { id: getRoleId(rawRole), name: rawRole } : rawRole;
+
+      return {
+        ...user,
+        id: Number(user.id ?? 0),
+        fullName: String(user.fullName ?? user.full_name ?? ''),
+        email: String(user.email ?? ''),
+        role,
+        roleName: typeof rawRole === 'string' ? rawRole : rawRole?.name,
+      };
+    });
+};
 
 const UserManagement: React.FC = () => {
   const { logout } = useAuth();
@@ -47,7 +80,7 @@ const UserManagement: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState('Tất cả');
+  const [roleFilter, setRoleFilter] = useState(ROLE_FILTER_ALL);
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -65,14 +98,20 @@ const UserManagement: React.FC = () => {
     setErrorMessage('');
     try {
       const response = await api.get('/api/v1/users/users');
-      if (response.data?.success) {
-        setUsers(response.data.data);
-      } else {
-        setUsers(response.data || []);
+      if (response.data?.success === false) {
+        throw new Error(response.data?.message || 'API trả về trạng thái không thành công.');
       }
-    } catch (err) {
+      setUsers(readUsersResponse(response.data));
+    } catch (err: any) {
       console.error(err);
-      setErrorMessage('Không tải được danh sách người dùng từ máy chủ.');
+      const status = err?.response?.status;
+      const serverMessage = err?.response?.data?.message || err?.message;
+      setErrorMessage(
+        status === 403
+          ? 'Tài khoản admin không có quyền xem danh sách người dùng. Hãy kiểm tra role ADMIN trong token/database.'
+          : serverMessage || 'Không tải được danh sách người dùng từ máy chủ.'
+      );
+      setUsers([]);
     } finally {
       setIsLoading(false);
     }
@@ -84,10 +123,11 @@ const UserManagement: React.FC = () => {
 
   // Filter Logic
   const filteredUsers = users.filter(user => {
-    const matchesSearch = (user.fullName || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+    const roleName = user.role?.name ?? user.roleName;
+    const matchesSearch = (user.fullName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                           (user.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          user.id.toString().includes(searchQuery.toLowerCase());
-    const matchesRole = roleFilter === 'Tất cả' || user.role?.name === roleFilter;
+                          String(user.id ?? '').includes(searchQuery.toLowerCase());
+    const matchesRole = roleFilter === ROLE_FILTER_ALL || roleName === roleFilter;
     return matchesSearch && matchesRole;
   });
 
@@ -98,6 +138,12 @@ const UserManagement: React.FC = () => {
   const currentUsers = filteredUsers.slice(startIndex, startIndex + itemsPerPage);
 
   const handleDelete = async (id: number) => {
+    const targetUser = users.find((user) => user.id === id);
+    if (targetUser && getAuthRoleName(targetUser.role ?? targetUser.roleName) === AUTH_ROLES.ADMIN) {
+      setDeleteConfirm(null);
+      return;
+    }
+
     try {
       await api.delete(`/api/v1/users/users/${id}`);
       setUsers(users.filter(u => u.id !== id));
@@ -150,7 +196,7 @@ const UserManagement: React.FC = () => {
       gender: formData.get('gender') as string,
       passwordHash: 'dummy_hash', // Mật khẩu tạm thời cho admin tạo
       role: {
-        id: roleName === 'ADMIN' ? 1 : 2,
+        id: getRoleId(roleName),
         name: roleName
       }
     };
@@ -169,82 +215,10 @@ const UserManagement: React.FC = () => {
   return (
     <div className="um-layout">
       {/* Sidebar - Consistent with RecipeManagement */}
-      <aside 
-        onMouseEnter={() => setIsSidebarHovered(true)}
-        onMouseLeave={() => setIsSidebarHovered(false)}
-        className={`um-sidebar ${isSidebarHovered ? 'expanded' : 'collapsed'}`}
-      >
-        {/* Branding */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', marginBottom: '3rem', padding: isSidebarHovered ? '0 1.25rem' : '0' }}>
-          <div style={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: isSidebarHovered ? 'flex-start' : 'center' }}>
-            <div style={{ 
-              width: '48px', 
-              height: '48px', 
-              backgroundColor: 'var(--fiza-secondary)', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              borderRadius: '20px',
-              flexShrink: 0,
-              margin: isSidebarHovered ? '0' : '0 auto'
-            }}>
-              <Leaf color="white" fill="white" size={28} />
-            </div>
-            <AnimatePresence>
-              {isSidebarHovered && (
-                <motion.span 
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -10 }}
-                  style={{ 
-                    fontWeight: 900, 
-                    fontSize: '1.5rem', 
-                    color: 'var(--mint-green)', 
-                    marginLeft: '0.75rem',
-                    whiteSpace: 'nowrap'
-                  }}
-                >
-                  Fiza
-                </motion.span>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-
-        {/* Navigation */}
-        <nav style={{ flex: 1, width: '100%', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <SidebarLink icon={<Users size={22} />} label="Quản lý người dùng" to="/admin/users" isExpanded={isSidebarHovered} active />
-          <SidebarLink icon={<UtensilsCrossed size={22} />} label="Quản lý thực phẩm" to="/admin/foods" isExpanded={isSidebarHovered} />
-          <SidebarLink icon={<BookOpen size={22} />} label="Quản lý món ăn" to="/admin/recipes" isExpanded={isSidebarHovered} />
-          <SidebarLink icon={<BarChart3 size={22} />} label="Quản lý hiệu suất" to="/admin/performance" isExpanded={isSidebarHovered} />
-          <SidebarLink icon={<LogOut size={22} />} label="Đăng xuất" to="#" isExpanded={isSidebarHovered} onClick={logout} />
-        </nav>
-
-
-        {/* Profile */}
-        <div style={{ width: '100%', paddingTop: '1.5rem', borderTop: '1px solid #f1f5f9' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.5rem 1rem', margin: '0.5rem 0.5rem 0', borderRadius: '1rem', cursor: 'pointer' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '50%', overflow: 'hidden', border: '1px solid var(--fiza-primary)', flexShrink: 0, margin: isSidebarHovered ? '0' : '0 auto' }}>
-              <img 
-                src="https://api.dicebear.com/7.x/avataaars/svg?seed=Admin" 
-                alt="Admin" 
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-            </div>
-            <AnimatePresence>
-              {isSidebarHovered && (
-                <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} style={{ marginLeft: '0.75rem' }}>
-                  <p style={{ fontWeight: 700, fontSize: '0.875rem', color: '#1e293b' }}>Admin Fiza</p>
-                  <p style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Super Admin</p>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-      </aside>
+      <AdminSidebar />
 
       {/* Main Content */}
-      <div className={`um-main ${isSidebarHovered ? 'shifted' : 'unshifted'}`}>
+      <div className="um-main unshifted">
         <header className="um-header">
           <div className="um-header-left">
             <h1 className="um-title">Quản lý người dùng</h1>
@@ -284,9 +258,10 @@ const UserManagement: React.FC = () => {
                         setCurrentPage(1); // Reset to page 1 on filter
                       }}
                     >
-                      <option>Tất cả</option>
-                      <option value="ADMIN">Người nội trợ</option>
-                      <option value="CUSTOMER">Thành viên</option>
+                      <option value={ROLE_FILTER_ALL}>Tất cả</option>
+                      {ROLE_OPTIONS.map((role) => (
+                        <option key={role.value} value={role.value}>{role.label}</option>
+                      ))}
                     </select>
                   </div>
                 </div>
@@ -295,6 +270,12 @@ const UserManagement: React.FC = () => {
                   Thêm người dùng
                 </button>
               </div>
+
+              {errorMessage && (
+                <div style={{ marginBottom: '1rem', padding: '0.875rem 1rem', borderRadius: '12px', background: '#FEF2F2', color: '#B91C1C', fontWeight: 600, fontSize: '0.875rem' }}>
+                  {errorMessage}
+                </div>
+              )}
 
               <div style={{ overflowX: 'auto' }}>
                 <table className="um-table">
@@ -329,7 +310,7 @@ const UserManagement: React.FC = () => {
                         <td>
                           <div style={{ display: 'flex', justifyContent: 'center' }}>
                             <div className="um-role-badge">
-                              {user.role?.name === 'ADMIN' ? 'Người nội trợ (Admin)' : 'Thành viên'}
+                              {getRoleLabel(user.role ?? user.roleName)}
                             </div>
                           </div>
                         </td>
@@ -340,11 +321,13 @@ const UserManagement: React.FC = () => {
                               hoverColor="var(--fiza-primary)" 
                               onClick={() => handleEditClick(user)}
                             />
-                            <ActionBtn 
-                              icon={<Trash2 size={18} />} 
-                              hoverColor="#ef4444" 
-                              onClick={() => setDeleteConfirm(user.id)}
-                            />
+                            {getAuthRoleName(user.role ?? user.roleName) !== AUTH_ROLES.ADMIN && (
+                              <ActionBtn 
+                                icon={<Trash2 size={18} />} 
+                                hoverColor="#ef4444" 
+                                onClick={() => setDeleteConfirm(user.id)}
+                              />
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -403,8 +386,9 @@ const UserManagement: React.FC = () => {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Vai trò</label>
                     <select name="role" className="um-search-input" style={{ paddingLeft: '1rem' }}>
-                      <option value="ADMIN">Người nội trợ</option>
-                      <option value="CUSTOMER">Thành viên</option>
+                      {ROLE_OPTIONS.map((role) => (
+                        <option key={role.value} value={role.value}>{role.label}</option>
+                      ))}
                     </select>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -451,11 +435,12 @@ const UserManagement: React.FC = () => {
                           value={editData.role?.name}
                           onChange={(e) => setEditData({ 
                             ...editData, 
-                            role: { id: e.target.value === 'ADMIN' ? 1 : 2, name: e.target.value } 
+                            role: { id: getRoleId(e.target.value), name: e.target.value }
                           })}
                         >
-                          <option value="ADMIN">Người nội trợ (Admin)</option>
-                          <option value="CUSTOMER">Thành viên</option>
+                          {ROLE_OPTIONS.map((role) => (
+                            <option key={role.value} value={role.value}>{role.label}</option>
+                          ))}
                         </select>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -485,7 +470,7 @@ const UserManagement: React.FC = () => {
                   ) : (
                     <>
                       <DetailItem label="Họ tên" value={viewUser.fullName} />
-                      <DetailItem label="Vai trò" value={viewUser.role?.name === 'ADMIN' ? 'Người nội trợ (Admin)' : 'Thành viên'} isBadge />
+                      <DetailItem label="Vai trò" value={getRoleLabel(viewUser.role ?? viewUser.roleName)} isBadge />
                       <DetailItem label="Giới tính" value={viewUser.gender === 'MALE' ? 'Nam' : viewUser.gender === 'FEMALE' ? 'Nữ' : 'Khác'} />
                       <DetailItem label="Số điện thoại" value={viewUser.phone} />
                       <DetailItem label="Email" value={viewUser.email} />

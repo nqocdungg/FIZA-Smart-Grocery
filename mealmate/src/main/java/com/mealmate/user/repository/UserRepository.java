@@ -15,6 +15,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT u FROM User u LEFT JOIN FETCH u.family LEFT JOIN FETCH u.role WHERE u.email = :email")
     Optional<User> findByEmail(@Param("email") String email);
 
+    @Query("SELECT u FROM User u LEFT JOIN FETCH u.family LEFT JOIN FETCH u.role ORDER BY u.id ASC")
+    List<User> findAllWithFamilyAndRole();
+
     boolean existsByEmail(String email);
 
     List<User> findByFamily_IdOrderByIdAsc(Long familyId); 
