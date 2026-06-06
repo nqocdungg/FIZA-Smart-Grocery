@@ -6,11 +6,11 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/mealmate
     username: postgres
-    password: admin 
+    password: 123456
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: none 
+      ddl-auto: none
     show-sql: false
     properties:
       hibernate:
@@ -34,7 +34,7 @@ logging:
 
 jwt:
   secret: ${JWT_SECRET:dGhpcy1pcy1hLXNlY3VyZS1rZXktZm9yLW1lYWxtYXRlLWp3dC0yNTY=}
-  expiration: 3600000  # 1 hour in milliseconds
+  expiration: 3600000 # 1 hour in milliseconds
 
 app:
   base-url: ${APP_BASE_URL:http://localhost:8080}

@@ -113,7 +113,9 @@ const ShoppingPlanPage: React.FC = () => {
             <div className="shopping-layout">
                 <Sidebar />
                 <div className="shopping-main-content">
-                    <Topbar />
+                    <Topbar
+                        title="Kế hoạch đi chợ"
+                    />
                     {/* title="Kế hoạch đi chợ" */}
                     <div className="shopping-page-body">
                         {/* 3. Toolbar: DatePicker và Nút lập kế hoạch */}

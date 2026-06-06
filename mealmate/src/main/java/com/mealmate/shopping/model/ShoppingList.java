@@ -1,10 +1,19 @@
 package com.mealmate.shopping.model;
 
-import com.mealmate.common.base.BaseEntity;
-import jakarta.persistence.*;
-import lombok.*;
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
+
+import com.mealmate.common.base.BaseEntity;
+
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "shopping_lists")
@@ -29,5 +38,5 @@ public class ShoppingList extends BaseEntity {
     @OneToMany(mappedBy = "shoppingList", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ShoppingListItem> items = new ArrayList<>();
 
-    //Sau thêm loại kế hoạch cho kế hoạch tuần
+    // Sau thêm loại kế hoạch cho kế hoạch tuần
 }
