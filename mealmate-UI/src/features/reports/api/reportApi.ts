@@ -59,12 +59,32 @@ export interface ReportQueryParams {
   categoryId?: number | null;
 }
 
+let categoriesCache: CategoryOption[] | null = null;
+let categoriesRequest: Promise<CategoryOption[]> | null = null;
+
 export const fetchReportOverview = async (params: ReportQueryParams): Promise<ReportOverview> => {
   const response = await api.get<ApiResponse<ReportOverview>>('/api/v1/reports/overview', { params });
   return response.data.data;
 };
 
 export const fetchCategories = async (): Promise<CategoryOption[]> => {
-  const response = await api.get<ApiResponse<CategoryOption[]>>('/api/v1/catalogs/categorys');
-  return response.data.data;
+  if (categoriesCache) {
+    return categoriesCache;
+  }
+
+  if (categoriesRequest) {
+    return categoriesRequest;
+  }
+
+  categoriesRequest = api
+    .get<CategoryOption[]>('/api/categories')
+    .then((response) => {
+      categoriesCache = response.data;
+      return categoriesCache;
+    })
+    .finally(() => {
+      categoriesRequest = null;
+    });
+
+  return categoriesRequest;
 };

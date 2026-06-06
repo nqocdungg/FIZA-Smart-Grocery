@@ -1,0 +1,100 @@
+[INFO] Scanning for projects...
+Downloading from central: https://repo.maven.apache.org/maven2/org/cyclonedx/maven-metadata.xml
+Downloading from central: https://repo.maven.apache.org/maven2/org/springframework/boot/maven-metadata.xml
+Downloading from central: https://repo.maven.apache.org/maven2/org/flywaydb/maven-metadata.xml
+Downloading from central: https://repo.maven.apache.org/maven2/io/github/git-commit-id/maven-metadata.xml
+Progress (1): 249 BProgress (2): 249 B | 234 BProgress (3): 249 B | 234 B | 255 BProgress (4): 249 B | 234 B | 255 B | 243 B                                           Downloaded from central: https://repo.maven.apache.org/maven2/io/github/git-commit-id/maven-metadata.xml (255 B at 687 B/s)
+Downloaded from central: https://repo.maven.apache.org/maven2/org/flywaydb/maven-metadata.xml (234 B at 629 B/s)
+Downloaded from central: https://repo.maven.apache.org/maven2/org/cyclonedx/maven-metadata.xml (243 B at 653 B/s)
+Downloading from central: https://repo.maven.apache.org/maven2/org/jooq/maven-metadata.xml
+Downloading from central: https://repo.maven.apache.org/maven2/org/liquibase/maven-metadata.xml
+Downloading from central: https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/maven-metadata.xml
+Downloaded from central: https://repo.maven.apache.org/maven2/org/springframework/boot/maven-metadata.xml (249 B at 667 B/s)
+Downloading from central: https://repo.maven.apache.org/maven2/org/graalvm/buildtools/maven-metadata.xml
+Progress (1): 375 BProgress (2): 375 B | 398 B                           Downloaded from central: https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/maven-metadata.xml (375 B at 9.6 kB/s)
+Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-metadata.xml
+Downloaded from central: https://repo.maven.apache.org/maven2/org/jooq/maven-metadata.xml (398 B at 9.7 kB/s)
+Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/mojo/maven-metadata.xml
+Progress (1): 394 B                   Downloaded from central: https://repo.maven.apache.org/maven2/org/liquibase/maven-metadata.xml (394 B at 8.6 kB/s)
+Progress (1): 242 B                   Downloaded from central: https://repo.maven.apache.org/maven2/org/graalvm/buildtools/maven-metadata.xml (242 B at 6.0 kB/s)
+Progress (1): 3.9 kBProgress (1): 7.7 kBProgress (1): 10 kB Progress (2): 10 kB | 3.1 kBProgress (2): 10 kB | 7.7 kBProgress (2): 10 kB | 12 kB Progress (2): 10 kB | 17 kBProgress (2): 10 kB | 20 kBProgress (2): 10 kB | 21 kB                           Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-metadata.xml (10 kB at 250 kB/s)
+Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/mojo/maven-metadata.xml (21 kB at 258 kB/s)
+[INFO] 
+[INFO] -----------------------< com.mealmate:mealmate >------------------------
+[INFO] Building  0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] >>> spring-boot:3.5.13:run (default-cli) > test-compile @ mealmate >>>
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ mealmate ---
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] Copying 0 resource from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ mealmate ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ mealmate ---
+[INFO] skip non existing resourceDirectory C:\code\IT4549.ITSS.Group7.TuanNM\mealmate\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ mealmate ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] <<< spring-boot:3.5.13:run (default-cli) < test-compile @ mealmate <<<
+[INFO] 
+[INFO] 
+[INFO] --- spring-boot:3.5.13:run (default-cli) @ mealmate ---
+[INFO] Attaching agents: []
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::               (v3.5.13)
+
+2026-06-05T09:13:47.214+07:00  INFO 24428 --- [mealmate] [           main] com.mealmate.MealmateApplication         : Starting MealmateApplication using Java 21.0.7 with PID 24428 (C:\code\IT4549.ITSS.Group7.TuanNM\mealmate\target\classes started by Admin in C:\code\IT4549.ITSS.Group7.TuanNM\mealmate)
+2026-06-05T09:13:47.215+07:00  INFO 24428 --- [mealmate] [           main] com.mealmate.MealmateApplication         : No active profile set, falling back to 1 default profile: "default"
+2026-06-05T09:13:47.769+07:00  INFO 24428 --- [mealmate] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-06-05T09:13:47.836+07:00  INFO 24428 --- [mealmate] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 60 ms. Found 15 JPA repository interfaces.
+2026-06-05T09:13:48.133+07:00  INFO 24428 --- [mealmate] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-06-05T09:13:48.143+07:00  INFO 24428 --- [mealmate] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-06-05T09:13:48.143+07:00  INFO 24428 --- [mealmate] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-06-05T09:13:48.183+07:00  INFO 24428 --- [mealmate] [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-06-05T09:13:48.183+07:00  INFO 24428 --- [mealmate] [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 945 ms
+2026-06-05T09:13:48.262+07:00  INFO 24428 --- [mealmate] [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-06-05T09:13:48.306+07:00  INFO 24428 --- [mealmate] [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.45.Final
+2026-06-05T09:13:48.335+07:00  INFO 24428 --- [mealmate] [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-06-05T09:13:48.520+07:00  INFO 24428 --- [mealmate] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-06-05T09:13:48.540+07:00  INFO 24428 --- [mealmate] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-06-05T09:13:48.664+07:00  INFO 24428 --- [mealmate] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@6231f77a
+2026-06-05T09:13:48.665+07:00  INFO 24428 --- [mealmate] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-06-05T09:13:48.710+07:00  WARN 24428 --- [mealmate] [           main] org.hibernate.orm.deprecation            : HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-06-05T09:13:48.721+07:00  INFO 24428 --- [mealmate] [           main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 18.0
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-06-05T09:13:49.460+07:00  INFO 24428 --- [mealmate] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-06-05T09:13:49.649+07:00  INFO 24428 --- [mealmate] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-06-05T09:13:49.910+07:00  INFO 24428 --- [mealmate] [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-06-05T09:13:50.389+07:00  WARN 24428 --- [mealmate] [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-06-05T09:13:50.514+07:00  INFO 24428 --- [mealmate] [           main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsService
+2026-06-05T09:13:50.715+07:00  INFO 24428 --- [mealmate] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-06-05T09:13:50.720+07:00  INFO 24428 --- [mealmate] [           main] com.mealmate.MealmateApplication         : Started MealmateApplication in 3.816 seconds (process running for 4.035)
+2026-06-05T09:13:50.722+07:00  WARN 24428 --- [mealmate] [           main] o.s.core.events.SpringDocAppInitializer  : SpringDoc /v3/api-docs endpoint is enabled by default. To disable it in production, set the property 'springdoc.api-docs.enabled=false'
+2026-06-05T09:13:50.722+07:00  WARN 24428 --- [mealmate] [           main] o.s.core.events.SpringDocAppInitializer  : SpringDoc /swagger-ui.html endpoint is enabled by default. To disable it in production, set the property 'springdoc.swagger-ui.enabled=false'
+2026-06-05T09:16:35.663+07:00  INFO 24428 --- [mealmate] [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-06-05T09:16:35.663+07:00  INFO 24428 --- [mealmate] [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-06-05T09:16:35.666+07:00  INFO 24428 --- [mealmate] [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 0 ms
+2026-06-05T09:16:36.261+07:00  WARN 24428 --- [mealmate] [io-8080-exec-10] c.m.auth.filter.JwtAuthenticationFilter  : JWT token expired: JWT expired at 2026-06-03T11:52:42Z. Current time: 2026-06-05T02:16:36Z, a difference of 138234261 milliseconds.  Allowed clock skew: 0 milliseconds.
+2026-06-05T09:16:36.262+07:00  WARN 24428 --- [mealmate] [nio-8080-exec-1] c.m.auth.filter.JwtAuthenticationFilter  : JWT token expired: JWT expired at 2026-06-03T11:52:42Z. Current time: 2026-06-05T02:16:36Z, a difference of 138234261 milliseconds.  Allowed clock skew: 0 milliseconds.
+2026-06-05T09:16:36.262+07:00  WARN 24428 --- [mealmate] [nio-8080-exec-2] c.m.auth.filter.JwtAuthenticationFilter  : JWT token expired: JWT expired at 2026-06-03T11:52:42Z. Current time: 2026-06-05T02:16:36Z, a difference of 138234261 milliseconds.  Allowed clock skew: 0 milliseconds.
+2026-06-05T09:16:36.265+07:00  WARN 24428 --- [mealmate] [nio-8080-exec-4] c.m.auth.filter.JwtAuthenticationFilter  : JWT token expired: JWT expired at 2026-06-03T11:52:42Z. Current time: 2026-06-05T02:16:36Z, a difference of 138234265 milliseconds.  Allowed clock skew: 0 milliseconds.
+2026-06-05T09:16:36.266+07:00  WARN 24428 --- [mealmate] [nio-8080-exec-3] c.m.auth.filter.JwtAuthenticationFilter  : JWT token expired: JWT expired at 2026-06-03T11:52:42Z. Current time: 2026-06-05T02:16:36Z, a difference of 138234265 milliseconds.  Allowed clock skew: 0 milliseconds.
+2026-06-05T09:16:36.267+07:00  WARN 24428 --- [mealmate] [nio-8080-exec-5] c.m.auth.filter.JwtAuthenticationFilter  : JWT token expired: JWT expired at 2026-06-03T11:52:42Z. Current time: 2026-06-05T02:16:36Z, a difference of 138234267 milliseconds.  Allowed clock skew: 0 milliseconds.

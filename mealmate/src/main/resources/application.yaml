@@ -4,9 +4,9 @@ spring:
   application:
     name: mealmate
   datasource:
-    url: jdbc:postgresql://localhost:5432/mealmate
-    username: postgres
-    password: 123456
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/mealmate}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:Duy080205}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -37,4 +37,35 @@ jwt:
   expiration: 3600000 # 1 hour in milliseconds
 
 app:
+  cloudinary:
+    cloud-name: ${CLOUDINARY_CLOUD_NAME:dcpfuezuz}
+    api-key: ${CLOUDINARY_API_KEY:283424587871336}
+    api-secret: ${CLOUDINARY_API_SECRET:_3eASMMa55IXWjyWbdfaCk8hrqg}
+    recipe-folder: ${CLOUDINARY_RECIPE_FOLDER:mealmate/recipes}
+    upload-folder: ${CLOUDINARY_UPLOAD_FOLDER:mealmate/uploads}
   base-url: ${APP_BASE_URL:http://localhost:8080}
+  recommendation:
+    scoring:
+      ingredient-match-max-score: 40
+      missing-penalty-per-ingredient: 10
+      missing-penalty-max-score: 30
+      expiry-score-within-1-day: 25
+      expiry-score-within-2-days: 20
+      expiry-score-within-3-days: 15
+      expiry-score-within-5-days: 10
+      expiry-max-score: 25
+      meal-type-match-score: 20
+      meal-type-null-score: 5
+      meal-type-mismatch-score: -10
+      favorite-score-per-member: 15
+      recent-penalty-yesterday: 20
+      recent-penalty-within-3-days: 15
+      recent-penalty-within-7-days: 10
+      draft-random-pool-size: 4
+      draft-random-rank1-weight: 50
+      draft-random-rank2-weight: 25
+      draft-random-rank3-weight: 15
+      draft-random-rank4-weight: 10
+  seed-dashboard:
+    enabled: ${SEED_DASHBOARD_ENABLED:false}
+    days: ${SEED_DASHBOARD_DAYS:90}

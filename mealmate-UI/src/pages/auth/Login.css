@@ -13,10 +13,16 @@
 /* Kế thừa trực tiếp style mượt từ file cấu hình AuthInput bên trên */
 .login-container .input-group input {
   transition: background 0.2s ease;
+  width: 100% !important;
+  background-color: #F7FAFC !important;
+  text-align: left !important;
+  font-weight: 500 !important;
+  color: #171D1A !important;
 }
 
 .login-container .input-group input::placeholder {
   color: #6B7280;
+  text-align: left;
 }
 
 /* Viền đỏ hiển thị chuẩn xác khi có lỗi */

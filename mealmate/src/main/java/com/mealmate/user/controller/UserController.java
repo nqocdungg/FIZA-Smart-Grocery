@@ -3,6 +3,7 @@ package com.mealmate.user.controller;
 import com.mealmate.user.model.User;
 import com.mealmate.user.model.Invitation;
 import com.mealmate.user.model.Family;
+import com.mealmate.user.model.dto.UserMemberResponse;
 import com.mealmate.user.model.dto.UserResponse;
 import com.mealmate.user.service.UserService;
 import com.mealmate.user.service.FamilyService;
@@ -70,6 +71,16 @@ public class UserController {
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.ok(new ApiResponse<>(true, "Deleted", null));
+    }
+
+    @GetMapping("/current")
+    public ResponseEntity<ApiResponse<UserMemberResponse>> getCurrentUser() {
+        User currentUser = resolveCurrentUser();
+        if (currentUser == null) {
+            return ResponseEntity.status(401).body(new ApiResponse<>(false, "Chua dang nhap", null));
+        }
+
+        return ResponseEntity.ok(new ApiResponse<>(true, "Success", toUserMemberResponse(currentUser)));
     }
 
     // =========================================================================
@@ -389,5 +400,31 @@ public class UserController {
             System.err.println("❌ LỖI SẬP TẠI API PUT PROFILE CONTROLLER: " + e.getMessage());
             return ResponseEntity.status(500).body(new ApiResponse<>(false, "Lỗi hệ thống khi cập nhật: " + e.getMessage(), null));
         }
+    }
+
+    private User resolveCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return null;
+        }
+
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof User user) {
+            return user;
+        }
+
+        return userRepository.findByEmail(authentication.getName()).orElse(null);
+    }
+
+    private UserMemberResponse toUserMemberResponse(User user) {
+        return UserMemberResponse.builder()
+                .id(user.getId())
+                .fullName(user.getFullName())
+                .email(user.getEmail())
+                .roleId(user.getRole() != null ? user.getRole().getId() : null)
+                .roleName(user.getRole() != null ? user.getRole().getName() : null)
+                .familyId(user.getFamilyId())
+                .avatarUrl(user.getAvatarUrl())
+                .build();
     }
 }

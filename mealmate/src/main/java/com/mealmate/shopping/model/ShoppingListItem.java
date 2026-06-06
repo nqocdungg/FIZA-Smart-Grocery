@@ -2,6 +2,8 @@ package com.mealmate.shopping.model;
 
 import com.mealmate.catalog.model.Food;
 import com.mealmate.common.base.BaseEntity;
+import com.mealmate.fridge.model.FridgeItem;
+import com.mealmate.user.model.User;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -14,6 +16,8 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "shopping_list_items")
@@ -30,24 +34,34 @@ public class ShoppingListItem extends BaseEntity {
     @JoinColumn(name = "food_id", nullable = false)
     private Food food;
 
+    @Column(name = "custom_name")
+    private String customName;
+
+    @Column(name = "order_number")
+    private Integer orderNumber;
+
     private Double quantity;
     private String unit;
     private String note;
+
+    @Column(name = "assigned_to")
     private Long assignedTo;
 
     @Column(name = "is_purchased")
     private Boolean isPurchased = false;
 
-    @Column(name = "custom_name")
-    private String customName;
-
     @Column(name = "imported_to_fridge_at")
-    private java.time.LocalDateTime importedToFridgeAt;
+    private LocalDateTime importedToFridgeAt;
 
-    @OneToOne(fetch = jakarta.persistence.FetchType.LAZY)
-    @jakarta.persistence.JoinColumn(name = "fridge_item_id")
-    private com.mealmate.fridge.model.FridgeItem fridgeItem;
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "fridge_item_id")
+    private FridgeItem fridgeItem;
 
-    @Column(name = "order_number")
-    private Integer orderNumber;
+    public void setAssignedTo(User user) {
+        this.assignedTo = user == null ? null : user.getId();
+    }
+
+    public void setAssignedTo(Long assignedTo) {
+        this.assignedTo = assignedTo;
+    }
 }

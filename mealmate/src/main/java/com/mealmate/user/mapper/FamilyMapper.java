@@ -2,10 +2,19 @@ package com.mealmate.user.mapper;
 
 import com.mealmate.user.model.Family;
 import com.mealmate.user.model.dto.FamilyResponse;
-import org.mapstruct.Mapper;
+import org.springframework.stereotype.Component;
 
-@Mapper(componentModel = "spring")
-public interface FamilyMapper {
-    // Tự động map tất cả các thuộc tính trùng tên: id -> id, name -> name, housekeeperId -> housekeeperId
-    FamilyResponse toResponse(Family family);
+@Component
+public class FamilyMapper {
+
+    public FamilyResponse toResponse(Family family) {
+        if (family == null) {
+            return null;
+        }
+        return new FamilyResponse(
+                family.getId(),
+                family.getName(),
+                family.getHousekeeperId()
+        );
+    }
 }

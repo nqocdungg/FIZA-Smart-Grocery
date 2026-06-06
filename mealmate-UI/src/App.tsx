@@ -76,13 +76,14 @@ const HomeRedirect: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <> <Toaster position="top-center" reverseOrder={false} />
-
+    <>
+      <Toaster position="top-center" reverseOrder={false} />
       <Routes>
         <Route path="/customer/fridge" element={<Navigate to="/fridge" replace />} />
         <Route path="/customer/family" element={<Navigate to="/family" replace />} />
         <Route path="/customer/shopping" element={<Navigate to="/shopping" replace />} />
         <Route path="/customer/suggestions" element={<Navigate to="/suggestions" replace />} />
+        <Route path="/customer/recipes" element={<Navigate to="/recipes" replace />} />
         <Route path="/customer/reports" element={<Navigate to="/reports" replace />} />
 
         <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
