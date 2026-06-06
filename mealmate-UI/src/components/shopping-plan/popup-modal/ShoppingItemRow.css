@@ -172,8 +172,8 @@
 }
 
 .item-note-input {
-    font-size: 12px;
-    color: #94A3B8;
+    font-size: 13px;
+    color: #515965;
     border: 1px solid transparent;
     background: transparent;
     outline: none;
@@ -193,4 +193,4 @@
 .item-note-input::placeholder {
     color: #cbd5e1;
     font-style: italic;
-}
+}

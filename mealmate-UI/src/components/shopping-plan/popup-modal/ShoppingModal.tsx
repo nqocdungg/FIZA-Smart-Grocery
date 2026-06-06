@@ -1,6 +1,6 @@
 import DatePicker from "@/components/common/DatePicker";
 import { useAuth } from "@/context/AuthContext";
-import { deleteShoppingList, getFamilyMembers, saveShoppingPlan, searchFoods, toggleItemStatus } from "@/features/shopping-plan/shoppingApi";
+import { deleteShoppingList, getFamilyMembers, getPlanDetail, saveShoppingPlan, searchFoods, toggleItemStatus } from "@/features/shopping-plan/shoppingApi";
 import { Edit3, Filter, Plus, Search, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
@@ -16,9 +16,10 @@ interface ShoppingModalProps {
     onClose: () => void;
     familyId: number | null;
     onSuccess: () => void;
+    plans: any[];
 }
 
-const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, onSuccess }: ShoppingModalProps) => {
+const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, onSuccess, plans }: ShoppingModalProps) => {
     if (!isOpen) return null;
     const { user } = useAuth();
     const [searchTerm, setSearchTerm] = useState('');
@@ -100,6 +101,46 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
     }, {});
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSearchTerm(e.target.value);
+    };
+
+    const handleDateChange = async (newDate: string) => {
+        setCurrentDate(newDate);
+        if (!familyId) return;
+
+        // Check if there is an existing plan for this new date
+        const existingPlan = plans.find(p => p.plannedDate === newDate);
+        if (existingPlan && existingPlan.listId) {
+            const confirmMerge = window.confirm('Ngày này đã có kế hoạch. Bạn có muốn chỉnh sửa kế hoạch cũ không?');
+            if (confirmMerge) {
+                try {
+                    const loadToastId = toast.loading("Đang tải kế hoạch cũ...");
+                    const items = await getPlanDetail(familyId, newDate);
+                    setLocalItems(items || []);
+                    setNote(existingPlan.note || '');
+                    if (data) {
+                        data.listId = existingPlan.listId;
+                        data.note = existingPlan.note || '';
+                    }
+                    toast.success("Đã tải kế hoạch cũ! ✨", { id: loadToastId });
+                } catch (error: any) {
+                    toast.error("Lỗi tải kế hoạch cũ: " + error.message);
+                }
+            } else {
+                setLocalItems([]);
+                setNote('');
+                if (data) {
+                    data.listId = null;
+                    data.note = '';
+                }
+            }
+        } else {
+            setLocalItems([]);
+            setNote('');
+            if (data) {
+                data.listId = null;
+                data.note = '';
+            }
+        }
     };
 
     useEffect(() => {
@@ -253,7 +294,7 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
                         <div className="modal-datepicker-wrapper">
                             <DatePicker
                                 value={currentDate}
-                                onChange={(newDate) => setCurrentDate(newDate)}
+                                onChange={handleDateChange}
                             />
                         </div>
                     </div>

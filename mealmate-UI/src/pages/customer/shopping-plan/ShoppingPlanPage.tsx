@@ -14,6 +14,7 @@ import type { DailyPlanCardData } from '@/features/shopping-plan/shopping';
 import { getPlanDetail, getUserFamilies, getWeeklySummary } from '@/features/shopping-plan/shoppingApi';
 import { Plus } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import './ShoppingPlanPage.css';
 
 const ShoppingPlanPage: React.FC = () => {
@@ -72,20 +73,33 @@ const ShoppingPlanPage: React.FC = () => {
 
     const handleOpenCreateModal = async (date: string) => {
         if (!familyId) return;
+        const existingPlan = plans.find(p => p.plannedDate === date);
         try {
             setModalMode('CREATE');
             setSelectedDate(date);
             setIsModalOpen(true);
-            setSelectedListData({
-                planned_date: date,
-                items: []
-            });
+            if (existingPlan && existingPlan.listId) {
+                const items = await fetchPlanDetail(date);
+                setSelectedListData({
+                    plannedDate: date,
+                    listId: existingPlan.listId,
+                    note: existingPlan.note || '',
+                    items: items || []
+                });
+                toast.success("Ngày này đã có kế hoạch, bạn có thể thêm món mới vào! ✨");
+            } else {
+                setSelectedListData({
+                    plannedDate: date,
+                    listId: null,
+                    note: '',
+                    items: []
+                });
+            }
         }
         catch (error: any) {
             console.log("Lỗi khi lấy chi tiết kế hoạch: ", error.message);
             setIsModalOpen(false);
         }
-
     };
 
     const handleOpenDetailModal = async (date: string) => {
@@ -177,6 +191,7 @@ const ShoppingPlanPage: React.FC = () => {
                 mode={modalMode}
                 data={selectedListData}
                 familyId={familyId}
+                plans={plans}
                 onSuccess={fetchSummary}
                 onModeChange={(newMode) => setModalMode(newMode)}
                 onClose={() => setIsModalOpen(false)}
