@@ -239,5 +239,6 @@ const DailyPlanGrid: React.FC<DailyPlanGridProps> = ({ plans, activeDate, onCard
             </button>
         </div>
     );
-}
+};
+
 export default DailyPlanGrid;

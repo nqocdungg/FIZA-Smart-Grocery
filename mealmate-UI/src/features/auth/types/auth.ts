@@ -26,11 +26,8 @@ export interface AuthSession {
   tokenType?: string;
   email: string;
   fullName: string;
-<<<<<<< HEAD
   familyId?: number;
-=======
   role?: string;
->>>>>>> main
 }
 
 export interface ApiResponse<T> {

@@ -1114,4 +1114,125 @@
 .recipe-suggestion-detail-toggle {
   align-self: flex-start;
   min-height: 36px;
- 
+  border: none;
+  border-radius: 9999px;
+  background: var(--fiza-primary);
+  color: #ffffff;
+  cursor: pointer;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.recipe-suggestion-instructions {
+  border-radius: 14px;
+  background: #f8fffc;
+  border: 1px solid #cbfbf1;
+  color: #334155;
+  padding: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 720px) {
+  .recipe-suggestion-dialog {
+    width: calc(100vw - 24px);
+    max-height: calc(100vh - 24px);
+    padding: 18px;
+  }
+
+  .recipe-suggestion-card-main,
+  .recipe-suggestion-ingredients {
+    grid-template-columns: 1fr;
+  }
+
+  .recipe-suggestion-rank,
+  .recipe-suggestion-score {
+    width: 100%;
+  }
+}
+
+@keyframes fridgeCardEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fridgeProgressReveal {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes fridgeFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes fridgeToastIn {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fridgeOverlayIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fridgeDialogIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .my-fridge-card,
+  .my-fridge-progress-bar,
+  .fridge-status-visual img,
+  .my-fridge-toast,
+  .fridge-alert-overlay,
+  .fridge-alert-dialog,
+  .recipe-suggestion-overlay,
+  .recipe-suggestion-dialog {
+    animation: none;
+  }
+
+  .my-fridge-card,
+  .alert-card,
+  .round-action,
+  .fridge-alert-item,
+  .my-fridge-filter-tabs button,
+  .my-fridge-view-tabs button {
+    transition: none;
+  }
+}

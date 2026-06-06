@@ -24,6 +24,17 @@ interface MemberType {
   avatarUrl?: string;
 }
 
+interface FamilyResponse {
+  id?: number;
+  name?: string;
+  housekeeperId?: number;
+  ownerId?: number;
+  createdBy?: number;
+  housekeeper?: {
+    id?: number;
+  };
+}
+
 const FamilyGroup: React.FC = () => {
   const [keyword, setKeyword] = useState("");
   const [familyName, setFamilyName] = useState<string>("Đang tải...");
@@ -81,7 +92,7 @@ const FamilyGroup: React.FC = () => {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         
-        const groupData = resGroup.data.success ? resGroup.data.data : resGroup.data;
+        const groupData: FamilyResponse = resGroup.data.success ? resGroup.data.data : resGroup.data;
         
         if (groupData) {
           const cleanName = String(groupData.name || "Gia đình Fiza").trim();
@@ -90,9 +101,13 @@ const FamilyGroup: React.FC = () => {
           setFamilyName(cleanName);
           setEditName(cleanName);
           localStorage.setItem("currentFamilyName", cleanName); // Đồng bộ tên gia đình lên local storage
-          familyIdFromDb && setFamilyId(familyIdFromDb);
+          setFamilyId(familyIdFromDb ?? null);
 
-          dbHousekeeperId = groupData.housekeeperId || groupData.ownerId || groupData.createdBy || (groupData.housekeeper && groupData.housekeeper.id);
+          dbHousekeeperId = groupData.housekeeperId
+            ?? groupData.ownerId
+            ?? groupData.createdBy
+            ?? groupData.housekeeper?.id
+            ?? null;
 
           if (currentUserId && dbHousekeeperId && Number(currentUserId) === Number(dbHousekeeperId)) {
             setIsHousekeeper(true);
@@ -131,6 +146,7 @@ const FamilyGroup: React.FC = () => {
                             String(roleNameFromDb).toUpperCase().includes("HOUSEKEEPER") || 
                             String(roleNameFromDb).toUpperCase().includes("BOSS") ||
                             String(roleNameFromDb).toUpperCase().includes("CHỦ NHÀ") ||
+                            m.roleId === 3 ||
                             (dbHousekeeperId && Number(m.id) === Number(dbHousekeeperId));
 
             return {
@@ -278,8 +294,6 @@ const FamilyGroup: React.FC = () => {
         <Topbar 
           title="Nhóm gia đình" 
           searchPlaceholder="Tìm kiếm thành viên..."
-          searchValue={keyword}
-          onSearchChange={(value) => setKeyword(value)}
           familyName={familyName} 
         />
 
@@ -324,10 +338,20 @@ const FamilyGroup: React.FC = () => {
               </div>
             </div>
             
-            <button className="btn-add-member" onClick={() => setIsAddModalOpen(true)}>
+            <div className="family-group-actions">
+              <input
+                type="search"
+                className="family-member-search"
+                placeholder="TÃ¬m kiáº¿m thÃ nh viÃªn..."
+                value={keyword}
+                onChange={(event) => setKeyword(event.target.value)}
+              />
+
+              <button className="btn-add-member" onClick={() => setIsAddModalOpen(true)}>
               <div className="btn-shadow" />
               <div className="btn-text">Thêm thành viên</div>
-            </button>
+              </button>
+            </div>
           </div>
 
           <div className="table-wrapper">

@@ -5,6 +5,7 @@ import com.mealmate.catalog.repository.RecipeRepository;
 import com.mealmate.catalog.repository.UserFavoriteRecipeRepository;
 import com.mealmate.user.model.User;
 import jakarta.transaction.Transactional;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -28,7 +29,11 @@ public class FavoriteRecipeService {
     }
 
     public List<Long> getFavoriteRecipeIds() {
-        return favoriteRecipeRepository.findRecipeIdsByUserId(getCurrentUserOrThrow().getId());
+        try {
+            return favoriteRecipeRepository.findRecipeIdsByUserId(getCurrentUserOrThrow().getId());
+        } catch (DataAccessException error) {
+            return List.of();
+        }
     }
 
     @Transactional

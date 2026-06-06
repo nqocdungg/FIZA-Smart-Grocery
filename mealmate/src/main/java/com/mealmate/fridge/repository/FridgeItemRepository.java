@@ -211,9 +211,19 @@ public interface FridgeItemRepository extends JpaRepository<FridgeItem, Long> {
         join foods f on fi.food_id = f.id
         left join categories c on f.category_id = c.id
         where fi.family_id = :familyId
-          and fi.status = :status
-          and fi.updated_at >= :from
-          and fi.updated_at < :to
+          and (
+            (:status = 'USED'
+              and (fi.status = 'USED' or fi.removed_reason = 'USED_UP')
+              and coalesce(fi.removed_at, fi.updated_at) >= :from
+              and coalesce(fi.removed_at, fi.updated_at) < :to
+            )
+            or
+            (:status <> 'USED'
+              and fi.status = :status
+              and fi.updated_at >= :from
+              and fi.updated_at < :to
+            )
+          )
           and (:categoryId is null or c.id = :categoryId)
         group by c.id, c.name
         """, nativeQuery = true)
@@ -230,8 +240,17 @@ public interface FridgeItemRepository extends JpaRepository<FridgeItem, Long> {
         from fridge_items fi
         join foods f on fi.food_id = f.id
         where fi.family_id = :familyId
-          and fi.status = :status
           and fi.expiry_date between :from and :to
+          and (
+            (:status = 'EXPIRED'
+              and (
+                fi.status = 'EXPIRED'
+                or fi.removed_reason in ('EXPIRED_DISCARDED', 'SPOILED')
+                or (fi.status = 'STORED' and fi.expiry_date < current_date)
+              )
+            )
+            or (:status <> 'EXPIRED' and fi.status = :status)
+          )
           and (:categoryId is null or f.category_id = :categoryId)
         """, nativeQuery = true)
     Long countByStatusAndExpiryDateRange(
@@ -247,8 +266,17 @@ public interface FridgeItemRepository extends JpaRepository<FridgeItem, Long> {
         from fridge_items fi
         join foods f on fi.food_id = f.id
         where fi.family_id = :familyId
-          and fi.status = :status
           and fi.expiry_date between :from and :to
+          and (
+            (:status = 'EXPIRED'
+              and (
+                fi.status = 'EXPIRED'
+                or fi.removed_reason in ('EXPIRED_DISCARDED', 'SPOILED')
+                or (fi.status = 'STORED' and fi.expiry_date < current_date)
+              )
+            )
+            or (:status <> 'EXPIRED' and fi.status = :status)
+          )
           and (:categoryId is null or f.category_id = :categoryId)
         group by fi.expiry_date
         order by fi.expiry_date
@@ -262,16 +290,26 @@ public interface FridgeItemRepository extends JpaRepository<FridgeItem, Long> {
     );
 
     @Query(value = """
-        select cast(fi.updated_at as date) as date, count(fi.id) as count
+        select cast(coalesce(fi.removed_at, fi.updated_at) as date) as date, count(fi.id) as count
         from fridge_items fi
         join foods f on fi.food_id = f.id
         where fi.family_id = :familyId
-          and fi.status = :status
-          and fi.updated_at >= :from
-          and fi.updated_at < :to
+          and (
+            (:status = 'USED'
+              and (fi.status = 'USED' or fi.removed_reason = 'USED_UP')
+              and coalesce(fi.removed_at, fi.updated_at) >= :from
+              and coalesce(fi.removed_at, fi.updated_at) < :to
+            )
+            or
+            (:status <> 'USED'
+              and fi.status = :status
+              and fi.updated_at >= :from
+              and fi.updated_at < :to
+            )
+          )
           and (:categoryId is null or f.category_id = :categoryId)
-        group by cast(fi.updated_at as date)
-        order by cast(fi.updated_at as date)
+        group by cast(coalesce(fi.removed_at, fi.updated_at) as date)
+        order by cast(coalesce(fi.removed_at, fi.updated_at) as date)
         """, nativeQuery = true)
     List<DateCountProjection> countByStatusAndUpdatedAtGroup(
         @Param("familyId") Long familyId,

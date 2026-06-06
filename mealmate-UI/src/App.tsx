@@ -65,6 +65,7 @@ const App: React.FC = () => {
       <Route path="/customer/family" element={<Navigate to="/family" replace />} />
       <Route path="/customer/shopping" element={<Navigate to="/shopping" replace />} />
       <Route path="/customer/suggestions" element={<Navigate to="/suggestions" replace />} />
+      <Route path="/customer/recipes" element={<Navigate to="/recipes" replace />} />
       <Route path="/customer/reports" element={<Navigate to="/reports" replace />} />
 
       <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />

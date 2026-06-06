@@ -25,6 +25,7 @@ import com.mealmate.shopping.repository.ShoppingImportCandidateProjection;
 import com.mealmate.shopping.repository.ShoppingListItemRepository;
 import com.mealmate.user.model.User;
 import jakarta.transaction.Transactional;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -239,12 +240,10 @@ public class FridgeItemService {
                 today
         );
 
-        Set<Long> favoriteRecipeIds = new HashSet<>(
-                userFavoriteRecipeRepository.findRecipeIdsByUserId(getCurrentUserOrThrow().getId())
-        );
+        Set<Long> favoriteRecipeIds = loadFavoriteRecipeIdsSafely();
 
         Map<Long, RecipeSuggestionDraft> draftsByRecipeId = new LinkedHashMap<>();
-        recipeIngredientRepository.findRecipeSuggestionRows().forEach(row -> {
+        findRecipeSuggestionRowsSafely().forEach(row -> {
             RecipeSuggestionDraft draft = draftsByRecipeId.computeIfAbsent(
                     row.getRecipeId(),
                     recipeId -> new RecipeSuggestionDraft(row)
@@ -274,6 +273,22 @@ public class FridgeItemService {
                 )
                 .limit(normalizedLimit)
                 .toList();
+    }
+
+    private List<RecipeSuggestionProjection> findRecipeSuggestionRowsSafely() {
+        try {
+            return recipeIngredientRepository.findRecipeSuggestionRows();
+        } catch (DataAccessException error) {
+            return recipeIngredientRepository.findRecipeSuggestionRowsLegacy();
+        }
+    }
+
+    private Set<Long> loadFavoriteRecipeIdsSafely() {
+        try {
+            return new HashSet<>(userFavoriteRecipeRepository.findRecipeIdsByUserId(getCurrentUserOrThrow().getId()));
+        } catch (DataAccessException error) {
+            return Set.of();
+        }
     }
 
     @Transactional

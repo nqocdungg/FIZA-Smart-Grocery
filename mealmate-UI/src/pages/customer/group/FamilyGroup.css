@@ -11,6 +11,146 @@
   box-sizing: border-box;
 }
 
+@media (max-width: 1280px) {
+  .family-group-main-wrapper {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+
+  .info-bar,
+  .table-wrapper {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 1024px) {
+  .family-group-main-wrapper {
+    padding-top: 24px;
+    gap: 20px;
+  }
+
+  .info-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .info-bar-left {
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .family-group-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .family-member-search {
+    width: min(320px, 100%);
+  }
+
+  .btn-add-member {
+    align-self: flex-start;
+  }
+
+  .table-card {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .family-group-main-wrapper {
+    padding-left: 16px;
+    padding-right: 16px;
+    padding-top: 16px;
+    gap: 16px;
+  }
+
+  .info-bar {
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .info-bar-left {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .info-item-flex {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .info-label-box,
+  .info-label-box-wide {
+    padding-right: 0;
+  }
+
+  .info-value-name-box,
+  .info-value-code-box {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .family-group-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .family-member-search {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .btn-add-member {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .table-card {
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .table-header-row {
+    display: none;
+  }
+
+  .table-body {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .table-row,
+  .table-row-bordered {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 16px 0;
+  }
+
+  .td-id,
+  .td-member-info,
+  .td-role,
+  .td-actions {
+    width: 100%;
+  }
+
+  .td-member-info {
+    align-items: center;
+  }
+
+  .td-actions {
+    justify-content: flex-start;
+    margin-left: 0;
+  }
+}
+
 /* Thanh toolbar chứa ô search thành viên */
 .family-table-toolbar {
   display: flex;
@@ -37,6 +177,32 @@
   display: flex;
   align-items: center;
   gap: 24px;
+}
+
+.family-group-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  min-width: 0;
+}
+
+.family-member-search {
+  width: min(260px, 32vw);
+  height: 40px;
+  border: none;
+  border-radius: 12px;
+  background: #E4E7ED;
+  color: #171D1A;
+  padding: 0 14px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  outline: none;
+}
+
+.family-member-search::placeholder {
+  color: #64748b;
 }
 
 .info-item-flex {
