@@ -87,9 +87,22 @@ public class ShoppingListService {
                     .assigneeNames(new ArrayList<>());
 
             if (listOnDate != null) {
+                List<Long> assigneeIds = listOnDate.getItems().stream()
+                        .map(ShoppingListItem::getAssignedTo)
+                        .filter(java.util.Objects::nonNull)
+                        .distinct()
+                        .collect(Collectors.toList());
+
+                List<String> names = assigneeIds.stream()
+                        .map(id -> userRepository.findById(id)
+                                .map(com.mealmate.user.model.User::getFullName)
+                                .orElse("Ẩn danh"))
+                        .collect(Collectors.toList());
+
                 long purchased = listOnDate.getItems().stream().filter(ShoppingListItem::getIsPurchased).count();
                 builder.totalItems(listOnDate.getItems().size())
                         .purchasedItems((int) purchased)
+                        .assigneeNames(names)
                         .listId(listOnDate.getId());
             } else {
                 builder.totalItems(0).purchasedItems(0);
@@ -155,7 +168,7 @@ public class ShoppingListService {
                     item.setAssignedTo(dto.getAssignedTo());
                 }
 
-                item.setIsPurchased(false);
+                item.setIsPurchased(dto.getIsPurchased() != null ? dto.getIsPurchased() : false);
                 return item;
             }).collect(Collectors.toList());
 

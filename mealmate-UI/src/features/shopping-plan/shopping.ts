@@ -41,7 +41,7 @@ export interface ShoppingListItem {
   unit: string;
   note?: string;
   assignedTo?: number; // ID users
-  assignee?: UserSummary;
+  assigneeName?: string;
   isPurchased: boolean;
   orderNumber?: number;
   imported_to_fridge_at?: string;

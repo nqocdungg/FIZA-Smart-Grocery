@@ -16,6 +16,7 @@ export interface ShoppingItemRequest {
   foodId: number;
   quantity: number;
   unit: string;
+  isPurchased: boolean;
   assignedTo?: number | null;
   note?: string;
 }

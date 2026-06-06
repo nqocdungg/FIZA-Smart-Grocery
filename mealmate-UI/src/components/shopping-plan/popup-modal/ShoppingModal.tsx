@@ -139,10 +139,18 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
         setLocalItems(prev => prev.filter(item => item.id !== id));
     };
 
-    const handleToggleItemStatus = (id: number) => {
-        setLocalItems(prev => prev.map(item => item.id === id ? { ...item, isPurchased: !item.isPurchased } : item));
+    const handleToggleItemStatus = async (itemId: number) => {
+        setLocalItems(prev => prev.map(item => item.id === itemId ? { ...item, isPurchased: !item.isPurchased } : item));
         if (mode === 'DETAIL') {
-            toggleItemStatus(id).catch(err => console.error("Toggle item status failed:", err));
+            try {
+                console.log("toggle itemId:", itemId);
+                await toggleItemStatus(itemId);
+            } catch (err: any) {
+                toast.error("Không thể cập nhật trạng thái: " + err.message);
+                setLocalItems(prev => prev.map(item =>
+                    item.id === itemId ? { ...item, isPurchased: !item.isPurchased } : item
+                ));
+            }
         }
     };
 
@@ -164,6 +172,7 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
                 quantity: item.quantity,
                 unit: item.unit,
                 assignedTo: item.assignedTo || null,
+                isPurchased: item.isPurchased,
                 note: item.note || ''
             }))
         };

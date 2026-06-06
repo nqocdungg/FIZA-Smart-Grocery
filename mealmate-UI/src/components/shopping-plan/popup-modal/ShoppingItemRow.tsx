@@ -15,8 +15,7 @@ const ShoppingItemRow: React.FC<RowProps> = ({ item, mode, members = [], onUpdat
 
     if (mode === 'CREATE') {
         const selectedMember = members.find(m => m.id === item.assignedTo);
-        const displayName = selectedMember ? selectedMember.fullName : 'Chưa giao';
-
+        const displayName = selectedMember ? selectedMember.name : (item.assigneeName || 'Chưa giao');
         return (
             <div className="shopping-row-edit">
                 <span className="food-name">{item.foodName || 'Thực phẩm'}</span>
@@ -46,7 +45,7 @@ const ShoppingItemRow: React.FC<RowProps> = ({ item, mode, members = [], onUpdat
                         <option value="">Chưa giao</option>
                         {members.map((m: any) => (
                             <option key={m.id} value={m.id}>
-                                {m.fullName}
+                                {m.name}
                             </option>
                         ))}
                     </select>
@@ -76,7 +75,7 @@ const ShoppingItemRow: React.FC<RowProps> = ({ item, mode, members = [], onUpdat
             </div>
 
             <div className="assignee-badge">
-                {item.assignee?.name}
+                {item.assigneeName || 'Chưa giao'}
             </div>
         </div>
     );

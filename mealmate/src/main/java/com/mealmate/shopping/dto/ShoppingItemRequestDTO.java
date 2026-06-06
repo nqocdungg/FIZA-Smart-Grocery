@@ -9,5 +9,7 @@ public class ShoppingItemRequestDTO {
     private Double quantity;
     private String unit;
     private Long assignedTo;
+    private String assigneeName;
     private String note;
+    private Boolean isPurchased;
 }

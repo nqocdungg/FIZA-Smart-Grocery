@@ -3,7 +3,13 @@ package com.mealmate.shopping.model;
 import com.mealmate.catalog.model.Food;
 import com.mealmate.common.base.BaseEntity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -28,7 +34,7 @@ public class ShoppingListItem extends BaseEntity {
     private String unit;
     private String note;
     private Long assignedTo;
-    
+
     @Column(name = "is_purchased")
     private Boolean isPurchased = false;
 
