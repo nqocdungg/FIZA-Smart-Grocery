@@ -89,6 +89,21 @@ export type UpdateMealItemRequest = AddRecommendationToMealRequest & {
   recipeId: number;
 };
 
+export type AddMissingIngredientsToShoppingListRequest = {
+  familyId: number;
+  userId: number;
+  date: string;
+  plannedDate?: string;
+  note?: string;
+};
+
+export type AddMissingIngredientsToShoppingListResponse = {
+  shoppingListId: number;
+  recipeId: number;
+  addedItemCount: number;
+  addedItems: MissingIngredientDto[];
+};
+
 export type MenuPlanRecipe = {
   mealItemId: number;
   recipeId: number;
@@ -218,6 +233,14 @@ export const recommendationApi = {
 
   async addRecommendationToMeal(recipeId: number, payload: AddRecommendationToMealRequest) {
     const response = await api.post(`/api/recommendations/${recipeId}/add-to-meal`, payload);
+    return response.data;
+  },
+
+  async addMissingIngredientsToShoppingList(recipeId: number, payload: AddMissingIngredientsToShoppingListRequest) {
+    const response = await api.post<AddMissingIngredientsToShoppingListResponse>(
+      `/api/recommendations/${recipeId}/missing-ingredients/add-to-shopping-list`,
+      payload
+    );
     return response.data;
   },
 

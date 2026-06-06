@@ -199,6 +199,15 @@
   flex-direction: column;
   gap: 12px;
   animation: menuCardIn 220ms ease-out both;
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.menu-recipe-card:hover,
+.menu-recipe-card:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 30px rgba(15, 23, 42, 0.08);
+  outline: none;
 }
 
 .menu-recipe-image {
@@ -524,6 +533,22 @@
   padding: 10px 12px;
 }
 
+.menu-preview-recipe-button {
+  width: 100%;
+  border: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 160ms ease, background 160ms ease;
+}
+
+.menu-preview-recipe-button:hover,
+.menu-preview-recipe-button:focus-visible {
+  background: #e5f3ec;
+  transform: translateY(-1px);
+  outline: none;
+}
+
 .menu-preview-slots {
   display: grid;
   gap: 8px;
@@ -717,6 +742,27 @@
 .menu-modal-empty.compact {
   min-height: 84px;
   gap: 10px;
+}
+
+.menu-detail-loading {
+  position: fixed;
+  right: 28px;
+  bottom: 28px;
+  z-index: 1450;
+  border-radius: 999px;
+  padding: 12px 16px;
+  background: #ffffff;
+  color: #006b55;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.16);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.menu-suggestion-layout .recipe-detail-overlay {
+  z-index: 1500;
 }
 
 @keyframes menuCardIn {

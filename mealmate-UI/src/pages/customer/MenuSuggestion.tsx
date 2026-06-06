@@ -32,6 +32,14 @@ import {
   type RecipeRecommendation,
 } from "@/features/recommendations/recommendationApi";
 import { fetchRecipeCatalog, type RecipeCatalogItem } from "@/features/recipes/recipeApi";
+import RecipeDetailPopup from "./recipes/RecipeDetailPopup";
+import {
+  addFavoriteRecipe,
+  fetchFavoriteRecipeIds,
+  fetchRecipeLibrary as fetchFridgeRecipeLibrary,
+  removeFavoriteRecipe,
+} from "./recipes/recipeApi";
+import type { RecipeFromApi, RecipeIngredientFromApi } from "./recipes/recipeTypes";
 
 type ToastState = {
   message: string;
@@ -292,6 +300,45 @@ const catalogRecipeToRecommendation = (recipe: RecipeCatalogItem): RecipeRecomme
   reasons: ["Người dùng tự chọn từ danh sách món ăn"],
 });
 
+const recommendationToDetailRecipe = (recipe: RecipeRecommendation, favorite: boolean): RecipeFromApi => {
+  const matchedIngredients: RecipeIngredientFromApi[] = recipe.availableIngredients.map((item) => ({
+    foodId: item.foodId,
+    foodName: item.name,
+    requiredQuantity: item.requiredQuantity,
+    requiredUnit: item.unit,
+    availableQuantity: item.availableQuantity,
+    availableUnit: item.unit,
+    sufficientQuantity: true,
+    expiringSoon: false,
+  }));
+
+  const missingIngredients: RecipeIngredientFromApi[] = recipe.missingIngredients.map((item) => ({
+    foodId: item.foodId,
+    foodName: item.name,
+    requiredQuantity: item.requiredQuantity,
+    requiredUnit: item.unit,
+    availableQuantity: Math.max(item.requiredQuantity - item.missingQuantity, 0),
+    availableUnit: item.unit,
+    sufficientQuantity: false,
+    expiringSoon: false,
+  }));
+
+  return {
+    recipeId: recipe.recipeId,
+    name: recipe.recipeName,
+    imageUrl: recipe.imageUrl,
+    description: recipe.reasons.join(". ") || undefined,
+    ingredientCount: matchedIngredients.length + missingIngredients.length,
+    score: recipe.score,
+    coveragePercent: recipe.matchPercent,
+    canCook: missingIngredients.length === 0,
+    favorite,
+    matchedIngredients,
+    missingIngredients,
+    expiringIngredients: [],
+  };
+};
+
 const getErrorMessage = (error: unknown, fallback: string) => {
   if (error instanceof Error && error.message) return error.message;
   return fallback;
@@ -323,6 +370,12 @@ const MenuSuggestion: React.FC = () => {
   const [draftPickerOptions, setDraftPickerOptions] = useState<RecipeRecommendation[]>([]);
   const [isLoadingDraftPickerOptions, setIsLoadingDraftPickerOptions] = useState(false);
   const [draftRecipeSearch, setDraftRecipeSearch] = useState("");
+  const [recipeLibraryDetails, setRecipeLibraryDetails] = useState<RecipeFromApi[]>([]);
+  const [detailRecipe, setDetailRecipe] = useState<RecipeFromApi | null>(null);
+  const [detailRecipeDate, setDetailRecipeDate] = useState<string | null>(null);
+  const [isLoadingDetailRecipe, setIsLoadingDetailRecipe] = useState(false);
+  const [favoriteRecipeIds, setFavoriteRecipeIds] = useState<Set<number>>(new Set());
+  const [pendingFavoriteIds, setPendingFavoriteIds] = useState<Set<number>>(new Set());
   const [toast, setToast] = useState<ToastState | null>(null);
 
   const weekDays = useMemo(() => {
@@ -349,6 +402,12 @@ const MenuSuggestion: React.FC = () => {
     window.setTimeout(() => setToast(null), 3200);
   }, []);
 
+  useEffect(() => {
+    fetchFavoriteRecipeIds()
+      .then((ids) => setFavoriteRecipeIds(new Set(ids)))
+      .catch(() => undefined);
+  }, []);
+
   const loadRecipeCatalog = useCallback(async () => {
     if (recipeCatalog.length > 0) return recipeCatalog;
 
@@ -364,6 +423,122 @@ const MenuSuggestion: React.FC = () => {
       setIsLoadingRecipeCatalog(false);
     }
   }, [recipeCatalog, showToast]);
+
+  const loadRecipeLibraryDetails = useCallback(async () => {
+    if (recipeLibraryDetails.length > 0) return recipeLibraryDetails;
+
+    const recipes = await fetchFridgeRecipeLibrary(150);
+    setRecipeLibraryDetails(recipes);
+    return recipes;
+  }, [recipeLibraryDetails]);
+
+  const openRecipeDetail = useCallback(
+    async (recipeId: number, date: string, fallback?: RecipeRecommendation) => {
+      setDetailRecipeDate(date);
+      setIsLoadingDetailRecipe(true);
+
+      try {
+        const recipes = await loadRecipeLibraryDetails();
+        const recipe = recipes.find((item) => item.recipeId === recipeId);
+        if (recipe) {
+          setDetailRecipe({
+            ...recipe,
+            favorite: favoriteRecipeIds.has(recipe.recipeId),
+          });
+          return;
+        }
+
+        if (fallback) {
+          setDetailRecipe(recommendationToDetailRecipe(fallback, favoriteRecipeIds.has(fallback.recipeId)));
+          return;
+        }
+
+        showToast("Không tải được chi tiết món ăn này.", "error");
+      } catch (error) {
+        if (fallback) {
+          setDetailRecipe(recommendationToDetailRecipe(fallback, favoriteRecipeIds.has(fallback.recipeId)));
+        } else {
+          showToast(getErrorMessage(error, "Không tải được chi tiết món ăn này."), "error");
+        }
+      } finally {
+        setIsLoadingDetailRecipe(false);
+      }
+    },
+    [favoriteRecipeIds, loadRecipeLibraryDetails, showToast]
+  );
+
+  const closeRecipeDetail = useCallback(() => {
+    setDetailRecipe(null);
+    setDetailRecipeDate(null);
+  }, []);
+
+  const handleToggleDetailFavorite = useCallback(
+    async (recipe: RecipeFromApi) => {
+      if (pendingFavoriteIds.has(recipe.recipeId)) return;
+
+      setPendingFavoriteIds((current) => new Set(current).add(recipe.recipeId));
+      const isFavorite = favoriteRecipeIds.has(recipe.recipeId);
+
+      try {
+        if (isFavorite) {
+          await removeFavoriteRecipe(recipe.recipeId);
+          setFavoriteRecipeIds((current) => {
+            const next = new Set(current);
+            next.delete(recipe.recipeId);
+            return next;
+          });
+          setDetailRecipe((current) => (current?.recipeId === recipe.recipeId ? { ...current, favorite: false } : current));
+          showToast("Đã bỏ món khỏi yêu thích.", "success");
+        } else {
+          await addFavoriteRecipe(recipe.recipeId);
+          setFavoriteRecipeIds((current) => new Set(current).add(recipe.recipeId));
+          setDetailRecipe((current) => (current?.recipeId === recipe.recipeId ? { ...current, favorite: true } : current));
+          showToast("Đã thêm món vào yêu thích.", "success");
+        }
+      } catch (error) {
+        showToast(getErrorMessage(error, "Không cập nhật được trạng thái yêu thích."), "error");
+      } finally {
+        setPendingFavoriteIds((current) => {
+          const next = new Set(current);
+          next.delete(recipe.recipeId);
+          return next;
+        });
+      }
+    },
+    [favoriteRecipeIds, pendingFavoriteIds, showToast]
+  );
+
+  const handleAddMissingToShopping = useCallback(
+    async (recipe: RecipeFromApi, missing: RecipeIngredientFromApi[]) => {
+      if (!family?.id || !userId) {
+        showToast("Cần có gia đình và tài khoản đăng nhập để thêm danh sách đi chợ.", "error");
+        return;
+      }
+      if (missing.length === 0) return;
+
+      const targetDate = detailRecipeDate || selectedDate;
+      try {
+        const response = await recommendationApi.addMissingIngredientsToShoppingList(recipe.recipeId, {
+          familyId: family.id,
+          userId,
+          date: targetDate,
+          plannedDate: targetDate,
+          note: `Thiếu nguyên liệu cho ${recipe.name}`,
+        });
+
+        showToast(
+          response.addedItemCount > 0
+            ? `Đã thêm ${response.addedItemCount} nguyên liệu thiếu vào danh sách đi chợ.`
+            : "Không có nguyên liệu thiếu mới cần thêm.",
+          "success"
+        );
+        closeRecipeDetail();
+      } catch (error) {
+        showToast(getErrorMessage(error, "Không thêm được nguyên liệu thiếu vào danh sách đi chợ."), "error");
+      }
+    },
+    [closeRecipeDetail, detailRecipeDate, family?.id, selectedDate, showToast, userId]
+  );
 
   const loadFamily = useCallback(async () => {
     const currentFamily = await recommendationApi.getCurrentFamily();
@@ -869,13 +1044,32 @@ const MenuSuggestion: React.FC = () => {
                       {meal.recipes.length > 0 ? (
                         <div className="recipe-card-grid">
                           {meal.recipes.map((recipe) => (
-                            <article className="menu-recipe-card" key={recipe.mealItemId}>
+                            <article
+                              className="menu-recipe-card"
+                              key={recipe.mealItemId}
+                              onClick={() => openRecipeDetail(recipe.recipeId, selectedDate, menuPlanRecipeToRecommendation(recipe))}
+                              tabIndex={0}
+                              role="button"
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter" || event.key === " ") {
+                                  event.preventDefault();
+                                  void openRecipeDetail(recipe.recipeId, selectedDate, menuPlanRecipeToRecommendation(recipe));
+                                }
+                              }}
+                            >
                               <div className="menu-recipe-image">
                                 {recipe.imageUrl ? <img src={recipe.imageUrl} alt={recipe.recipeName} /> : getRecipeInitial(recipe.recipeName)}
                               </div>
                               <h3>{recipe.recipeName}</h3>
                               <p>Đã được thêm vào {meta.label.toLowerCase()} ngày {formatDisplayDate(selectedDate)}.</p>
-                              <button className="recipe-edit-btn" type="button" onClick={() => openEditMealItem(recipe, mealType)}>
+                              <button
+                                className="recipe-edit-btn"
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  openEditMealItem(recipe, mealType);
+                                }}
+                              >
                                 <Edit3 size={14} />
                                 Chỉnh sửa
                               </button>
@@ -1037,9 +1231,12 @@ const MenuSuggestion: React.FC = () => {
                                 <div className="menu-preview-slots">
                                   {meal.slots.map((slot) => (
                                     <div className="menu-preview-slot" key={slot.id}>
-                                      <div className="menu-preview-recipe">
-                                        {slot.recommendation ? (
-                                          <>
+                                      {slot.recommendation ? (
+                                        <button
+                                          className="menu-preview-recipe menu-preview-recipe-button"
+                                          type="button"
+                                          onClick={() => openRecipeDetail(slot.recommendation!.recipeId, day.date, slot.recommendation!)}
+                                        >
                                             <strong>{slot.recommendation.recipeName}</strong>
                                             {slot.recommendation.score > 0 ? (
                                               <span>
@@ -1049,11 +1246,12 @@ const MenuSuggestion: React.FC = () => {
                                             ) : (
                                               <span>{slot.existingMealItemId ? "Đã có trong thực đơn đã lưu." : "Món người dùng tự chọn."}</span>
                                             )}
-                                          </>
-                                        ) : (
+                                        </button>
+                                      ) : (
+                                        <div className="menu-preview-recipe">
                                           <span>Không có món phù hợp với slot này.</span>
-                                        )}
-                                      </div>
+                                        </div>
+                                      )}
 
                                       <div className="menu-preview-actions">
                                         {slot.recommendation ? (
@@ -1331,6 +1529,24 @@ const MenuSuggestion: React.FC = () => {
               </div>
             </footer>
           </section>
+        </div>
+      )}
+
+      {detailRecipe && (
+        <RecipeDetailPopup
+          recipe={detailRecipe}
+          isFavorite={favoriteRecipeIds.has(detailRecipe.recipeId)}
+          isFavoritePending={pendingFavoriteIds.has(detailRecipe.recipeId)}
+          onClose={closeRecipeDetail}
+          onToggleFavorite={handleToggleDetailFavorite}
+          onAddMissingToShopping={handleAddMissingToShopping}
+        />
+      )}
+
+      {isLoadingDetailRecipe && (
+        <div className="menu-detail-loading" role="status" aria-live="polite">
+          <Loader2 className="menu-spin" size={18} />
+          Đang tải chi tiết món ăn...
         </div>
       )}
 
