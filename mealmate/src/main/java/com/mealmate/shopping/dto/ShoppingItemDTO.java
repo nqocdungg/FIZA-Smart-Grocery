@@ -5,11 +5,13 @@ import lombok.Data;
 @Data
 public class ShoppingItemDTO {
     private Long id;
+    private Long foodId;
     private String foodName;
     private String categoryName;
     private String foodIcon;
     private Double quantity;
     private String unit;
+    private Long assignedTo;
     private String assigneeName;
     private Boolean isPurchased;
 }

@@ -1,6 +1,7 @@
 import './CategoryGroup.css';
 import ShoppingItemRow from "./ShoppingItemRow";
-const CategoryGroup = ({ categoryName, items, mode, icon, onUpdate, onDelete, onToggleStatus }: any) => {
+
+const CategoryGroup = ({ categoryName, items, mode, icon, onUpdate, onDelete, onToggleStatus, members }: any) => {
   return (
     <div className="category-card">
       <div className="category-header">
@@ -13,10 +14,11 @@ const CategoryGroup = ({ categoryName, items, mode, icon, onUpdate, onDelete, on
 
       <div className="items-list">
         {items.map((item: any) => (
-          <ShoppingItemRow 
-            key={item.id} 
-            item={item} 
-            mode={mode} 
+          <ShoppingItemRow
+            key={item.id}
+            item={item}
+            mode={mode}
+            members={members}
             onUpdate={onUpdate}
             onDelete={onDelete}
             onToggleStatus={onToggleStatus}

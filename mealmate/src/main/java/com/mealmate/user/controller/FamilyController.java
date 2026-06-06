@@ -52,7 +52,12 @@ public class FamilyController {
             return ResponseEntity.ok(new ApiResponse<>(false, "Tài khoản chưa tham gia nhóm", null));
         }
         
-        Family family = service.findByFamilyId(currentUser.getFamilyId());
+        Family family;
+        try {
+            family = service.findByFamilyId(currentUser.getFamilyId());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.ok(new ApiResponse<>(false, "Nhóm gia đình không tồn tại", null));
+        }
         FamilyResponse response = familyMapper.toResponse(family);
         return ResponseEntity.ok(new ApiResponse<>(true, "Success", response));
     }

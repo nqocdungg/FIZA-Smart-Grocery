@@ -7,6 +7,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import Topbar from "@/components/layout/Topbar";
 import DeleteMember from "./DeleteMember"; 
 import AddMember from "./AddMember"; 
+import { AUTH_ROLES, getAuthRoleName } from "@/features/auth/role";
 // 🎯 BƯỚC NHÚNG GỐC: Gọi chính xác file ProfileModal của bạn vào trang cha
 import ProfileModal from "@/components/layout/ProfileModal"; 
 
@@ -24,24 +25,38 @@ interface MemberType {
   avatarUrl?: string;
 }
 
-interface FamilyResponse {
-  id?: number;
-  name?: string;
-  housekeeperId?: number;
-  ownerId?: number;
-  createdBy?: number;
-  housekeeper?: {
-    id?: number;
-  };
-}
+const hasRealFamilyName = (value?: string | null) => {
+  return Boolean(
+    value &&
+    !value.includes("Đang tải") &&
+    !value.includes("Äang") &&
+    !value.includes("Chưa có gia đình") &&
+    !value.includes("ChÆ°a")
+  );
+};
 
 const FamilyGroup: React.FC = () => {
   const [keyword, setKeyword] = useState("");
-  const [familyName, setFamilyName] = useState<string>("Đang tải...");
+  const [familyName, setFamilyName] = useState<string>(() => {
+    const cachedName = localStorage.getItem("currentFamilyName");
+    return hasRealFamilyName(cachedName) ? cachedName as string : "Đang tải...";
+  });
   
-  const [familyId, setFamilyId] = useState<number | null>(null);
+  const [familyId, setFamilyId] = useState<number | null>(() => {
+    const authUserString = localStorage.getItem("authUser");
+    if (!authUserString) return null;
+    try {
+      const authUser = JSON.parse(authUserString);
+      return authUser.familyId ? Number(authUser.familyId) : null;
+    } catch {
+      return null;
+    }
+  });
   const [isHousekeeper, setIsHousekeeper] = useState<boolean>(false);
-  const [editName, setEditName] = useState<string>("Đang tải...");
+  const [editName, setEditName] = useState<string>(() => {
+    const cachedName = localStorage.getItem("currentFamilyName");
+    return hasRealFamilyName(cachedName) ? cachedName as string : "Đang tải...";
+  });
   const [members, setMembers] = useState<MemberType[]>([]);
   const [loggedUserId, setLoggedUserId] = useState<number | null>(null);
 
@@ -54,7 +69,6 @@ const FamilyGroup: React.FC = () => {
 
   const avatarColors = ["avatar-orange", "avatar-peach", "avatar-teal", "avatar-blue", "avatar-purple"];
 
-  
   // =========================================================================
   // 🎯 LUỒNG QUẢN LÝ PROFILE MODAL CHUẨN CỦA BẠN
   // =========================================================================
@@ -67,6 +81,7 @@ const FamilyGroup: React.FC = () => {
       const authUserString = localStorage.getItem("authUser");
       
       let currentUserId: number | null = null;
+      let currentUserRoleName = "";
 
       if (authUserString) {
         try {
@@ -76,6 +91,8 @@ const FamilyGroup: React.FC = () => {
             currentUserId = Number(rawId);
             setLoggedUserId(currentUserId);
           }
+          currentUserRoleName = getAuthRoleName(parsedUser);
+          setIsHousekeeper(currentUserRoleName === AUTH_ROLES.HOUSEKEEPER);
           console.log("👉 [FRONTEND DEBUG] ID người dùng đăng nhập từ LocalStorage:", currentUserId);
         } catch (e) {
           console.error("❌ [FRONTEND DEBUG] Lỗi đọc localStorage:", e);
@@ -92,24 +109,23 @@ const FamilyGroup: React.FC = () => {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         
-        const groupData: FamilyResponse = resGroup.data.success ? resGroup.data.data : resGroup.data;
+        if (resGroup.data?.success === false) {
+          throw new Error(resGroup.data?.message || "Không tải được thông tin gia đình hiện tại");
+        }
+        const groupData = resGroup.data.success ? resGroup.data.data : resGroup.data;
         
         if (groupData) {
-          const cleanName = String(groupData.name || "Gia đình Fiza").trim();
+          const cleanName = String(groupData.name || "Chưa có gia đình").trim();
           const familyIdFromDb = groupData.id;
           
           setFamilyName(cleanName);
           setEditName(cleanName);
           localStorage.setItem("currentFamilyName", cleanName); // Đồng bộ tên gia đình lên local storage
-          setFamilyId(familyIdFromDb ?? null);
+          familyIdFromDb && setFamilyId(familyIdFromDb);
 
-          dbHousekeeperId = groupData.housekeeperId
-            ?? groupData.ownerId
-            ?? groupData.createdBy
-            ?? groupData.housekeeper?.id
-            ?? null;
+          dbHousekeeperId = groupData.housekeeperId || groupData.ownerId || groupData.createdBy || (groupData.housekeeper && groupData.housekeeper.id);
 
-          if (currentUserId && dbHousekeeperId && Number(currentUserId) === Number(dbHousekeeperId)) {
+          if (currentUserRoleName === AUTH_ROLES.HOUSEKEEPER || (currentUserId && dbHousekeeperId && Number(currentUserId) === Number(dbHousekeeperId))) {
             setIsHousekeeper(true);
           } else {
             setIsHousekeeper(false);
@@ -117,8 +133,30 @@ const FamilyGroup: React.FC = () => {
         }
       } catch (err) {
         console.error("❌ [FRONTEND DEBUG] Lỗi API luồng A (Chi tiết nhóm):", err);
-        setFamilyName("Gia đình Fiza");
-        setEditName("Gia đình Fiza");
+        const cachedFamilyName = localStorage.getItem("currentFamilyName");
+        let fallbackFamilyName = hasRealFamilyName(cachedFamilyName) ? cachedFamilyName as string : "";
+        let fallbackFamilyId: number | null = null;
+        if (authUserString) {
+          try {
+            const parsedUser = JSON.parse(authUserString);
+            fallbackFamilyName = fallbackFamilyName || (hasRealFamilyName(parsedUser.familyName) ? parsedUser.familyName : "");
+            fallbackFamilyId = parsedUser.familyId ? Number(parsedUser.familyId) : null;
+          } catch {
+            fallbackFamilyId = null;
+          }
+        }
+
+        if (fallbackFamilyName) {
+          setFamilyName(fallbackFamilyName);
+          setEditName(fallbackFamilyName);
+          localStorage.setItem("currentFamilyName", fallbackFamilyName);
+        } else {
+          setFamilyName("Chưa có gia đình");
+          setEditName("Chưa có gia đình");
+        }
+        if (fallbackFamilyId) {
+          setFamilyId(fallbackFamilyId);
+        }
       }
 
       // =========================================================================
@@ -138,15 +176,34 @@ const FamilyGroup: React.FC = () => {
 
         if (Array.isArray(dbMembers)) {
           console.log(`👉 [FRONTEND DEBUG 4] Xác nhận dữ liệu là một mảng gồm ${dbMembers.length} thành viên. Tiến hành format dữ liệu...`);
+
+          const familyMeta = dbMembers[0];
+          if (familyMeta?.familyId) {
+            const fallbackFamilyName = String(familyMeta.familyName || "Gia đình").trim();
+            const fallbackFamilyId = Number(familyMeta.familyId);
+            dbHousekeeperId = familyMeta.housekeeperId || dbHousekeeperId;
+            setFamilyId(fallbackFamilyId);
+            setFamilyName(fallbackFamilyName);
+            setEditName(fallbackFamilyName);
+            localStorage.setItem("currentFamilyName", fallbackFamilyName);
+            const authUserString = localStorage.getItem("authUser");
+            if (authUserString) {
+              try {
+                const authUser = JSON.parse(authUserString);
+                authUser.familyId = fallbackFamilyId;
+                authUser.familyName = fallbackFamilyName;
+                localStorage.setItem("authUser", JSON.stringify(authUser));
+              } catch {
+                // Ignore malformed legacy auth cache.
+              }
+            }
+          }
           
           const formattedMembers = dbMembers.map((m: any, index: number) => {
             const roleNameFromDb = m.roleName || (m.role && typeof m.role === 'object' ? m.role.name : m.role);
             
-            const isOwner = String(roleNameFromDb).toUpperCase().includes("ADMIN") || 
-                            String(roleNameFromDb).toUpperCase().includes("HOUSEKEEPER") || 
-                            String(roleNameFromDb).toUpperCase().includes("BOSS") ||
+            const isOwner = String(roleNameFromDb).toUpperCase().includes("HOUSEKEEPER") ||
                             String(roleNameFromDb).toUpperCase().includes("CHỦ NHÀ") ||
-                            m.roleId === 3 ||
                             (dbHousekeeperId && Number(m.id) === Number(dbHousekeeperId));
 
             return {
@@ -287,6 +344,14 @@ const FamilyGroup: React.FC = () => {
       alert("Hệ thống từ chối xử lý hoặc lỗi kết nối mạng!");
     }
   };
+
+  const openLeaveFamilyModal = () => {
+    if (!loggedUserId) return;
+    setSelectedMemberName("bản thân");
+    setSelectedMemberId(loggedUserId);
+    setIsModalOpen(true);
+  };
+
   return (
     <div className="my-fridge-layout">
       <Sidebar />
@@ -294,6 +359,8 @@ const FamilyGroup: React.FC = () => {
         <Topbar 
           title="Nhóm gia đình" 
           searchPlaceholder="Tìm kiếm thành viên..."
+          searchValue={keyword}
+          onSearchChange={(value) => setKeyword(value)}
           familyName={familyName} 
         />
 
@@ -338,19 +405,18 @@ const FamilyGroup: React.FC = () => {
               </div>
             </div>
             
-            <div className="family-group-actions">
-              <input
-                type="search"
-                className="family-member-search"
-                placeholder="TÃ¬m kiáº¿m thÃ nh viÃªn..."
-                value={keyword}
-                onChange={(event) => setKeyword(event.target.value)}
-              />
-
-              <button className="btn-add-member" onClick={() => setIsAddModalOpen(true)}>
-              <div className="btn-shadow" />
-              <div className="btn-text">Thêm thành viên</div>
-              </button>
+            <div className="family-actions">
+              {!isHousekeeper && loggedUserId && (
+                <button className="btn-leave-family" onClick={openLeaveFamilyModal}>
+                  Rời nhóm
+                </button>
+              )}
+              {isHousekeeper && (
+                <button className="btn-add-member" onClick={() => setIsAddModalOpen(true)}>
+                  <div className="btn-shadow" />
+                  <div className="btn-text">Thêm thành viên</div>
+                </button>
+              )}
             </div>
           </div>
 
@@ -366,9 +432,7 @@ const FamilyGroup: React.FC = () => {
 
                 <div className="table-body">
                   {filteredMembers.map((member, index) => {
-                    const showDeleteButton = isHousekeeper 
-                      ? member.id !== loggedUserId 
-                      : member.id === loggedUserId;
+                    const showDeleteButton = isHousekeeper && member.id !== loggedUserId;
 
                     return (
                       <div className={index === 0 ? "table-row" : "table-row-bordered"} key={member.id}>

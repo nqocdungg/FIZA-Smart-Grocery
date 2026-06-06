@@ -1,14 +1,12 @@
 package com.mealmate.shopping.mapper;
 
-import com.mealmate.catalog.model.Category;
-import com.mealmate.catalog.repository.CategoryRepository;
-import com.mealmate.user.repository.UserRepository;
-import org.mapstruct.Mapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import com.mealmate.catalog.repository.CategoryRepository;
 import com.mealmate.shopping.dto.ShoppingItemDTO;
 import com.mealmate.shopping.model.ShoppingListItem;
+import com.mealmate.user.repository.UserRepository;
 
 @Component
 public class ShoppingMapper {
@@ -26,6 +24,7 @@ public class ShoppingMapper {
         dto.setIsPurchased(item.getIsPurchased());
 
         if (item.getFood() != null) {
+            dto.setFoodId(item.getFood().getId());
             dto.setFoodName(item.getFood().getName());
 
             Long catId = item.getFood().getCategoryId();
@@ -38,6 +37,7 @@ public class ShoppingMapper {
         }
 
         if (item.getAssignedTo() != null) {
+            dto.setAssignedTo(item.getAssignedTo());
             userRepository.findById(item.getAssignedTo()).ifPresent(u -> {
                 dto.setAssigneeName(u.getFullName());
             });

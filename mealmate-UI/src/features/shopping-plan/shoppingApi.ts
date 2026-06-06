@@ -1,5 +1,10 @@
 import api from "@/services/api";
-import type { DailyPlanCardData, Food, ShoppingListItem } from "./shopping";
+import type {
+  DailyPlanCardData,
+  Food,
+  ShoppingListItem,
+  UserSummary,
+} from "./shopping";
 
 interface ApiResponse<T> {
   success: boolean;
@@ -11,6 +16,7 @@ export interface ShoppingItemRequest {
   foodId: number;
   quantity: number;
   unit: string;
+  isPurchased: boolean;
   assignedTo?: number | null;
   note?: string;
 }
@@ -27,6 +33,14 @@ export const getUserFamilies = async (): Promise<any[]> => {
     throw new Error(
       response.data.message || "Không thể lấy thông tin gia đình.",
     );
+  }
+  return response.data.data;
+};
+
+export const getCurrentFamily = async (): Promise<any | null> => {
+  const response = await api.get("/api/v1/users/familys/current");
+  if (!response.data.success) {
+    return null;
   }
   return response.data.data;
 };
@@ -129,4 +143,35 @@ export const deleteShoppingList = async (listId: number): Promise<void> => {
   if (!response.data.success) {
     throw new Error(response.data.message || "Xóa kế hoạch thất bại.");
   }
+};
+
+export const updateShoppingListNote = async (listId: number, note: string): Promise<void> => {
+  const response = await api.patch<ApiResponse<void>>(
+    `/api/v1/shopping/${listId}/note`,
+    { note }
+  );
+  if (!response.data.success) {
+    throw new Error(response.data.message || "Cập nhật ghi chú thất bại.");
+  }
+};
+
+export const getFrequentItems = async (familyId: number): Promise<any[]> => {
+  const response = await api.get<ApiResponse<any[]>>(
+    "/api/v1/shopping/frequent",
+    { params: { familyId } }
+  );
+  if (!response.data.success) {
+    throw new Error(response.data.message || "Lấy danh sách thực phẩm thường mua thất bại.");
+  }
+  return response.data.data;
+};
+
+export const getFamilyMembers = async (): Promise<UserSummary[]> => {
+  const response = await api.get(`/api/v1/users/users/family/members`);
+  if (!response.data.success) {
+    throw new Error(
+      response.data.message || "Không thể lấy danh sách thành viên.",
+    );
+  }
+  return response.data.data;
 };

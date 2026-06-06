@@ -1,7 +1,9 @@
 import DatePicker from "@/components/common/DatePicker";
-import { deleteShoppingList, saveShoppingPlan, searchFoods, toggleItemStatus } from "@/features/shopping-plan/shoppingApi";
+import { useAuth } from "@/context/AuthContext";
+import { deleteShoppingList, getFamilyMembers, saveShoppingPlan, searchFoods, toggleItemStatus } from "@/features/shopping-plan/shoppingApi";
 import { Edit3, Filter, Plus, Search, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import toast from "react-hot-toast";
 import AddItemPopover from "../popover-modal/AddItemPopover";
 import CategoryGroup from "./CategoryGroup";
 import './ShoppingModal.css';
@@ -16,16 +18,20 @@ interface ShoppingModalProps {
     onSuccess: () => void;
 }
 
-const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose }: ShoppingModalProps) => {
+const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, onSuccess }: ShoppingModalProps) => {
     if (!isOpen) return null;
+    const { user } = useAuth();
     const [searchTerm, setSearchTerm] = useState('');
+    const [currentDate, setCurrentDate] = useState('');
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [showResults, setShowResults] = useState(false);
     const [activeFood, setActiveFood] = useState<any | null>(null);
+    const [note, setNote] = useState('');
     const searchRef = useRef<HTMLDivElement>(null);
     const searchInputRef = useRef<HTMLInputElement>(null);
-
+    const [members, setMembers] = useState<any[]>([]);
     const [localItems, setLocalItems] = useState<any[]>([]);
+    const isHousekeeper = user?.role === 'HOUSEKEEPER';
 
     useEffect(() => {
         if (data && data.items) {
@@ -35,6 +41,21 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose }: ShoppingMo
         }
     }, [data, isOpen]);
 
+    useEffect(() => {
+        if (isOpen) {
+            const initialDate = data?.plannedDate || data?.planned_date || '';
+            setCurrentDate(initialDate);
+            setLocalItems(data?.items || []);
+            setNote(data?.note || '');
+        }
+    }, [isOpen, data]);
+
+    useEffect(() => {
+        if (isOpen) {
+            getFamilyMembers().then(data => setMembers(data));
+        }
+    }, [isOpen]);
+
     const categoryIcons: Record<string, string> = {
         'Rau củ': '🥦',
         'Thịt & Hải sản': '🥩',
@@ -43,37 +64,43 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose }: ShoppingMo
         'Đồ khô': '🍞'
     };
 
-    const groupedItems = localItems.reduce((acc: any, item: any) => {
+    useEffect(() => {
+        if (!isHousekeeper) return;
+        const delayDebounceFn = setTimeout(async () => {
+            if (searchTerm.trim().length > 1) {
+                try {
+                    const results = await searchFoods(searchTerm);
+                    setSearchResults(results);
+                    setShowResults(true);
+                } catch (error) {
+                    console.error("Lỗi search:", error);
+                    setSearchResults([]);
+                }
+            } else {
+                setSearchResults([]);
+                setShowResults(false);
+            }
+        }, 300);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchTerm, isHousekeeper]);
+
+    const getFilteredLocalItems = () => {
+        if (!searchTerm.trim()) return localItems;
+
+        return localItems.filter(item =>
+            item.foodName?.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    };
+    const groupedItems = getFilteredLocalItems().reduce((acc: any, item: any) => {
         const category = item.categoryName || item.category || 'Khác';
         if (!acc[category]) acc[category] = [];
         acc[category].push(item);
         return acc;
     }, {});
-
-    useEffect(() => {
-        const delayDebounceFn = setTimeout(async () => {
-            if (searchTerm.trim().length > 1) {
-                try {
-                    // Nhập xong thì gọi API tìm kiếm thực phẩm thực tế
-                    const results = await searchFoods(searchTerm);
-                    setSearchResults(results);
-                } catch (error) {
-                    console.error("Lỗi khi tìm kiếm thực phẩm:", error);
-                    // Fallback to mock data if API fails
-                    setSearchResults([
-                        { id: 101, name: 'Cà rốt Đà Lạt', unit: 'kg', category: 'Rau củ' },
-                        { id: 102, name: 'Cà chua bi', unit: 'kg', category: 'Rau củ' }
-                    ]);
-                }
-                setShowResults(true);
-            } else {
-                setSearchResults([]);
-                setShowResults(false);
-            }
-        }, 300); // Đợi 300ms sau khi ngừng gõ mới gọi API
-
-        return () => clearTimeout(delayDebounceFn);
-    }, [searchTerm]);
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchTerm(e.target.value);
+    };
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -90,21 +117,18 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose }: ShoppingMo
         setShowResults(false);
     };
 
-    const handleConfirmAddItem = (config: { quantity: number; assignee: string; note: string }) => {
+    const handleConfirmAddItem = (config: { quantity: number; assignedTo: number | null; note: string }) => {
         if (!activeFood) return;
 
         const newItem: any = {
-            id: Date.now(), // ID tạm thời để hiển thị
+            id: Date.now(),
             foodId: activeFood.id,
             foodName: activeFood.name || activeFood.foodName,
             quantity: config.quantity,
             unit: activeFood.unit || 'kg',
             categoryName: activeFood.category || 'Khác',
             note: config.note,
-            assignee: {
-                id: Date.now() + 1,
-                name: config.assignee
-            },
+            assignedTo: config.assignedTo,
             isPurchased: false
         };
 
@@ -121,47 +145,62 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose }: ShoppingMo
         setLocalItems(prev => prev.filter(item => item.id !== id));
     };
 
-    const handleToggleItemStatus = (id: number) => {
-        setLocalItems(prev => prev.map(item => item.id === id ? { ...item, isPurchased: !item.isPurchased } : item));
+    const handleToggleItemStatus = async (itemId: number) => {
+        setLocalItems(prev => prev.map(item => item.id === itemId ? { ...item, isPurchased: !item.isPurchased } : item));
         if (mode === 'DETAIL') {
-            toggleItemStatus(id).catch(err => console.error("Toggle item status failed:", err));
+            try {
+                console.log("toggle itemId:", itemId);
+                await toggleItemStatus(itemId);
+            } catch (err: any) {
+                toast.error("Không thể cập nhật trạng thái: " + err.message);
+                setLocalItems(prev => prev.map(item =>
+                    item.id === itemId ? { ...item, isPurchased: !item.isPurchased } : item
+                ));
+            }
         }
     };
 
     const handleConfirmSave = async () => {
+        if (!familyId) {
+            toast.error("Lỗi: Không xác định được gia đình để lưu!");
+            return;
+        }
+        if (!currentDate) {
+            toast.error("Vui lòng chọn ngày kế hoạch!");
+            return;
+        }
+        const payload = {
+            familyId: familyId,
+            plannedDate: currentDate,
+            note: note,
+            items: localItems.map(item => ({
+                foodId: item.foodId,
+                quantity: item.quantity,
+                unit: item.unit,
+                assignedTo: item.assignedTo || null,
+                isPurchased: item.isPurchased,
+                note: item.note || ''
+            }))
+        };
         try {
-            const familyId = Number(data?.familyId);
-            const plannedDate = data?.plannedDate || data?.planned_date;
-
-            if (!familyId) {
-                alert("Lỗi: Không tìm thấy familyId.");
-                return;
-            }
-            if (!plannedDate) {
-                alert("Lỗi: Không tìm thấy plannedDate.");
-                return;
-            }
-
-            const formattedItems = localItems.map(item => ({
-                foodId: Number(item.foodId || item.food?.id),
-                quantity: Number(item.quantity),
-                unit: item.unit || "kg",
-                assignedTo: item.assignedTo || item.assignee?.id || null,
-                note: item.note || ""
-            }));
-
-            const payload = {
-                familyId,
-                plannedDate,
-                items: formattedItems,
-                note: data?.note || ""
-            };
-
             console.log("Saving plan payload:", payload);
             await saveShoppingPlan(payload);
-            alert("Lưu kế hoạch thành công!");
+            if (onSuccess) {
+                onSuccess();
+            }
             onClose();
-            window.location.reload();
+            toast.success('Lưu kế hoạch thành công! ✨', {
+                style: {
+                    borderRadius: '16px',
+                    background: '#44BD97',
+                    color: '#fff',
+                    fontWeight: 'bold'
+                },
+                iconTheme: {
+                    primary: '#fff',
+                    secondary: '#44BD97',
+                },
+            });
         } catch (error: any) {
             console.error("Lỗi khi lưu kế hoạch:", error);
             alert("Lưu kế hoạch thất bại: " + error.message);
@@ -177,13 +216,17 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose }: ShoppingMo
             }
             if (window.confirm("Bạn có chắc chắn muốn xóa danh sách này không?")) {
                 await deleteShoppingList(listId);
-                alert("Xóa danh sách thành công!");
+                onSuccess();
                 onClose();
-                window.location.reload();
+                toast.success('Đã xóa danh sách thành công!', {
+                    icon: '🗑️',
+                    duration: 3000
+                });
+
             }
         } catch (error: any) {
             console.error("Lỗi khi xóa danh sách:", error);
-            alert("Xóa danh sách thất bại: " + error.message);
+            toast.error('Xóa thất bại: ' + error.message);
         }
     };
 
@@ -209,8 +252,8 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose }: ShoppingMo
                         </h2>
                         <div className="modal-datepicker-wrapper">
                             <DatePicker
-                                value={data?.plannedDate || data?.planned_date || '2026-05-01'}
-                                onChange={() => { }}
+                                value={currentDate}
+                                onChange={(newDate) => setCurrentDate(newDate)}
                             />
                         </div>
                     </div>
@@ -223,16 +266,16 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose }: ShoppingMo
                                 <input
                                     ref={searchInputRef}
                                     type="text"
-                                    placeholder="Tìm kiếm thực phẩm"
+                                    placeholder={isHousekeeper ? "Tìm để thêm món mới..." : "Tìm món trong danh sách..."}
                                     value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    onFocus={() => searchTerm.length > 1 && setShowResults(true)}
+                                    onChange={handleSearchChange}
+                                    onFocus={() => isHousekeeper && searchTerm.length > 1 && setShowResults(true)}
                                 />
                                 {searchTerm && <X size={14} className="clear-search" onClick={() => setSearchTerm('')} />}
                             </div>
 
                             {/* 3. RENDER SEARCH RESULTS (Dropdown nổi) */}
-                            {showResults && (
+                            {isHousekeeper && showResults && (
                                 <div className="search-results-dropdown">
                                     {searchResults.map(food => (
                                         <div key={food.id} className="search-result-item" onClick={() => handleAddClick(food)}>
@@ -254,11 +297,12 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose }: ShoppingMo
                             )}
 
                             {/* 4. HIỂN THỊ POPOVER KHI CÓ ACTIVE FOOD */}
-                            {activeFood && (
+                            {isHousekeeper && activeFood && (
                                 <div className="popover-anchor">
                                     <AddItemPopover
                                         foodName={activeFood.name || activeFood.foodName}
                                         unit={activeFood.unit || 'kg'}
+                                        members={members}
                                         onConfirm={handleConfirmAddItem}
                                         onCancel={() => setActiveFood(null)}
                                     />
@@ -282,6 +326,7 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose }: ShoppingMo
                                 key={categoryName}
                                 categoryName={categoryName}
                                 mode={mode}
+                                members={members}
                                 items={groupedItems[categoryName]}
                                 icon={categoryIcons[categoryName] || '📦'}
                                 onUpdate={handleUpdateItem}
@@ -290,7 +335,7 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose }: ShoppingMo
                             />
                         ))}
 
-                        {mode === 'CREATE' && (
+                        {mode === 'CREATE' && isHousekeeper && (
                             <button className="add-food-dashed-btn" onClick={() => searchInputRef.current?.focus()}>
                                 + Thêm thực phẩm
                             </button>
@@ -298,7 +343,7 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose }: ShoppingMo
                         {/* Tạo một khoảng trống ở cuối để nội dung cuối cùng không bị nút che mất */}
                         <div style={{ height: '80px' }}></div>
                     </div>
-                    {mode === 'DETAIL' && (
+                    {mode === 'DETAIL' && isHousekeeper && (
                         <button
                             className="fab-edit-btn"
                             onClick={() => onModeChange?.('CREATE')}
@@ -310,7 +355,7 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose }: ShoppingMo
 
                 {/* Footer: Khác biệt theo Mode */}
                 <div className="modal-footer">
-                    {mode === 'DETAIL' && (
+                    {mode === 'DETAIL' && isHousekeeper && (
                         <button className="delete-list-btn" onClick={handleDeleteList}> <Trash2 size={16} />Xóa danh sách</button>
                     )}
 

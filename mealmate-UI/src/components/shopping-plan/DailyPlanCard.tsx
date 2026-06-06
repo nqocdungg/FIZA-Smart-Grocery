@@ -36,10 +36,11 @@ const DailyPlanCard = ({ data, isActive, onClick }: DailyPlanCardProps) => {
                     </div>
 
                     <div className="assignee-actions">
-                        <div className="name-tag">
-                            {data.assigneeNames && data.assigneeNames.length > 0 ? data.assigneeNames[0] : 'Chưa giao'}
+                        <div className={`name-tag ${data.assigneeNames?.length > 0 ? 'is-count' : ''}`}>
+                            {data.assigneeNames && data.assigneeNames.length > 0
+                                ? `${data.assigneeNames.length} người`
+                                : 'Chưa giao'}
                         </div>
-                        <div className="more-icon">•••</div>
                     </div>
                 </div>
 

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { login as loginRequest } from '@/features/auth/api/authApi';
 import { AuthInput, AuthButton, AuthLayout } from '@/components/auth/AuthComponents';
+import { getAuthRedirectPath } from '@/features/auth/role';
 import api from "@/services/api"; // 🎯 GIỮ NGUYÊN: Sử dụng instance axios cấu hình chung để gọi các API bổ sung
 import './Login.css';
 
@@ -57,6 +58,9 @@ const Login: React.FC = () => {
     setIsSubmitting(true);
 
     try {
+      localStorage.removeItem("currentFamilyName");
+      localStorage.removeItem("familyMembersCache");
+
       // 1. Gọi API đăng nhập để bốc thông tin Token xác thực cơ bản
       const response = await loginRequest({ email, password });
       const currentToken = response.accessToken ?? '';
@@ -64,7 +68,13 @@ const Login: React.FC = () => {
       // Đặt các biến cục bộ bọc lót dữ liệu chi tiết
       let detailedPhone = "Chưa cập nhật";
       let detailedGender = "OTHER";
-      let detailedRoleName = "Thành viên";
+      let detailedRoleName = response.role;
+      let detailedFamilyId: number | undefined = response.familyId;
+      let detailedFamilyName: string | undefined = response.familyName;
+
+      if (detailedFamilyName) {
+        localStorage.setItem("currentFamilyName", detailedFamilyName.trim());
+      }
 
       // 🎯 Ép kiểu trung gian sang 'any' để bypass qua bộ lọc TypeScript của AuthResponse gốc
       const rawResponse = response as any;
@@ -79,7 +89,11 @@ const Login: React.FC = () => {
           });
           const groupData = resGroup.data.success ? resGroup.data.data : resGroup.data;
           if (groupData?.name) {
-            localStorage.setItem("currentFamilyName", String(groupData.name).trim());
+            detailedFamilyName = String(groupData.name).trim();
+            localStorage.setItem("currentFamilyName", detailedFamilyName);
+          }
+          if (groupData?.id) {
+            detailedFamilyId = Number(groupData.id);
           }
 
           // B. Tải danh sách thành viên đầy đủ trường để bóc tách thông tin cá nhân của chính mình
@@ -89,10 +103,19 @@ const Login: React.FC = () => {
           const dbMembers = resMembers.data.success ? resMembers.data.data : resMembers.data;
           
           if (Array.isArray(dbMembers)) {
+            const familyMeta = dbMembers[0];
+            if (familyMeta?.familyId) {
+              detailedFamilyId = Number(familyMeta.familyId);
+            }
+            if (familyMeta?.familyName) {
+              detailedFamilyName = String(familyMeta.familyName).trim();
+              localStorage.setItem("currentFamilyName", detailedFamilyName);
+            }
+
             // Định dạng và lưu bộ nhớ đệm danh sách thành viên phục vụ hệ thống
             const formattedMembers = dbMembers.map((m: any) => {
               const rName = String(m.roleName || m.role?.name || m.role).toUpperCase();
-              const isOwner = rName.includes("BOSS") || rName.includes("CHỦ NHÀ") || rName.includes("ADMIN") || rName.includes("HOUSEKEEPER");
+              const isOwner = rName.includes("CHỦ NHÀ") || rName.includes("HOUSEKEEPER");
               return {
                 id: m.id,
                 fullName: m.fullName || m.full_name || "Thành viên ẩn danh",
@@ -130,15 +153,13 @@ const Login: React.FC = () => {
         phone: detailedPhone,
         gender: detailedGender,
         roleName: detailedRoleName,
+        familyId: detailedFamilyId,
+        familyName: detailedFamilyName,
         avatarUrl: detailedAvatar 
       });
 
       // 4. KIỂM TRA PHÂN QUYỀN VÀ ĐIỀU HƯỚNG CHUẨN XÁC
-      if (response.role === 'ADMIN') {
-        navigate('/admin/users', { replace: true });
-      } else {
-        navigate('/fridge', { replace: true });
-      }
+      navigate(getAuthRedirectPath(response.role), { replace: true });
       
     } catch (error) {
       setSubmitError(getErrorMessage(error));

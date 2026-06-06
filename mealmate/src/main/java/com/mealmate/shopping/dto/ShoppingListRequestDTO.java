@@ -1,9 +1,9 @@
 package com.mealmate.shopping.dto;
 
-import lombok.Data;
-
 import java.time.LocalDate;
 import java.util.List;
+
+import lombok.Data;
 
 @Data
 public class ShoppingListRequestDTO {
@@ -12,4 +12,3 @@ public class ShoppingListRequestDTO {
     private String note;
     private List<ShoppingItemRequestDTO> items;
 }
-

@@ -104,6 +104,8 @@ public class UserAuthService {
                 .fullName(savedUser.getFullName())
                 .role(savedUser.getRole() != null ? savedUser.getRole().getName() : "HOUSEKEEPER")
                 .gender(savedUser.getGender() != null ? savedUser.getGender() : "OTHER") // 🎯 BỔ SUNG: Trả về cho Front-end khi Đăng ký
+                .familyId(newFamily.getId())
+                .familyName(newFamily.getName())
                 .build();
     }
 
@@ -137,6 +139,8 @@ public class UserAuthService {
                 .fullName(user.getFullName())
                 .role(user.getRole() != null ? user.getRole().getName() : "CUSTOMER")
                 .gender(user.getGender() != null ? user.getGender() : "OTHER") // 🎯 BỔ SUNG: Trả về cho Front-end khi Đăng nhập
+                .familyId(user.getFamilyId())
+                .familyName(user.getFamily() != null ? user.getFamily().getName() : null)
                 .build();
     }
 }

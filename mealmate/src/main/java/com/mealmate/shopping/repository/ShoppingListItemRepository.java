@@ -37,7 +37,7 @@ public interface ShoppingListItemRepository extends JpaRepository<ShoppingListIt
             from shopping_list_items sli
             join shopping_lists sl on sli.shopping_list_id = sl.id
             join foods f on sli.food_id = f.id
-            where sl.family_id = :familyId
+            where sl.familyId  = :familyId
               and sli.is_purchased = true
               and sl.created_date between :from and :to
               and (:categoryId is null or f.category_id = :categoryId)
@@ -53,7 +53,7 @@ public interface ShoppingListItemRepository extends JpaRepository<ShoppingListIt
             from shopping_list_items sli
             join shopping_lists sl on sli.shopping_list_id = sl.id
             join foods f on sli.food_id = f.id
-            where sl.family_id = :familyId
+            where sl.familyId  = :familyId
               and sli.is_purchased = true
               and sl.created_date between :from and :to
               and (:categoryId is null or f.category_id = :categoryId)
@@ -72,7 +72,7 @@ public interface ShoppingListItemRepository extends JpaRepository<ShoppingListIt
             join shopping_lists sl on sli.shopping_list_id = sl.id
             join foods f on sli.food_id = f.id
             left join categories c on f.category_id = c.id
-            where sl.family_id = :familyId
+            where sl.familyId  = :familyId
               and sli.is_purchased = true
               and sl.created_date between :from and :to
               and (:categoryId is null or c.id = :categoryId)
@@ -103,7 +103,7 @@ public interface ShoppingListItemRepository extends JpaRepository<ShoppingListIt
             JOIN shopping_lists sl ON sl.id = sli.shopping_list_id
             JOIN foods f ON f.id = sli.food_id
             LEFT JOIN categories c ON c.id = f.category_id
-            WHERE sl.family_id = :familyId
+            WHERE sl.familyId  = :familyId
               AND COALESCE(sli.is_purchased, false) = true
               AND sli.imported_to_fridge_at IS NULL
             ORDER BY
@@ -120,9 +120,27 @@ public interface ShoppingListItemRepository extends JpaRepository<ShoppingListIt
             JOIN FETCH item.shoppingList shoppingList
             JOIN FETCH item.food food
             WHERE item.id = :id
-            AND shoppingList.family.id = :familyId
+            AND shoppingList.familyId = :familyId
             """)
     Optional<ShoppingListItem> findImportableByIdAndFamilyId(
             @Param("id") Long id,
             @Param("familyId") Long familyId);
+
+    interface FrequentItemProjection {
+        Long getId();
+        String getFoodName();
+        String getUnit();
+    }
+
+    @Query(value = """
+            SELECT f.id AS id, f.name AS foodName, COALESCE(sli.unit, f.unit) AS unit, COUNT(sli.id) as count
+            FROM shopping_list_items sli
+            JOIN foods f ON sli.food_id = f.id
+            JOIN shopping_lists sl ON sli.shopping_list_id = sl.id
+            WHERE sl.familyId = :familyId
+            GROUP BY f.id, f.name, f.unit, sli.unit
+            ORDER BY count DESC
+            LIMIT 5
+            """, nativeQuery = true)
+    List<FrequentItemProjection> findFrequentItems(@Param("familyId") Long familyId);
 }

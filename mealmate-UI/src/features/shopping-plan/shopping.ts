@@ -17,6 +17,7 @@ export interface UserSummary {
   id: number;
   name: string;
   avatar?: string;
+  roleName?: string;
 }
 
 // Chi tiết thực phẩm
@@ -40,7 +41,8 @@ export interface ShoppingListItem {
   unit: string;
   note?: string;
   assignedTo?: number; // ID users
-  assignee?: UserSummary;
+  assigneeName?: string;
+  assignee?: { id?: number; name?: string };
   isPurchased: boolean;
   orderNumber?: number;
   imported_to_fridge_at?: string;
@@ -70,15 +72,15 @@ export interface FridgeItem {
   status: FridgeItemStatus;
 }
 
-// 1. Cho các ô "Thứ x - Ngày y" trong Grid
 export interface DailyPlanCardData {
-  plannedDate: string; // YYYY-MM-DD
-  dayOfWeek: string; // "Thứ 2", "Thứ 3"...
-  displayDate: string; // "4/5"
-  totalItems: number; // Count items
-  purchasedItems: number; // Count items where is_purchased = true
-  assigneeNames: string[]; // Danh sách tên những người được giao (assigned_to)
+  plannedDate: string;
+  dayOfWeek: string;
+  displayDate: string;
+  totalItems: number;
+  purchasedItems: number;
+  assigneeNames: string[];
   listId?: number;
+  note?: string;
 }
 
 // 2. Cho phần "Thực phẩm thường mua" (FrequentItems)

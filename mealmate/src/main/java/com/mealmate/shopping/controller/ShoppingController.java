@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.mealmate.catalog.model.Food;
 import com.mealmate.catalog.repository.FoodRepository;
 import com.mealmate.common.dto.ApiResponse;
+import com.mealmate.shopping.dto.FrequentItemSuggestionDTO;
 import com.mealmate.shopping.dto.DailyPlanSummaryDTO;
 import com.mealmate.shopping.dto.ShoppingItemDTO;
 import com.mealmate.shopping.dto.ShoppingListRequestDTO;
@@ -70,5 +71,20 @@ public class ShoppingController {
     public ResponseEntity<ApiResponse<Void>> deletePlan(@PathVariable Long listId) {
         service.deletePlan(listId);
         return ResponseEntity.ok(new ApiResponse<>(true, "Xóa danh sách thành công", null));
+    }
+
+    @PatchMapping("/{listId}/note")
+    public ResponseEntity<ApiResponse<Void>> updatePlanNote(
+            @PathVariable Long listId,
+            @RequestBody java.util.Map<String, String> body) {
+        String note = body.get("note");
+        service.updatePlanNote(listId, note);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Cập nhật ghi chú thành công", null));
+    }
+
+    @GetMapping("/frequent")
+    public ResponseEntity<ApiResponse<List<FrequentItemSuggestionDTO>>> getFrequent(@RequestParam Long familyId) {
+        return ResponseEntity.ok(new ApiResponse<>(true, "Lấy danh sách thực phẩm thường mua thành công",
+                service.getFrequentItems(familyId)));
     }
 }

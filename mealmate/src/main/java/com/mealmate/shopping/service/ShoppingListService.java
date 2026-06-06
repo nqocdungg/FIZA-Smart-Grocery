@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import com.mealmate.catalog.repository.CategoryRepository;
 import com.mealmate.catalog.repository.FoodRepository;
+import com.mealmate.shopping.dto.FrequentItemSuggestionDTO;
 import com.mealmate.shopping.dto.DailyPlanSummaryDTO;
 import com.mealmate.shopping.dto.ShoppingItemDTO;
 import com.mealmate.shopping.dto.ShoppingListRequestDTO;
@@ -87,10 +88,24 @@ public class ShoppingListService {
                     .assigneeNames(new ArrayList<>());
 
             if (listOnDate != null) {
+                List<Long> assigneeIds = listOnDate.getItems().stream()
+                        .map(ShoppingListItem::getAssignedTo)
+                        .filter(java.util.Objects::nonNull)
+                        .distinct()
+                        .collect(Collectors.toList());
+
+                List<String> names = assigneeIds.stream()
+                        .map(id -> userRepository.findById(id)
+                                .map(com.mealmate.user.model.User::getFullName)
+                                .orElse("Ẩn danh"))
+                        .collect(Collectors.toList());
+
                 long purchased = listOnDate.getItems().stream().filter(ShoppingListItem::getIsPurchased).count();
                 builder.totalItems(listOnDate.getItems().size())
                         .purchasedItems((int) purchased)
-                        .listId(listOnDate.getId());
+                        .assigneeNames(names)
+                        .listId(listOnDate.getId())
+                        .note(listOnDate.getNote());
             } else {
                 builder.totalItems(0).purchasedItems(0);
             }
@@ -155,7 +170,7 @@ public class ShoppingListService {
                     item.setAssignedTo(dto.getAssignedTo());
                 }
 
-                item.setIsPurchased(false);
+                item.setIsPurchased(dto.getIsPurchased() != null ? dto.getIsPurchased() : false);
                 return item;
             }).collect(Collectors.toList());
 
@@ -172,4 +187,17 @@ public class ShoppingListService {
         repository.deleteById(listId);
     }
 
+    @Transactional
+    public void updatePlanNote(Long listId, String note) {
+        ShoppingList list = repository.findById(listId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy danh sách cần cập nhật ghi chú."));
+        list.setNote(note);
+        repository.save(list);
+    }
+
+    public List<FrequentItemSuggestionDTO> getFrequentItems(Long familyId) {
+        return itemRepository.findFrequentItems(familyId).stream()
+                .map(p -> new FrequentItemSuggestionDTO(p.getId(), p.getFoodName(), p.getUnit()))
+                .collect(Collectors.toList());
+    }
 }

@@ -4,6 +4,7 @@ import com.mealmate.catalog.model.dto.CategoryRequest;
 import com.mealmate.catalog.model.dto.CategoryResponse;
 import com.mealmate.catalog.service.CategoryService;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -33,6 +34,7 @@ public class CategoryController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public CategoryResponse create(
             @Valid @RequestBody CategoryRequest request
     ) {
@@ -40,6 +42,7 @@ public class CategoryController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public CategoryResponse update(
             @PathVariable Long id,
             @Valid @RequestBody CategoryRequest request
@@ -48,6 +51,7 @@ public class CategoryController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public void delete(
             @PathVariable Long id
     ) {

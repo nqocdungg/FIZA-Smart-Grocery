@@ -11,7 +11,7 @@ import ProgressSection from '@/components/shopping-plan/ProgressSection';
 import ToggleSwitch from '@/components/common/ToggleSwitch';
 import ShoppingModal from '@/components/shopping-plan/popup-modal/ShoppingModal';
 import type { DailyPlanCardData } from '@/features/shopping-plan/shopping';
-import { getPlanDetail, getUserFamilies, getWeeklySummary } from '@/features/shopping-plan/shoppingApi';
+import { getCurrentFamily, getPlanDetail, getWeeklySummary } from '@/features/shopping-plan/shoppingApi';
 import { Plus } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import './ShoppingPlanPage.css';
@@ -29,12 +29,19 @@ const ShoppingPlanPage: React.FC = () => {
 
     const fetchFamilyInfo = async () => {
         try {
-            const families = await getUserFamilies();
-            if (families && families.length > 0) {
-                setFamilyId(families[0].id);
+            const family = await getCurrentFamily();
+            if (family?.id) {
+                setFamilyId(Number(family.id));
+                if (family.name) {
+                    localStorage.setItem("currentFamilyName", String(family.name).trim());
+                }
+            } else {
+                setFamilyId(null);
+                localStorage.removeItem("currentFamilyName");
             }
         } catch (error: any) {
             console.error("Lỗi lấy gia đình:", error.message);
+            setFamilyId(null);
         }
     };
     const fetchSummary = async () => {
@@ -113,8 +120,9 @@ const ShoppingPlanPage: React.FC = () => {
             <div className="shopping-layout">
                 <Sidebar />
                 <div className="shopping-main-content">
-                    <Topbar />
-                    {/* title="Kế hoạch đi chợ" */}
+                    <Topbar
+                        title="Kế hoạch đi chợ"
+                    />
                     <div className="shopping-page-body">
                         {/* 3. Toolbar: DatePicker và Nút lập kế hoạch */}
                         <div className="plan-toolbar">
@@ -152,8 +160,16 @@ const ShoppingPlanPage: React.FC = () => {
 
                             {/* 5. Widgets bên cạnh board */}
                             <div className="dashboard-widgets">
-                                <NoteSection />
-                                <FrequentItems />
+                                <NoteSection
+                                    note={plans.find(p => p.plannedDate === selectedDate)?.note || ''}
+                                    listId={plans.find(p => p.plannedDate === selectedDate)?.listId}
+                                    onSaveSuccess={fetchSummary}
+                                />
+                                <FrequentItems
+                                    familyId={familyId}
+                                    plans={plans}
+                                    onAddSuccess={fetchSummary}
+                                />
                                 <ProgressSection
                                     percentage={45}
                                     message="Còn 6 danh mục cần hoàn thành cho hôm nay"

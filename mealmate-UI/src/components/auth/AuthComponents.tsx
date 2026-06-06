@@ -10,9 +10,9 @@ interface AuthInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 
 export const AuthInput: React.FC<AuthInputProps> = ({ label, rightLabel, ...props }) => {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8vh', width: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <label style={{ fontSize: '1rem', color: '#0B735F', fontWeight: '500', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+        <label style={{ fontSize: '14px', color: '#0B735F', fontWeight: '500', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
           {label}
         </label>
         {rightLabel}
@@ -21,11 +21,12 @@ export const AuthInput: React.FC<AuthInputProps> = ({ label, rightLabel, ...prop
         {...props}
         style={{
           width: '100%',
-          padding: '1.7vh 2.2vw', /* Co giãn tỉ lệ ngang dọc theo Figma */
+          padding: '16px 24px',
           backgroundColor: '#F7FAFC',
           border: 'none', /* Sạch bóng viền thẫm mặc định */
           borderRadius: '0.75rem', /* Bo góc 12px theo tỷ lệ rem */
-          fontSize: '1rem',
+          fontSize: '14px',
+          textAlign: 'left',
           outline: 'none',
           boxSizing: 'border-box',
           fontFamily: "'Plus Jakarta Sans', sans-serif",
@@ -49,7 +50,7 @@ export const AuthButton: React.FC<AuthButtonProps> = ({ children, ...props }) =>
       {...props}
       style={{
         width: '100%',
-        padding: '2vh 0',
+        padding: '16px',
         backgroundColor: '#4D9A80',
         color: 'white',
         border: 'none',
@@ -58,7 +59,7 @@ export const AuthButton: React.FC<AuthButtonProps> = ({ children, ...props }) =>
         fontWeight: '700',
         letterSpacing: '1px',
         cursor: 'pointer',
-        marginTop: '1vh',
+        marginTop: '8px',
         transition: '0.3s',
         fontFamily: "'Plus Jakarta Sans', sans-serif",
         ...props.style,
@@ -106,7 +107,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitl
         {/* Cột phải: Form Content */}
         <div style={layoutStyles.rightSection}>
           <div style={layoutStyles.formContainer}>
-            <header style={{ marginBottom: '6.5vh' }}>
+            <header style={{ marginBottom: '40px' }}>
               <h2 style={{ fontSize: '16px', color: '#0B735F', fontWeight: '600', margin: 0, paddingBottom: '0.5vh' }}>{title}</h2>
               <p style={{ fontSize: '14px', color: '#88938E', margin: 0 }}>{subtitle}</p>
             </header>
@@ -136,8 +137,8 @@ const layoutStyles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    background: 'linear-gradient(0deg, #4D9A80 0%, #4D9A80 100%), white',
-    padding: '3.5vh 3vw',
+    background: '#4D9A80',
+    padding: '20px 40px',
     fontFamily: "'Plus Jakarta Sans', sans-serif",
     boxSizing: 'border-box',
   },
@@ -146,40 +147,40 @@ const layoutStyles: Record<string, React.CSSProperties> = {
     width: '100%',
     maxWidth: '1240px',
     height: 'auto',
-    minHeight: '840px',
+    minHeight: '750px',
     backgroundColor: 'white',
     borderRadius: '32px',
     boxShadow: '0px 25px 50px -12px rgba(0, 0, 0, 0.25)',
     overflow: 'hidden',
-    marginBottom: '4vh',
+    marginBottom: '40px',
   },
   leftSection: {
     flex: 1,
     backgroundColor: '#F0F4F2',
-    padding: '6.5vh 4.5vw',
+    padding: '48px 64px',
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'space-between',
     boxSizing: 'border-box',
   },
-  brandContent: { display: 'flex', flexDirection: 'column', gap: '3.2vh' },
-  logoRow: { display: 'flex', alignItems: 'center', gap: '1vw' },
+  brandContent: { display: 'flex', flexDirection: 'column', gap: '24px' },
+  logoRow: { display: 'flex', alignItems: 'center', gap: '12px' },
   logoIcon: { width: '24px', height: '30px', backgroundColor: '#0B735F' },
-  logoText: { fontSize: '32px', fontWeight: '600', color: '#0B735F' },
-  welcomeGroup: { display: 'flex', flexDirection: 'column', gap: '1.6vh' },
-  title: { fontSize: '48px', fontWeight: '700', color: '#0B735F', lineHeight: '1.25', margin: 0 },
+  logoText: { fontSize: '28px', fontWeight: '600', color: '#0B735F' },
+  welcomeGroup: { display: 'flex', flexDirection: 'column', gap: '8px' },
+  title: { fontSize: '40px', fontWeight: '700', color: '#0B735F', lineHeight: '1.2', maxWidth: '400px', margin: 0 },
   slogan: { fontSize: '16px', fontStyle: 'italic', color: '#0B735F', opacity: 0.8, margin: 0 },
-  illustrationWrapper: { borderRadius: '32px', overflow: 'hidden', backgroundColor: 'white', marginTop: '2.5vh' },
-  rightSection: { flex: 1, backgroundColor: 'white', padding: '6.5vh 6vw', display: 'flex', flexDirection: 'column', justifyContent: 'center', boxSizing: 'border-box' },
-  formContainer: { width: '100%', maxWidth: '440px', margin: '0 auto' },
+  illustrationWrapper: { borderRadius: '24px', overflow: 'hidden', backgroundColor: 'white', marginTop: '24px' },
+  rightSection: { flex: 1, backgroundColor: 'white', padding: '48px 80px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', boxSizing: 'border-box' },
+  formContainer: { width: '100%', maxWidth: '400px', margin: '0 auto' },
   pageFooter: {
     width: '100%',
     maxWidth: '1240px',
     display: 'flex',
     justifyContent: 'space-between',
-    color: 'rgba(255, 255, 255, 0.40)',
-    fontSize: '14px',
-    padding: '2vh 0',
+    color: 'rgba(255, 255, 255, 0.5)',
+    fontSize: '12px',
+    paddingBottom: '20px',
     boxSizing: 'border-box',
   },
 };

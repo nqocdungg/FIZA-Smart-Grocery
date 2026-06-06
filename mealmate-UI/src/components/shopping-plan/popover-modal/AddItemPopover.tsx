@@ -6,21 +6,28 @@ interface AddItemPopoverProps {
     foodName: string;
     foodIcon?: string;
     unit: string;
-    onConfirm: (data: { quantity: number; assignee: string; note: string }) => void;
+    onConfirm: (data: { quantity: number; assignedTo: number | null; note: string }) => void;
     onCancel: () => void;
+    members?: any[];
 }
 
 const AddItemPopover: React.FC<AddItemPopoverProps> = ({
     foodName,
     foodIcon = "🍎",
     unit,
+    members = [],
     onConfirm,
     onCancel
 }) => {
     const [quantity, setQuantity] = useState(1);
-    const [assignee] = useState('Mẹ');
+    const [assigneeId, setAssigneeId] = useState<number | ''>('');
     const [note, setNote] = useState('');
 
+    const getAssigneeName = () => {
+        if (assigneeId === '') return 'Chọn người phụ trách';
+        const found = members.find(m => m.id === assigneeId);
+        return found ? found.fullName : 'Chọn người phụ trách';
+    };
     return (
         <div className="add-item-popover">
             {/*Tên thực phẩm */}
@@ -35,9 +42,21 @@ const AddItemPopover: React.FC<AddItemPopoverProps> = ({
             <div className="popover-row">
                 <label>GIAO CHO</label>
                 <div className="custom-select">
-                    <span>{assignee}</span>
+                    <span>{getAssigneeName()}</span>
                     <ChevronDown size={16} />
-                    {/* Ở đây có thể làm thêm dropdown menu nếu cần */}
+                    <select
+                        className="custom-select-native"
+                        value={assigneeId}
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            setAssigneeId(val === '' ? '' : Number(val));
+                        }}
+                    >
+                        <option value="">Chọn người phụ trách</option>
+                        {members.map((m: any) => (
+                            <option key={m.id} value={m.id}>{m.fullName}</option>
+                        ))}
+                    </select>
                 </div>
             </div>
 
@@ -71,7 +90,11 @@ const AddItemPopover: React.FC<AddItemPopoverProps> = ({
             {/* Actions */}
             <div className="popover-footer">
                 <button className="popover-btn-cancel" onClick={onCancel}>Hủy</button>
-                <button className="popover-btn-confirm" onClick={() => onConfirm({ quantity, assignee, note })}>
+                <button className="popover-btn-confirm" onClick={() => onConfirm({
+                    quantity,
+                    assignedTo: assigneeId === '' ? null : assigneeId,
+                    note
+                })}>
                     <Check size={18} /> Xác nhận
                 </button>
             </div>
