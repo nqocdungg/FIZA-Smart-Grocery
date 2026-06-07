@@ -35,8 +35,9 @@
     align-items: center;
     justify-content: space-between;
     border-bottom: 1px solid #f1f5f9;
-    overflow: visible; 
+    border-radius: 32px 32px 0 0;
 }
+
 
 /* Khối bên trái: Tiêu đề & Date */
 .modal-header-left {
@@ -130,6 +131,7 @@
     justify-content: space-between;
     align-items: center;
     border-top: 1px solid #e2e8f0;
+    border-radius: 0 0 32px 32px;
 }
 
 /* Các nút bấm */
@@ -469,7 +471,7 @@
 }
 
 .modal-left-column {
-    width: 34%;
+    width: 40%;
     border-right: 1px solid #f1f5f9;
     padding: 16px;
     overflow-y: auto;
@@ -517,4 +519,4 @@
     background: #047857;
     color: #ffffff;
 }
-
+

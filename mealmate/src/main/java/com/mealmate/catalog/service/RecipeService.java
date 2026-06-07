@@ -1,5 +1,19 @@
 package com.mealmate.catalog.service;
 
+import static org.springframework.http.HttpStatus.*;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
 import com.mealmate.catalog.model.Recipe;
 import com.mealmate.catalog.model.RecipeIngredient;
 import com.mealmate.catalog.model.dto.RecipeCatalogResponse;
@@ -13,21 +27,8 @@ import com.mealmate.catalog.repository.RecipeIngredientDetailProjection;
 import com.mealmate.catalog.repository.RecipeIngredientRepository;
 import com.mealmate.catalog.repository.RecipeIngredientSummaryProjection;
 import com.mealmate.catalog.repository.RecipeRepository;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Sort;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
-
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import static org.springframework.http.HttpStatus.NOT_FOUND;
-import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
 @Service
 @RequiredArgsConstructor
@@ -64,7 +65,6 @@ public class RecipeService {
         recipe.setAuthor(request.getAuthor());
         recipe.setPreferredMealTime(request.getPreferredMealTime());
         recipe.setCookingTimeMinutes(request.getCookingTimeMinutes());
-        recipe.setDisplayStatus(request.getDisplayStatus());
         recipe.setImageUrl(request.getImageUrl());
         return repository.save(recipe);
     }
@@ -114,7 +114,8 @@ public class RecipeService {
                 .toList();
 
         Map<Long, List<String>> ingredientsByRecipeId = new LinkedHashMap<>();
-        for (RecipeIngredientSummaryProjection ingredient : recipeIngredientRepository.findIngredientNamesByRecipeIds(recipeIds)) {
+        for (RecipeIngredientSummaryProjection ingredient : recipeIngredientRepository
+                .findIngredientNamesByRecipeIds(recipeIds)) {
             ingredientsByRecipeId
                     .computeIfAbsent(ingredient.getRecipeId(), ignored -> new ArrayList<>())
                     .add(ingredient.getFoodName());
@@ -135,7 +136,6 @@ public class RecipeService {
                         .servings(recipe.getServings())
                         .calories(recipe.getCalories())
                         .difficulty(recipe.getDifficulty())
-                        .displayStatus(recipe.getDisplayStatus())
                         .favorite(favoriteRecipeIds.contains(recipe.getId()))
                         .ingredients(ingredientsByRecipeId.getOrDefault(recipe.getId(), List.of()))
                         .build())
@@ -195,7 +195,6 @@ public class RecipeService {
         recipe.setServings(request.getServings());
         recipe.setCalories(request.getCalories());
         recipe.setDifficulty(normalizeBlank(request.getDifficulty()));
-        recipe.setDisplayStatus(userId == null ? "SYSTEM" : "CUSTOM");
 
         Recipe savedRecipe = repository.save(recipe);
         saveCreateIngredients(savedRecipe, request.getIngredients());
@@ -213,7 +212,8 @@ public class RecipeService {
                     RecipeIngredient ingredient = new RecipeIngredient();
                     ingredient.setRecipe(recipe);
                     ingredient.setFood(foodRepository.findById(request.getFoodId())
-                            .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Food not found: " + request.getFoodId())));
+                            .orElseThrow(() -> new ResponseStatusException(NOT_FOUND,
+                                    "Food not found: " + request.getFoodId())));
                     ingredient.setQuantity(request.getQuantity());
                     ingredient.setUnit(normalizeBlank(request.getUnit()));
                     return ingredient;
@@ -224,7 +224,8 @@ public class RecipeService {
     }
 
     private RecipeDetailResponse toDetailResponse(Recipe recipe, boolean favorite) {
-        List<RecipeIngredientDetailResponse> ingredients = recipeIngredientRepository.findIngredientDetailsByRecipeId(recipe.getId())
+        List<RecipeIngredientDetailResponse> ingredients = recipeIngredientRepository
+                .findIngredientDetailsByRecipeId(recipe.getId())
                 .stream()
                 .map(this::toIngredientResponse)
                 .toList();
@@ -241,7 +242,6 @@ public class RecipeService {
                 .servings(recipe.getServings())
                 .calories(recipe.getCalories())
                 .difficulty(recipe.getDifficulty())
-                .displayStatus(recipe.getDisplayStatus())
                 .imageUrl(recipe.getImageUrl())
                 .favorite(favorite)
                 .ingredients(ingredients)

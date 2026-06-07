@@ -1,29 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Users, 
-  UtensilsCrossed, 
-  BookOpen, 
-  Bell, 
-  Settings, 
-  Search, 
-  Plus, 
-  Eye, 
-  Trash2, 
-  ChevronLeft, 
+import {
+  ChevronLeft,
   ChevronRight,
-  Leaf,
-  BarChart3,
-  LogOut,
+  Eye,
+  Plus,
+  Search,
+  Settings,
+  Trash2,
   X
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
+import React, { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import AdminSidebar from '../../components/admin/AdminSidebar';
 import SharedModal from '../../components/admin/Modal';
 import NotificationPanel from '../../components/common/NotificationPanel';
-import api from '../../services/api';
-import { uploadFile } from '../../features/uploads/uploadApi';
 import { useAuth } from '../../context/AuthContext';
+import { uploadFile } from '../../features/uploads/uploadApi';
+import api from '../../services/api';
 
 
 export interface Ingredient {
@@ -52,11 +45,11 @@ const RecipeManagement: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('Tất cả');
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
-  
+
   // Modals state
   const [showAddModal, setShowAddModal] = useState(false);
   const [viewRecipe, setViewRecipe] = useState<Recipe | null>(null);
@@ -68,8 +61,8 @@ const RecipeManagement: React.FC = () => {
   const [newIngredients, setNewIngredients] = useState<Ingredient[]>([{ name: '', amount: '' }]);
 
   // Image upload state for Add Modal
-  const [addImageMode, setAddImageMode]       = useState<'url' | 'upload'>('url');
-  const [addImageUrl, setAddImageUrl]         = useState('');
+  const [addImageMode, setAddImageMode] = useState<'url' | 'upload'>('url');
+  const [addImageUrl, setAddImageUrl] = useState('');
   const [addImageUploaded, setAddImageUploaded] = useState('');
   const [addImageUploading, setAddImageUploading] = useState(false);
   const addImageInputRef = React.useRef<HTMLInputElement>(null);
@@ -125,8 +118,8 @@ const RecipeManagement: React.FC = () => {
 
   // Filter Logic
   const filteredRecipes = recipes.filter(recipe => {
-    const matchesSearch = recipe.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          recipe.id.toString().includes(searchQuery.toLowerCase());
+    const matchesSearch = recipe.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      recipe.id.toString().includes(searchQuery.toLowerCase());
     const matchesCategory = categoryFilter === 'Tất cả' || recipe.preferredMealTime === categoryFilter;
     return matchesSearch && matchesCategory;
   });
@@ -368,16 +361,16 @@ const RecipeManagement: React.FC = () => {
                 <div className="um-toolbar-controls">
                   <div className="um-search-container">
                     <Search className="um-search-icon" size={18} />
-                    <input 
-                      className="um-search-input" 
-                      placeholder="Tìm kiếm món ăn..." 
+                    <input
+                      className="um-search-input"
+                      placeholder="Tìm kiếm món ăn..."
                       value={searchQuery}
                       onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
                     />
                   </div>
                   <div className="um-role-badge" style={{ padding: '0.5rem 1.25rem', flexShrink: 0 }}>
                     <span style={{ color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', fontSize: '10px', marginRight: '0.5rem' }}>Loại bữa ăn:</span>
-                    <select 
+                    <select
                       style={{ background: 'transparent', border: 'none', color: 'var(--fiza-primary)', fontWeight: 700, fontSize: '0.875rem', outline: 'none', cursor: 'pointer' }}
                       value={categoryFilter}
                       onChange={(e) => { setCategoryFilter(e.target.value); setCurrentPage(1); }}
@@ -590,14 +583,14 @@ const RecipeManagement: React.FC = () => {
                         {newIngredients.map((ing, idx) => (
                           <tr key={idx}>
                             <td style={{ padding: '0.25rem' }}>
-                              <input 
-                                type="text" 
-                                value={ing.name} 
-                                onChange={(e) => handleUpdateIngredient(idx, 'name', e.target.value, false)} 
-                                placeholder="VD: Dầu ăn" 
-                                list="foods-catalog-list" 
-                                className="um-search-input" 
-                                style={{ width: '100%', paddingLeft: '0.75rem', height: '36px' }} 
+                              <input
+                                type="text"
+                                value={ing.name}
+                                onChange={(e) => handleUpdateIngredient(idx, 'name', e.target.value, false)}
+                                placeholder="VD: Dầu ăn"
+                                list="foods-catalog-list"
+                                className="um-search-input"
+                                style={{ width: '100%', paddingLeft: '0.75rem', height: '36px' }}
                               />
                             </td>
                             <td style={{ padding: '0.25rem' }}>
@@ -639,10 +632,10 @@ const RecipeManagement: React.FC = () => {
                     <p style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', marginBottom: '1rem' }}>Thông tin chung</p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                       <DetailItem label="Mã món ăn" value={`#${viewRecipe.id}`} />
-                      <DetailItem 
-                        label="Bữa ăn" 
-                        value={viewRecipe.preferredMealTime === 'BREAKFAST' ? 'Bữa sáng' : viewRecipe.preferredMealTime === 'LUNCH' ? 'Bữa trưa' : 'Bữa tối'} 
-                        isBadge 
+                      <DetailItem
+                        label="Bữa ăn"
+                        value={viewRecipe.preferredMealTime === 'BREAKFAST' ? 'Bữa sáng' : viewRecipe.preferredMealTime === 'LUNCH' ? 'Bữa trưa' : 'Bữa tối'}
+                        isBadge
                       />
                       <DetailItem label="Tác giả" value={viewRecipe.author || 'Admin'} />
                     </div>
@@ -674,7 +667,7 @@ const RecipeManagement: React.FC = () => {
                           {editData.regionalNames?.map((name, idx) => (
                             <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.25rem 0.85rem', backgroundColor: '#E1F2EB', borderRadius: '9999px', border: '1px solid #6DD4B4' }}>
                               <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--fiza-primary)' }}>{name}</span>
-                              <button 
+                              <button
                                 type="button"
                                 onClick={() => {
                                   const updated = editData.regionalNames?.filter((_, i) => i !== idx) || [];
@@ -688,7 +681,7 @@ const RecipeManagement: React.FC = () => {
                           ))}
                           {inlineAdding ? (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                              <input 
+                              <input
                                 autoFocus
                                 value={inlineValue}
                                 onChange={(e) => setInlineValue(e.target.value)}
@@ -703,8 +696,8 @@ const RecipeManagement: React.FC = () => {
                               />
                             </div>
                           ) : (
-                            <button 
-                              type="button" 
+                            <button
+                              type="button"
                               onClick={() => { setInlineAdding(true); setInlineValue(''); }}
                               className="um-btn-add"
                               style={{ padding: '0.25rem 0.75rem', height: '28px', fontSize: '10px' }}
@@ -735,13 +728,13 @@ const RecipeManagement: React.FC = () => {
                               {editData.ingredients.map((ing, idx) => (
                                 <tr key={idx}>
                                   <td style={{ border: '1px solid #e2e8f0', padding: '0.5rem' }}>
-                                    <input 
-                                      type="text" 
-                                      value={ing.name} 
-                                      onChange={(e) => handleUpdateIngredient(idx, 'name', e.target.value, true)} 
-                                      list="foods-catalog-list" 
-                                      className="um-search-input" 
-                                      style={{ width: '100%', height: '36px', paddingLeft: '0.75rem', fontSize: '12px', background: 'white' }} 
+                                    <input
+                                      type="text"
+                                      value={ing.name}
+                                      onChange={(e) => handleUpdateIngredient(idx, 'name', e.target.value, true)}
+                                      list="foods-catalog-list"
+                                      className="um-search-input"
+                                      style={{ width: '100%', height: '36px', paddingLeft: '0.75rem', fontSize: '12px', background: 'white' }}
                                     />
                                   </td>
                                   <td style={{ border: '1px solid #e2e8f0', padding: '0.5rem' }}>
@@ -772,7 +765,7 @@ const RecipeManagement: React.FC = () => {
                         <DetailItem label="Tên gọi khác" value={viewRecipe.regionalNames?.join(', ') || 'Không có'} />
                       </div>
 
-                      
+
                       <div>
                         <p style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '1rem' }}>Nguyên liệu & Định mức</p>
                         <div style={{ background: '#f8fafc', borderRadius: '1.5rem', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
@@ -790,8 +783,8 @@ const RecipeManagement: React.FC = () => {
                                   <td style={{ padding: '0.75rem 1rem', color: 'var(--fiza-primary)', fontWeight: 700, fontSize: '0.875rem', border: '1px solid #e2e8f0' }}>{ing.amount}</td>
                                 </tr>
                               )) || (
-                                <tr><td colSpan={2} style={{ padding: '1rem', textAlign: 'center', color: '#94a3b8', border: '1px solid #e2e8f0' }}>Chưa cập nhật nguyên liệu</td></tr>
-                              )}
+                                  <tr><td colSpan={2} style={{ padding: '1rem', textAlign: 'center', color: '#94a3b8', border: '1px solid #e2e8f0' }}>Chưa cập nhật nguyên liệu</td></tr>
+                                )}
                             </tbody>
                           </table>
                         </div>
@@ -807,7 +800,7 @@ const RecipeManagement: React.FC = () => {
                   )}
                 </div>
               </div>
-              
+
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem' }}>
                 {isEditing ? (
                   <>

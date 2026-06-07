@@ -3,11 +3,11 @@ import DatePicker from '@/components/common/DatePicker';
 import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import DailyPlanGrid from '@/components/shopping-plan/DailyPlanGrid';
-import WeeklyAggregateView from '@/components/shopping-plan/weekly/WeeklyAggregateView';
 import FrequentItems from '@/components/shopping-plan/FrequentItems';
 import NoteSection from '@/components/shopping-plan/NoteSection';
 import ProgressSection from '@/components/shopping-plan/ProgressSection';
-// import { useAuth } from '@/context/AuthContext';
+import WeeklyAggregateView from '@/components/shopping-plan/weekly/WeeklyAggregateView';
+import { useAuth } from '@/context/AuthContext';
 
 import ToggleSwitch from '@/components/common/ToggleSwitch';
 import ShoppingModal from '@/components/shopping-plan/popup-modal/ShoppingModal';
@@ -19,6 +19,7 @@ import toast from 'react-hot-toast';
 import './ShoppingPlanPage.css';
 
 const ShoppingPlanPage: React.FC = () => {
+    const { user } = useAuth();
     const [selectedDate, setSelectedDate] = useState(() => {
         const today = new Date();
         today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
@@ -28,7 +29,7 @@ const ShoppingPlanPage: React.FC = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState<'CREATE' | 'DETAIL'>('CREATE');
     const [selectedListData, setSelectedListData] = useState<any>(null);
-    // const canCreatePlan = user?.role === 'CUSTOMER'; // Thay đổi sau để pbiet với ng nội trợ
+    const canCreatePlan = user?.role === 'HOUSEKEEPER'; // Thay đổi sau để pbiet với ng nội trợ
     const [, setLoading] = useState(false);
     const [familyId, setFamilyId] = useState<number | null>(null);
     const [plans, setPlans] = useState<DailyPlanCardData[]>([]);
@@ -39,7 +40,7 @@ const ShoppingPlanPage: React.FC = () => {
     // For progress section
     let total = 0;
     let purchased = 0;
-    
+
     if (type === 'WEEK') {
         plans.forEach(p => {
             total += p.totalItems || 0;
@@ -180,15 +181,15 @@ const ShoppingPlanPage: React.FC = () => {
                             <div className="toolbar-center">
                                 <ToggleSwitch value={type} onChange={(val) => setType(val)} />
                             </div>
-                            {/* canCreatePlan &&  */}
-                            {(
-                                <button className="btn-create-plan"
-                                    onClick={() => handleOpenCreateModal(selectedDate)}>
-                                    <Plus size={18} />
-                                    <span></span>
-                                    Lập kế hoạch mới
-                                </button>
-                            )}
+                            {canCreatePlan &&
+                                (
+                                    <button className="btn-create-plan"
+                                        onClick={() => handleOpenCreateModal(selectedDate)}>
+                                        <Plus size={18} />
+                                        <span></span>
+                                        Lập kế hoạch mới
+                                    </button>
+                                )}
                         </div>
 
                         <div className="shopping-plan-workspace">

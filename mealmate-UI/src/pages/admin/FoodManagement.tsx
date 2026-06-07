@@ -1,29 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Users, 
-  UtensilsCrossed, 
-  BookOpen, 
-  Bell, 
-  Settings, 
-  Search, 
-  Plus, 
-  Eye, 
-  Trash2, 
-  ChevronLeft, 
+import {
+  ChevronLeft,
   ChevronRight,
-  Leaf,
-  BarChart3,
-  Scale,
-  X,
-  LogOut
+  Eye,
+  Plus,
+  Search,
+  Settings,
+  Trash2,
+  X
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
+import React, { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import AdminSidebar from '../../components/admin/AdminSidebar';
 import SharedModal from '../../components/admin/Modal';
 import NotificationPanel from '../../components/common/NotificationPanel';
-import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import api from '../../services/api';
 
 
 interface Category {
@@ -53,11 +45,11 @@ const FoodManagement: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('Tất cả');
-  
+
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
-  
+
   // Modals
   const [showAddModal, setShowAddModal] = useState(false);
   const [viewFood, setViewFood] = useState<Food | null>(null);
@@ -106,8 +98,8 @@ const FoodManagement: React.FC = () => {
   }, []);
 
   const filteredFoods = foods.filter(food => {
-    const matchesSearch = food.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          food.synonyms.some(s => s.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesSearch = food.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      food.synonyms.some(s => s.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesCategory = categoryFilter === 'Tất cả' || food.categoryName === categoryFilter;
     return matchesSearch && matchesCategory;
   });
@@ -154,7 +146,7 @@ const FoodManagement: React.FC = () => {
 
   const handleInlineAddSynonym = () => {
     if (inlineValue.trim() && editData) {
-      setEditData({...editData, synonyms: Array.from(new Set([...editData.synonyms, inlineValue.trim()]))});
+      setEditData({ ...editData, synonyms: Array.from(new Set([...editData.synonyms, inlineValue.trim()])) });
       setInlineValue('');
       setInlineAdding(false);
     }
@@ -283,10 +275,10 @@ const FoodManagement: React.FC = () => {
 
               {/* Pagination */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2rem' }}>
-                <p style={{ fontSize: '10px', fontWeight: 700, color: '#94a3b8' }}>Hiển thị {startIndex+1}-{Math.min(startIndex+itemsPerPage, totalItems)} / {totalItems}</p>
+                <p style={{ fontSize: '10px', fontWeight: 700, color: '#94a3b8' }}>Hiển thị {startIndex + 1}-{Math.min(startIndex + itemsPerPage, totalItems)} / {totalItems}</p>
                 <div style={{ display: 'flex', gap: '0.25rem' }}>
                   <PageArrow icon={<ChevronLeft size={18} />} disabled={currentPage === 1} onClick={() => setCurrentPage(c => c - 1)} />
-                  {[...Array(totalPages)].map((_, i) => <PageNum key={i+1} active={currentPage === i+1} onClick={() => setCurrentPage(i+1)}>{i+1}</PageNum>)}
+                  {[...Array(totalPages)].map((_, i) => <PageNum key={i + 1} active={currentPage === i + 1} onClick={() => setCurrentPage(i + 1)}>{i + 1}</PageNum>)}
                   <PageArrow icon={<ChevronRight size={18} />} disabled={currentPage === totalPages} onClick={() => setCurrentPage(c => c + 1)} />
                 </div>
               </div>
@@ -306,20 +298,20 @@ const FoodManagement: React.FC = () => {
                   <DetailItem label="Mã thực phẩm" value={viewFood.id} />
                   {isEditing ? (
                     <>
-                      <FormGroup label="Tên thực phẩm" value={editData.name} onChange={(e: any) => setEditData({...editData, name: e.target.value})} />
+                      <FormGroup label="Tên thực phẩm" value={editData.name} onChange={(e: any) => setEditData({ ...editData, name: e.target.value })} />
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                         <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Chủng loại</label>
-                        <select 
-                          className="um-search-input" 
-                          value={editData.categoryId} 
-                          onChange={(e) => setEditData({...editData, categoryId: Number(e.target.value)})}
+                        <select
+                          className="um-search-input"
+                          value={editData.categoryId}
+                          onChange={(e) => setEditData({ ...editData, categoryId: Number(e.target.value) })}
                           style={{ paddingLeft: '1rem' }}
                         >
                           {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                       </div>
                       <div style={{ gridColumn: 'span 2' }}>
-                        <FormGroup label="Đơn vị" value={editData.unit} onChange={(e: any) => setEditData({...editData, unit: e.target.value})} />
+                        <FormGroup label="Đơn vị" value={editData.unit} onChange={(e: any) => setEditData({ ...editData, unit: e.target.value })} />
                       </div>
                       <div style={{ gridColumn: 'span 2' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
@@ -329,9 +321,9 @@ const FoodManagement: React.FC = () => {
                           {editData.synonyms.map((s, idx) => (
                             <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.25rem 0.85rem', backgroundColor: '#E1F2EB', borderRadius: '9999px', border: '1px solid #6DD4B4' }}>
                               <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--fiza-primary)' }}>{s}</span>
-                              <button 
+                              <button
                                 type="button"
-                                onClick={() => setEditData({...editData, synonyms: editData.synonyms.filter((_, i) => i !== idx)})}
+                                onClick={() => setEditData({ ...editData, synonyms: editData.synonyms.filter((_, i) => i !== idx) })}
                                 style={{ border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', padding: 0 }}
                               >
                                 <X size={14} color="var(--fiza-primary)" />
@@ -340,7 +332,7 @@ const FoodManagement: React.FC = () => {
                           ))}
                           {inlineAdding ? (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                              <input 
+                              <input
                                 autoFocus
                                 value={inlineValue}
                                 onChange={(e) => setInlineValue(e.target.value)}
@@ -355,7 +347,7 @@ const FoodManagement: React.FC = () => {
                               />
                             </div>
                           ) : (
-                            <button 
+                            <button
                               type="button"
                               onClick={() => {
                                 setInlineAdding(true);
@@ -397,19 +389,19 @@ const FoodManagement: React.FC = () => {
           {showAddModal && (
             <SharedModal title="Thêm thực phẩm mới" onClose={() => setShowAddModal(false)}>
               <form onSubmit={handleAddFood} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
-                 <FormGroup label="Tên thực phẩm" name="name" required />
-                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                   <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Chủng loại</label>
-                   <select name="categoryId" className="um-search-input" style={{ paddingLeft: '1rem' }}>
-                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                   </select>
-                 </div>
-                 <FormGroup label="Đơn vị (kg, g, cái...)" name="unit" required />
-                 <FormGroup label="Tên gọi khác" name="synonyms" />
-                 <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
-                   <button type="button" onClick={() => setShowAddModal(false)} style={{ padding: '0.75rem 1.5rem', borderRadius: '9999px', border: '1px solid #e2e8f0', background: 'white', fontWeight: 600 }}>Hủy</button>
-                   <button type="submit" className="um-btn-primary">Tạo mới</button>
-                 </div>
+                <FormGroup label="Tên thực phẩm" name="name" required />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Chủng loại</label>
+                  <select name="categoryId" className="um-search-input" style={{ paddingLeft: '1rem' }}>
+                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+                <FormGroup label="Đơn vị (kg, g, cái...)" name="unit" required />
+                <FormGroup label="Tên gọi khác" name="synonyms" />
+                <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
+                  <button type="button" onClick={() => setShowAddModal(false)} style={{ padding: '0.75rem 1.5rem', borderRadius: '9999px', border: '1px solid #e2e8f0', background: 'white', fontWeight: 600 }}>Hủy</button>
+                  <button type="submit" className="um-btn-primary">Tạo mới</button>
+                </div>
               </form>
             </SharedModal>
           )}
@@ -475,7 +467,7 @@ function HeaderBtn({ icon, hasBadge }: any) {
 
 function ActionBtn({ icon, hoverColor, onClick }: any) {
   const [h, setH] = useState(false);
-  return <button onMouseEnter={()=>setH(true)} onMouseLeave={()=>setH(false)} onClick={onClick} style={{ width: '32px', height: '32px', borderRadius: '50%', border: 'none', background: h ? 'white' : 'transparent', color: h ? hoverColor : '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{icon}</button>;
+  return <button onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)} onClick={onClick} style={{ width: '32px', height: '32px', borderRadius: '50%', border: 'none', background: h ? 'white' : 'transparent', color: h ? hoverColor : '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{icon}</button>;
 }
 
 function PageNum({ children, active, onClick }: any) {

@@ -1,6 +1,7 @@
 package com.mealmate.catalog.model;
 
 import com.mealmate.common.base.BaseEntity;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
@@ -46,9 +47,6 @@ public class Recipe extends BaseEntity {
 
     @Column(name = "preferred_meal_time")
     private String preferredMealTime;
-
-    @Column(name = "display_status")
-    private String displayStatus;
 
     @Column(name = "image_url")
     private String imageUrl;

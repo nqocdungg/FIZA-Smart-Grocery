@@ -1,28 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Users, 
-  UtensilsCrossed, 
-  BookOpen, 
-  Bell, 
-  Settings, 
-  Search, 
-  Plus, 
-  Eye, 
-  Trash2, 
-  ChevronLeft, 
+import {
+  ChevronLeft,
   ChevronRight,
-  Leaf,
-  BarChart3,
-  LogOut
+  Eye,
+  Plus,
+  Search,
+  Settings,
+  Trash2
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
+import React, { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { NavLink } from 'react-router-dom';
 import AdminSidebar from '../../components/admin/AdminSidebar';
 import SharedModal from '../../components/admin/Modal';
 import NotificationPanel from '../../components/common/NotificationPanel';
-import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { AUTH_ROLES, getAuthRoleName, getRoleId, getRoleLabel } from '../../features/auth/role';
+import api from '../../services/api';
 
 
 interface Role {
@@ -82,11 +76,11 @@ const UserManagement: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState(ROLE_FILTER_ALL);
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
-  
+
   // Modals state
   const [showAddModal, setShowAddModal] = useState(false);
   const [viewUser, setViewUser] = useState<User | null>(null);
@@ -126,8 +120,8 @@ const UserManagement: React.FC = () => {
   const filteredUsers = users.filter(user => {
     const roleName = user.role?.name ?? user.roleName;
     const matchesSearch = (user.fullName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          (user.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          String(user.id ?? '').includes(searchQuery.toLowerCase());
+      (user.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      String(user.id ?? '').includes(searchQuery.toLowerCase());
     const matchesRole = roleFilter === ROLE_FILTER_ALL || roleName === roleFilter;
     return matchesSearch && matchesRole;
   });
@@ -189,7 +183,7 @@ const UserManagement: React.FC = () => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const roleName = formData.get('role') as string;
-    
+
     const newUser = {
       fullName: formData.get('name') as string,
       email: formData.get('email') as string,
@@ -205,11 +199,21 @@ const UserManagement: React.FC = () => {
     try {
       const response = await api.post('/api/v1/users/users', newUser);
       if (response.data?.success) {
-        setUsers([response.data.data, ...users]);
+        const createdUser = response.data.data || response.data;
+        setUsers([createdUser, ...users]);
         setShowAddModal(false);
+        toast.success("Thêm người dùng mới thành công!");
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error("Lỗi chi tiết:", err);
+      let errorMsg = "Lỗi khi thêm người dùng";
+      if (err.response && err.response.data) {
+        errorMsg = err.response.data.message || err.response.data.error || errorMsg;
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
+
+      toast.error(errorMsg);
     }
   };
 
@@ -239,9 +243,9 @@ const UserManagement: React.FC = () => {
                 <div className="um-toolbar-controls">
                   <div className="um-search-container">
                     <Search className="um-search-icon" size={18} />
-                    <input 
-                      className="um-search-input" 
-                      placeholder="Tìm kiếm theo tên, email..." 
+                    <input
+                      className="um-search-input"
+                      placeholder="Tìm kiếm theo tên, email..."
                       value={searchQuery}
                       onChange={(e) => {
                         setSearchQuery(e.target.value);
@@ -251,7 +255,7 @@ const UserManagement: React.FC = () => {
                   </div>
                   <div className="um-role-badge" style={{ padding: '0.5rem 1.25rem', flexShrink: 0 }}>
                     <span style={{ color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', fontSize: '10px', marginRight: '0.5rem', whiteSpace: 'nowrap' }}>Vai trò:</span>
-                    <select 
+                    <select
                       style={{ background: 'transparent', border: 'none', color: 'var(--fiza-primary)', fontWeight: 700, fontSize: '0.875rem', outline: 'none', cursor: 'pointer' }}
                       value={roleFilter}
                       onChange={(e) => {
@@ -297,9 +301,9 @@ const UserManagement: React.FC = () => {
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                             <div style={{ width: '32px', height: '32px', borderRadius: '50%', overflow: 'hidden' }}>
-                              <img 
-                                src={user.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.fullName}`} 
-                                alt="" 
+                              <img
+                                src={user.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.fullName}`}
+                                alt=""
                                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                               />
                             </div>
@@ -317,15 +321,15 @@ const UserManagement: React.FC = () => {
                         </td>
                         <td>
                           <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem' }}>
-                            <ActionBtn 
-                              icon={<Eye size={18} />} 
-                              hoverColor="var(--fiza-primary)" 
+                            <ActionBtn
+                              icon={<Eye size={18} />}
+                              hoverColor="var(--fiza-primary)"
                               onClick={() => handleEditClick(user)}
                             />
                             {getAuthRoleName(user.role ?? user.roleName) !== AUTH_ROLES.ADMIN && (
-                              <ActionBtn 
-                                icon={<Trash2 size={18} />} 
-                                hoverColor="#ef4444" 
+                              <ActionBtn
+                                icon={<Trash2 size={18} />}
+                                hoverColor="#ef4444"
                                 onClick={() => setDeleteConfirm(user.id)}
                               />
                             )}
@@ -350,22 +354,22 @@ const UserManagement: React.FC = () => {
                   Hiển thị {startIndex + 1} - {Math.min(startIndex + itemsPerPage, totalItems)} trên {totalItems} người dùng
                 </p>
                 <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
-                  <PageArrow 
-                    icon={<ChevronLeft size={18} />} 
+                  <PageArrow
+                    icon={<ChevronLeft size={18} />}
                     disabled={currentPage === 1}
                     onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                   />
                   {[...Array(totalPages)].map((_, i) => (
-                    <PageNum 
-                      key={i + 1} 
+                    <PageNum
+                      key={i + 1}
                       active={currentPage === i + 1}
                       onClick={() => setCurrentPage(i + 1)}
                     >
                       {i + 1}
                     </PageNum>
                   ))}
-                  <PageArrow 
-                    icon={<ChevronRight size={18} />} 
+                  <PageArrow
+                    icon={<ChevronRight size={18} />}
                     disabled={currentPage === totalPages}
                     onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                   />
@@ -383,7 +387,8 @@ const UserManagement: React.FC = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <FormGroup label="Họ tên" name="name" placeholder="VD: Nguyễn Văn A" required />
                   <FormGroup label="Số điện thoại" name="phone" placeholder="090..." required />
-                  <FormGroup label="Email" name="email" type="email" placeholder="email@example.com" required />
+                  <FormGroup label="Email" name="email" type="email" placeholder="email@example.com" required autoComplete="none" />
+                  <FormGroup label="Mật khẩu" name="password" type="password" placeholder="Mật khẩu" required autoComplete="none" />
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Vai trò</label>
                     <select name="role" className="um-search-input" style={{ paddingLeft: '1rem' }}>
@@ -423,19 +428,19 @@ const UserManagement: React.FC = () => {
                   <DetailItem label="Mã người dùng" value={viewUser.id} readOnly />
                   {isEditing ? (
                     <>
-                      <FormGroup 
-                        label="Họ tên" 
-                        value={editData.fullName} 
-                        onChange={(e: any) => setEditData({ ...editData, fullName: e.target.value })} 
+                      <FormGroup
+                        label="Họ tên"
+                        value={editData.fullName}
+                        onChange={(e: any) => setEditData({ ...editData, fullName: e.target.value })}
                       />
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                         <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Vai trò</label>
-                        <select 
-                          className="um-search-input" 
+                        <select
+                          className="um-search-input"
                           style={{ paddingLeft: '1rem' }}
                           value={editData.role?.name}
-                          onChange={(e) => setEditData({ 
-                            ...editData, 
+                          onChange={(e) => setEditData({
+                            ...editData,
                             role: { id: getRoleId(e.target.value), name: e.target.value }
                           })}
                         >
@@ -446,8 +451,8 @@ const UserManagement: React.FC = () => {
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                         <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Giới tính</label>
-                        <select 
-                          className="um-search-input" 
+                        <select
+                          className="um-search-input"
                           style={{ paddingLeft: '1rem' }}
                           value={editData.gender}
                           onChange={(e) => setEditData({ ...editData, gender: e.target.value as any })}
@@ -457,15 +462,15 @@ const UserManagement: React.FC = () => {
                           <option value="OTHER">Khác</option>
                         </select>
                       </div>
-                      <FormGroup 
-                        label="Số điện thoại" 
-                        value={editData.phone} 
-                        onChange={(e: any) => setEditData({ ...editData, phone: e.target.value })} 
+                      <FormGroup
+                        label="Số điện thoại"
+                        value={editData.phone}
+                        onChange={(e: any) => setEditData({ ...editData, phone: e.target.value })}
                       />
-                      <FormGroup 
-                        label="Email" 
-                        value={editData.email} 
-                        onChange={(e: any) => setEditData({ ...editData, email: e.target.value })} 
+                      <FormGroup
+                        label="Email"
+                        value={editData.email}
+                        onChange={(e: any) => setEditData({ ...editData, email: e.target.value })}
                       />
                     </>
                   ) : (
@@ -482,22 +487,22 @@ const UserManagement: React.FC = () => {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem' }}>
                 {isEditing ? (
                   <>
-                    <button 
-                      onClick={() => setIsEditing(false)} 
+                    <button
+                      onClick={() => setIsEditing(false)}
                       style={{ padding: '0.75rem 1.5rem', borderRadius: '9999px', border: '1px solid #e2e8f0', background: 'white', fontWeight: 600, cursor: 'pointer' }}
                     >
                       Hủy
                     </button>
-                    <button 
-                      onClick={handleSaveEdit} 
+                    <button
+                      onClick={handleSaveEdit}
                       className="um-btn-primary"
                     >
                       Lưu thay đổi
                     </button>
                   </>
                 ) : (
-                  <button 
-                    onClick={() => setIsEditing(true)} 
+                  <button
+                    onClick={() => setIsEditing(true)}
                     className="um-btn-primary"
                   >
                     Chỉnh sửa thông tin
@@ -553,8 +558,8 @@ function DetailItem({ label, value, isBadge }: any) {
 
 function SidebarLink({ icon, label, to, isExpanded, active, onClick }: any) {
   return (
-    <NavLink 
-      to={to} 
+    <NavLink
+      to={to}
       onClick={onClick}
       className={`um-nav-item ${active ? 'active' : ''} ${isExpanded ? 'expanded' : 'collapsed'}`}
     >
@@ -565,9 +570,9 @@ function SidebarLink({ icon, label, to, isExpanded, active, onClick }: any) {
 
       <AnimatePresence>
         {isExpanded && (
-          <motion.span 
-            initial={{ opacity: 0, x: -10 }} 
-            animate={{ opacity: 1, x: 0 }} 
+          <motion.span
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -10 }}
             className="um-nav-label"
           >
@@ -591,7 +596,7 @@ function HeaderBtn({ icon, hasBadge }: any) {
 function ActionBtn({ icon, hoverColor, onClick }: any) {
   const [hover, setHover] = useState(false);
   return (
-    <button 
+    <button
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       onClick={onClick}
@@ -604,7 +609,7 @@ function ActionBtn({ icon, hoverColor, onClick }: any) {
 
 function PageNum({ children, active, onClick }: any) {
   return (
-    <button 
+    <button
       onClick={onClick}
       style={{ width: '36px', height: '36px', borderRadius: '50%', border: 'none', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', transition: 'all 0.2s', backgroundColor: active ? 'var(--mint-green)' : 'transparent', color: active ? 'white' : '#475569', boxShadow: active ? '0 10px 15px -3px rgba(109, 212, 180, 0.3)' : 'none' }}>
       {children}
@@ -614,8 +619,8 @@ function PageNum({ children, active, onClick }: any) {
 
 function PageArrow({ icon, disabled, onClick }: any) {
   return (
-    <button 
-      disabled={disabled} 
+    <button
+      disabled={disabled}
       onClick={onClick}
       style={{ width: '36px', height: '36px', borderRadius: '50%', border: 'none', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: disabled ? 'default' : 'pointer', color: '#94a3b8', opacity: disabled ? 0.3 : 1 }}>
       {icon}
