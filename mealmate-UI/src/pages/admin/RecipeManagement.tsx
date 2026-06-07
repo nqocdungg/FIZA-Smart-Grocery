@@ -353,7 +353,6 @@ const RecipeManagement: React.FC = () => {
         <header className="um-header">
           <div className="um-header-left">
             <h1 className="um-title">Quản lý món ăn</h1>
-            <p className="um-subtitle">Danh mục công thức nấu ăn của hệ thống</p>
           </div>
           <div className="um-header-right">
             <NotificationPanel variant="admin" />

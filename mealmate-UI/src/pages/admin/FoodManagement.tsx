@@ -211,7 +211,6 @@ const FoodManagement: React.FC = () => {
         <header className="um-header">
           <div className="um-header-left">
             <h1 className="um-title">Quản lý thực phẩm</h1>
-            <p className="um-subtitle">Danh mục nguyên liệu và thực phẩm hệ thống</p>
           </div>
           <div className="um-header-right">
             <NotificationPanel variant="admin" />

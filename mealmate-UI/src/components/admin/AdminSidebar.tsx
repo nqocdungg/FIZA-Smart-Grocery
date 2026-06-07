@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BarChart3, BookOpen, LogOut, Users, UtensilsCrossed } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import '@/components/layout/Sidebar.css';
 import iconLogo from '@/assets/icon/Icon-logo.svg';
+
+// Import ProfileModal từ thư mục layout (đi ra ngoài 1 cấp)
+import ProfileModal from '../layout/ProfileModal';
 
 const adminLinks = [
   { to: '/admin/users', label: 'Quản lý người dùng', icon: Users },
@@ -12,10 +15,87 @@ const adminLinks = [
   { to: '/admin/performance', label: 'Quản lý hiệu suất', icon: BarChart3 },
 ];
 
+const hasRealFamilyName = (value?: string | null) => {
+  return Boolean(
+    value &&
+    !value.includes("Đang tải") &&
+    !value.includes("Äang") &&
+    !value.includes("Chưa có gia đình") &&
+    !value.includes("ChÆ°a")
+  );
+};
+
 const AdminSidebar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout, user } = useAuth();
+  const { logout, user: userFromContext } = useAuth();
+  
+  // State quản lý việc đóng mở Profile Modal
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(false);
+
+  // ----------------------------------------------------
+  // LOGIC TRÍCH XUẤT DỮ LIỆU USER SANG PROFILE MODAL
+  // ----------------------------------------------------
+  let userFromLocalStorage = null;
+  const authUserString = localStorage.getItem("authUser");
+  if (authUserString) {
+    try {
+      userFromLocalStorage = JSON.parse(authUserString);
+    } catch (e) {
+      console.error("Lỗi parse authUser tại AdminSidebar:", e);
+    }
+  }
+
+  const baseAuthUser = userFromContext || userFromLocalStorage;
+
+  let refinedUserData = null;
+  if (baseAuthUser) {
+    const currentUserId = Number(baseAuthUser.id || baseAuthUser.userId);
+    const cachedMembersString = localStorage.getItem("familyMembersCache");
+    let foundFullProfile = null;
+
+    if (cachedMembersString) {
+      try {
+        const cachedMembers = JSON.parse(cachedMembersString);
+        if (Array.isArray(cachedMembers)) {
+          foundFullProfile = cachedMembers.find((m: any) => Number(m.id) === currentUserId);
+        }
+      } catch (e) {
+        console.error("Lỗi xử lý cache tại AdminSidebar:", e);
+      }
+    }
+
+    if (foundFullProfile) {
+      refinedUserData = {
+        id: foundFullProfile.id,
+        fullName: foundFullProfile.fullName,
+        roleName: foundFullProfile.roleName,
+        email: foundFullProfile.email,
+        phone: foundFullProfile.phone,
+        gender: foundFullProfile.gender,
+        avatarUrl: foundFullProfile.avatarUrl
+      };
+    } else {
+      refinedUserData = {
+        id: currentUserId,
+        fullName: baseAuthUser.fullName || baseAuthUser.full_name || baseAuthUser.name || "Admin",
+        roleName: "Admin",
+        email: baseAuthUser.email || "Chưa cập nhật",
+        phone: baseAuthUser.phone || "Chưa cập nhật",
+        gender: baseAuthUser.gender || "OTHER",
+        avatarUrl: baseAuthUser.avatarUrl || undefined
+      };
+    }
+  }
+
+  const rawName = baseAuthUser?.fullName || baseAuthUser?.full_name || baseAuthUser?.name || "Admin";
+  const cachedFamilyName = localStorage.getItem("currentFamilyName");
+  const displayFamilyName = hasRealFamilyName(cachedFamilyName)
+    ? cachedFamilyName as string
+    : hasRealFamilyName(baseAuthUser?.familyName)
+      ? baseAuthUser.familyName
+      : "Hệ thống";
+  // ----------------------------------------------------
 
   const handleLogout = () => {
     logout();
@@ -49,17 +129,25 @@ const AdminSidebar: React.FC = () => {
       </nav>
 
       <div className="sidebar-bottom">
-        <div className="sidebar-profile-section">
+        {/* Lắng nghe sự kiện click để mở Modal giống file Sidebar */}
+        <div 
+          className="sidebar-profile-section"
+          onClick={() => setIsProfileModalOpen(true)}
+          style={{ cursor: 'pointer' }}
+        >
           <div className="sidebar-profile">
             <div className="sidebar-avatar">
               <div className="sidebar-avatar-line" />
               <img
-                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user?.email || 'Admin')}`}
+                src={baseAuthUser?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(baseAuthUser?.email || 'Admin')}`}
                 alt="Admin"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent('Admin')}`;
+                }}
               />
             </div>
             <div className="sidebar-profile-text">
-              <p>{user?.fullName || 'Admin'}</p>
+              <p>{rawName}</p>
               <span>Admin</span>
             </div>
           </div>
@@ -77,6 +165,15 @@ const AdminSidebar: React.FC = () => {
           <span className="sidebar-menu-text">Đăng xuất</span>
         </button>
       </div>
+
+      {/* Gọi Component ProfileModal truyền đầy đủ props */}
+      <ProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        familyName={displayFamilyName}
+        isMe={true}
+        memberData={refinedUserData}
+      />
     </aside>
   );
 };

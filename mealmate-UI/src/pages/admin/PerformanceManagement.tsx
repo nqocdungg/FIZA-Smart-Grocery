@@ -331,7 +331,6 @@ const PerformanceManagement: React.FC = () => {
         <header className="um-header">
           <div className="um-header-left">
             <h1 className="um-title">Quản lý hiệu suất</h1>
-            <p className="um-subtitle">Theo dõi báo cáo và tối ưu hóa hệ thống</p>
           </div>
           <div className="um-header-right">
             <NotificationPanel variant="admin" />

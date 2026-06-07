@@ -223,7 +223,6 @@ const UserManagement: React.FC = () => {
         <header className="um-header">
           <div className="um-header-left">
             <h1 className="um-title">Quản lý người dùng</h1>
-            <p className="um-subtitle">Quản trị danh sách tài khoản toàn hệ thống</p>
           </div>
           <div className="um-header-right">
             <NotificationPanel variant="admin" />
