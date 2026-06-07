@@ -74,6 +74,12 @@ public class ShoppingController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Xóa danh sách thành công", null));
     }
 
+    @PostMapping("/{listId}/import-to-fridge")
+    public ResponseEntity<ApiResponse<Void>> importToFridge(@PathVariable Long listId) {
+        service.importToFridge(listId);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Nhập tủ lạnh thành công", null));
+    }
+
     @PatchMapping("/{listId}/note")
     public ResponseEntity<ApiResponse<Void>> updatePlanNote(
             @PathVariable Long listId,

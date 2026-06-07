@@ -24,6 +24,10 @@ import com.mealmate.shopping.repository.ShoppingListItemRepository;
 import com.mealmate.shopping.repository.ShoppingListRepository;
 import com.mealmate.user.repository.FamilyRepository;
 import com.mealmate.user.repository.UserRepository;
+import com.mealmate.fridge.model.FridgeItem;
+import com.mealmate.fridge.model.FridgeItemStatus;
+import com.mealmate.fridge.repository.FridgeItemRepository;
+import java.time.LocalDateTime;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +42,7 @@ public class ShoppingListService {
     private final UserRepository userRepository;
     private final FoodRepository foodRepository;
     private final FamilyRepository familyRepository;
+    private final FridgeItemRepository fridgeItemRepository;
 
     public List<ShoppingItemDTO> getPlanDetail(Long familyId, LocalDate date) {
         ShoppingList list = repository.findByFamilyIdAndPlannedDate(familyId, date).orElse(null);
@@ -281,6 +286,33 @@ public class ShoppingListService {
             item.setIsPurchased(isPurchased);
         }
         itemRepository.saveAll(itemsToUpdate);
+    }
+
+    @Transactional
+    public void importToFridge(Long listId) {
+        ShoppingList list = repository.findById(listId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy danh sách đi chợ."));
+
+        List<ShoppingListItem> itemsToImport = list.getItems().stream()
+                .filter(item -> Boolean.TRUE.equals(item.getIsPurchased()) && item.getImportedToFridgeAt() == null)
+                .collect(Collectors.toList());
+
+        for (ShoppingListItem item : itemsToImport) {
+            FridgeItem fridgeItem = new FridgeItem();
+            fridgeItem.setFamilyId(list.getFamilyId());
+            fridgeItem.setFoodId(item.getFood().getId());
+            fridgeItem.setQuantity(java.math.BigDecimal.valueOf(item.getQuantity()));
+            fridgeItem.setCustomName(item.getCustomName() != null ? item.getCustomName() : item.getFood().getName());
+            fridgeItem.setStatus(FridgeItemStatus.STORED);
+            fridgeItem.setAddedDate(LocalDate.now());
+
+            FridgeItem savedFridgeItem = fridgeItemRepository.save(fridgeItem);
+
+            item.setImportedToFridgeAt(LocalDateTime.now());
+            item.setFridgeItem(savedFridgeItem);
+        }
+
+        itemRepository.saveAll(itemsToImport);
     }
 
     public List<FrequentItemSuggestionDTO> getFrequentItems(Long familyId) {

@@ -190,6 +190,30 @@
     transform: translateY(0);
 }
 
+.import-fridge-btn {
+    background: #E0F2FE; 
+    color: #0369A1;   
+    padding: 10px 20px;
+    border-radius: 12px;
+    border: none;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.import-fridge-btn:hover {
+    background: #BAE6FD;
+    transform: translateY(-1px);
+}
+
+.import-fridge-btn:active {
+    transform: translateY(0);
+}
+
 .fab-edit-btn {
     width: 56px !important;
     height: 56px !important;

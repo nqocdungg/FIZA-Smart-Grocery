@@ -100,18 +100,27 @@ const ShoppingItemRow: React.FC<RowProps> = ({ item, mode, members = [], onUpdat
         );
     }
 
-    // --- GIAO DIỆN LÚC XEM CHI TIẾT (CÓ CHECKBOX) ---
+    // --- GIAO DIỆN XEM CHI TIẾT (CÓ CHECKBOX) ---
+    const isImported = !!(item.importedToFridgeAt || item.imported_to_fridge_at);
+
     return (
         <div className={`shopping-row-view ${item.isPurchased ? 'completed' : ''} ${isFadingOut ? 'fading-out' : ''}`}>
             <div
-                className={`checkbox ${item.isPurchased ? 'checked' : ''}`}
-                onClick={() => onToggleStatus?.(item.id)}
+                className={`checkbox ${item.isPurchased ? 'checked' : ''} ${isImported ? 'disabled' : ''}`}
+                onClick={() => {
+                    if (!isImported) {
+                        onToggleStatus?.(item.id);
+                    }
+                }}
             >
                 {item.isPurchased && <Check size={14} color="white" />}
             </div>
 
             <div className="food-info-display">
-                <span className="food-name-display">{item.foodName}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span className="food-name-display">{item.foodName}</span>
+                    {isImported && <span className="imported-badge">Đã trong tủ</span>}
+                </div>
                 <input
                     className="item-note-input"
                     type="text"
@@ -119,6 +128,7 @@ const ShoppingItemRow: React.FC<RowProps> = ({ item, mode, members = [], onUpdat
                     placeholder="Thêm lưu ý..."
                     onChange={(e) => setLocalNote(e.target.value)}
                     onBlur={handleDetailNoteBlur}
+                    disabled={isImported}
                 />
             </div>
 

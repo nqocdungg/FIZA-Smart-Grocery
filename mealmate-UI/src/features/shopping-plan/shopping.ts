@@ -47,6 +47,8 @@ export interface ShoppingListItem {
   orderNumber?: number;
   imported_to_fridge_at?: string;
   fridge_item_id?: number;
+  importedToFridgeAt?: string;
+  fridgeItemId?: number;
   order_number?: number;
 }
 

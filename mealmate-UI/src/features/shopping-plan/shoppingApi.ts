@@ -245,6 +245,15 @@ export const deleteShoppingList = async (listId: number): Promise<void> => {
   }
 };
 
+export const importToFridge = async (listId: number): Promise<void> => {
+  const response = await api.post<ApiResponse<void>>(
+    `/api/v1/shopping/${listId}/import-to-fridge`
+  );
+  if (!response.data.success) {
+    throw new Error(response.data.message || "Nhập tủ lạnh thất bại.");
+  }
+};
+
 export const updateShoppingListNote = async (
   listId: number,
   note: string,

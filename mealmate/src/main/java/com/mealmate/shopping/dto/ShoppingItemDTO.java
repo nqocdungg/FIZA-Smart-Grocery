@@ -15,4 +15,6 @@ public class ShoppingItemDTO {
     private String assigneeName;
     private Boolean isPurchased;
     private String note;
+    private java.time.LocalDateTime importedToFridgeAt;
+    private Long fridgeItemId;
 }

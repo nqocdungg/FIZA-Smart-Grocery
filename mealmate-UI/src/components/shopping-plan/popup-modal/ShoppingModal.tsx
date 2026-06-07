@@ -1,12 +1,12 @@
 import DatePicker from "@/components/common/DatePicker";
 import { useAuth } from "@/context/AuthContext";
-import { deleteShoppingList, getFamilyMembers, getPlanDetail, saveShoppingPlan, searchFoods, toggleItemStatus } from "@/features/shopping-plan/shoppingApi";
+import { deleteShoppingList, getFamilyMembers, getPlanDetail, importToFridge, saveShoppingPlan, searchFoods, toggleItemStatus } from "@/features/shopping-plan/shoppingApi";
 import { Edit3, Filter, Plus, Search, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
+import FrequentItems from "../FrequentItems";
 import AddItemPopover from "../popover-modal/AddItemPopover";
 import CategoryGroup from "./CategoryGroup";
-import FrequentItems from "../FrequentItems";
 import './ShoppingModal.css';
 
 interface ShoppingModalProps {
@@ -367,6 +367,34 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
         }
     };
 
+    const handleImportToFridge = async () => {
+        const listId = data?.listId;
+        if (!listId) {
+            toast.error("Không tìm thấy ID danh sách để nhập tủ lạnh.");
+            return;
+        }
+        try {
+            const loadToastId = toast.loading("Đang nhập thực phẩm vào tủ lạnh...");
+            await importToFridge(listId);
+            toast.success("Đã nhập thực phẩm vào tủ lạnh thành công! 🧺✨", { id: loadToastId });
+
+            const date = data.planned_date || data.plannedDate;
+            if (familyId && date) {
+                const updatedItems = await getPlanDetail(familyId, date);
+                setLocalItems(updatedItems || []);
+                if (data) {
+                    data.items = updatedItems || [];
+                }
+            }
+
+            if (onSuccess) {
+                onSuccess();
+            }
+        } catch (error: any) {
+            toast.error("Nhập tủ lạnh thất bại: " + error.message);
+        }
+    };
+
     const getTitle = () => {
         if (mode === 'DETAIL') return 'Chi tiết kế hoạch';
         if (mode === 'CREATE') {
@@ -417,7 +445,6 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
                                     </div>
                                 )}
                                 {searchTerm && <X size={14} className="clear-search" onClick={() => setSearchTerm('')} />}
-                                {/* {searchTerm && <X size={14} className="clear-search" onClick={() => setSearchTerm('')} />} */}
                             </div>
 
                             {/* 3. RENDER SEARCH RESULTS (Dropdown nổi) */}
@@ -456,7 +483,7 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
                             )}
                         </div>
                         <div className="filter-dropdown-container" ref={filterRef}>
-                            <button 
+                            <button
                                 className={`filter-btn ${filterStatus !== 'ALL' ? 'active' : ''}`}
                                 onClick={() => setShowFilterMenu(prev => !prev)}
                             >
@@ -464,19 +491,19 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
                             </button>
                             {showFilterMenu && (
                                 <div className="filter-menu-dropdown">
-                                    <div 
+                                    <div
                                         className={`filter-menu-item ${filterStatus === 'ALL' ? 'active' : ''}`}
                                         onClick={() => { setFilterStatus('ALL'); setShowFilterMenu(false); }}
                                     >
                                         Tất cả
                                     </div>
-                                    <div 
+                                    <div
                                         className={`filter-menu-item ${filterStatus === 'PENDING' ? 'active' : ''}`}
                                         onClick={() => { setFilterStatus('PENDING'); setShowFilterMenu(false); }}
                                     >
                                         Chưa mua
                                     </div>
-                                    <div 
+                                    <div
                                         className={`filter-menu-item ${filterStatus === 'DONE' ? 'active' : ''}`}
                                         onClick={() => { setFilterStatus('DONE'); setShowFilterMenu(false); }}
                                     >
@@ -485,7 +512,7 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
                                 </div>
                             )}
                         </div>
-                        <button 
+                        <button
                             className={`suggestions-toggle-btn ${showSuggestions ? 'active' : ''}`}
                             onClick={() => setShowSuggestions(prev => !prev)}
                             title="Bật/Tắt Gợi ý thực phẩm"
@@ -498,7 +525,6 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
                     </div>
                 </div>
 
-                {/* Content: Scrollable side-by-side columns layout */}
                 <div className="modal-body-layout">
                     {showSuggestions && (
                         <div className="modal-left-column">
@@ -509,7 +535,7 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
                             />
                         </div>
                     )}
-                    
+
                     <div className="modal-right-column">
                         <div className="modal-body-scroll">
                             {groupedItems && Object.keys(groupedItems).map(categoryName => (
@@ -548,7 +574,14 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
                 {/* Footer: Khác biệt theo Mode */}
                 <div className="modal-footer">
                     {mode === 'DETAIL' && isHousekeeper && (
-                        <button className="delete-list-btn" onClick={handleDeleteList}> <Trash2 size={16} />Xóa danh sách</button>
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <button className="delete-list-btn" onClick={handleDeleteList}> <Trash2 size={16} />Xóa danh sách</button>
+                            {localItems.some(item => item.isPurchased && !item.imported_to_fridge_at && !item.importedToFridgeAt) && (
+                                <button className="import-fridge-btn" onClick={handleImportToFridge}>
+                                    🧺 Nhập vào tủ lạnh
+                                </button>
+                            )}
+                        </div>
                     )}
 
                     <div className="footer-actions">

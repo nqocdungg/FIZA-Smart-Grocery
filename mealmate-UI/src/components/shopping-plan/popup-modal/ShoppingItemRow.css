@@ -200,3 +200,19 @@
     opacity: 0.5 !important;
     transition: opacity 1s ease;
 }
+
+.checkbox.disabled {
+    cursor: not-allowed;
+    background-color: #F1F5F9;
+    border-color: #CBD5E1;
+}
+
+.imported-badge {
+    background: #E0F2FE;
+    color: #0369A1;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-size: 10px;
+    font-weight: 700;
+    white-space: nowrap;
+}
