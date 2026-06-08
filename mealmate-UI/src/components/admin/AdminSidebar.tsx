@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BarChart3, BookOpen, LogOut, Users, UtensilsCrossed } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import '@/components/layout/Sidebar.css';
 import iconLogo from '@/assets/icon/Icon-logo.svg';
 
-// Import ProfileModal từ thư mục layout (đi ra ngoài 1 cấp)
 import ProfileModal from '../layout/ProfileModal';
 
 const adminLinks = [
@@ -25,28 +24,54 @@ const hasRealFamilyName = (value?: string | null) => {
   );
 };
 
+const getValidAvatar = (url: any) => {
+  if (!url || typeof url !== 'string' || url.trim() === '' || url === 'null' || url === 'undefined') {
+    return null;
+  }
+  return url;
+};
+
 const AdminSidebar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, user: userFromContext } = useAuth();
-  
-  // State quản lý việc đóng mở Profile Modal
   const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(false);
+  
+  // 🎯 State cục bộ quản lý chuỗi authUser để ép React re-render khi có cập nhật ảnh
+  const [localAuthUser, setLocalAuthUser] = useState<any>(null);
 
-  // ----------------------------------------------------
-  // LOGIC TRÍCH XUẤT DỮ LIỆU USER SANG PROFILE MODAL
-  // ----------------------------------------------------
-  let userFromLocalStorage = null;
-  const authUserString = localStorage.getItem("authUser");
-  if (authUserString) {
-    try {
-      userFromLocalStorage = JSON.parse(authUserString);
-    } catch (e) {
-      console.error("Lỗi parse authUser tại AdminSidebar:", e);
+  // Hàm đọc dữ liệu mới nhất từ tủ kính LocalStorage
+  const refreshUserCache = () => {
+    const authUserString = localStorage.getItem("authUser");
+    if (authUserString) {
+      try {
+        setLocalAuthUser(JSON.parse(authUserString));
+      } catch (e) {
+        console.error("Lỗi parse authUser tại AdminSidebar:", e);
+      }
     }
-  }
+  };
 
-  const baseAuthUser = userFromContext || userFromLocalStorage;
+  // 🎯 LẮNG NGHE ĐỒNG BỘ: Mỗi khi chuyển trang hoặc mở modal, tự động nạp lại cache mới nhất
+  useEffect(() => {
+    refreshUserCache();
+
+    // Lắng nghe chéo nếu sự thay đổi avatar diễn ra ở một tab/cửa sổ khác
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "authUser") {
+        refreshUserCache();
+      }
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, [location.pathname, isProfileModalOpen]);
+
+  const baseAuthUser = localAuthUser || userFromContext;
+
+  const rawAvatarFromDB = baseAuthUser?.avatarurl || baseAuthUser?.avatarUrl || baseAuthUser?.avatar_url || baseAuthUser?.avatar;
+  const rawAvatar = getValidAvatar(rawAvatarFromDB);
+  const rawName = baseAuthUser?.fullName || baseAuthUser?.full_name || baseAuthUser?.name || "Admin";
+  const fallbackAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(baseAuthUser?.email || 'Admin')}`;
 
   let refinedUserData = null;
   if (baseAuthUser) {
@@ -66,6 +91,7 @@ const AdminSidebar: React.FC = () => {
     }
 
     if (foundFullProfile) {
+      const cachedAvatar = foundFullProfile.avatarUrl || foundFullProfile.avatarurl;
       refinedUserData = {
         id: foundFullProfile.id,
         fullName: foundFullProfile.fullName,
@@ -73,29 +99,27 @@ const AdminSidebar: React.FC = () => {
         email: foundFullProfile.email,
         phone: foundFullProfile.phone,
         gender: foundFullProfile.gender,
-        avatarUrl: foundFullProfile.avatarUrl
+        avatarUrl: rawAvatar || getValidAvatar(cachedAvatar) || fallbackAvatar
       };
     } else {
       refinedUserData = {
         id: currentUserId,
-        fullName: baseAuthUser.fullName || baseAuthUser.full_name || baseAuthUser.name || "Admin",
+        fullName: rawName,
         roleName: "Admin",
         email: baseAuthUser.email || "Chưa cập nhật",
         phone: baseAuthUser.phone || "Chưa cập nhật",
         gender: baseAuthUser.gender || "OTHER",
-        avatarUrl: baseAuthUser.avatarUrl || undefined
+        avatarUrl: rawAvatar || fallbackAvatar
       };
     }
   }
 
-  const rawName = baseAuthUser?.fullName || baseAuthUser?.full_name || baseAuthUser?.name || "Admin";
   const cachedFamilyName = localStorage.getItem("currentFamilyName");
   const displayFamilyName = hasRealFamilyName(cachedFamilyName)
     ? cachedFamilyName as string
     : hasRealFamilyName(baseAuthUser?.familyName)
       ? baseAuthUser.familyName
       : "Hệ thống";
-  // ----------------------------------------------------
 
   const handleLogout = () => {
     logout();
@@ -103,7 +127,7 @@ const AdminSidebar: React.FC = () => {
   };
 
   return (
-    <aside className="sidebar">
+    <aside className="sidebar" onMouseEnter={refreshUserCache}>
       <div className="sidebar-logo-section">
         <div className="sidebar-logo">
           <div className="sidebar-logo-box">
@@ -129,20 +153,22 @@ const AdminSidebar: React.FC = () => {
       </nav>
 
       <div className="sidebar-bottom">
-        {/* Lắng nghe sự kiện click để mở Modal giống file Sidebar */}
         <div 
           className="sidebar-profile-section"
-          onClick={() => setIsProfileModalOpen(true)}
+          onClick={() => {
+            refreshUserCache(); // Cập nhật nóng trước khi mở Modal
+            setIsProfileModalOpen(true);
+          }}
           style={{ cursor: 'pointer' }}
         >
           <div className="sidebar-profile">
             <div className="sidebar-avatar">
               <div className="sidebar-avatar-line" />
               <img
-                src={baseAuthUser?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(baseAuthUser?.email || 'Admin')}`}
+                src={rawAvatar || fallbackAvatar}
                 alt="Admin"
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent('Admin')}`;
+                  (e.target as HTMLImageElement).src = fallbackAvatar;
                 }}
               />
             </div>
@@ -166,7 +192,6 @@ const AdminSidebar: React.FC = () => {
         </button>
       </div>
 
-      {/* Gọi Component ProfileModal truyền đầy đủ props */}
       <ProfileModal
         isOpen={isProfileModalOpen}
         onClose={() => setIsProfileModalOpen(false)}

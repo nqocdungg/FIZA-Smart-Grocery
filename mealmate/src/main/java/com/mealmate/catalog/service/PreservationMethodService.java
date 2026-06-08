@@ -19,4 +19,7 @@ public class PreservationMethodService {
     public PreservationMethod save(PreservationMethod entity) {
         return repository.save(entity);
     }
+    public PreservationMethod findByFoodId(Long foodId) {
+        return repository.findByFoodId(foodId).orElse(null);
+    }
 }

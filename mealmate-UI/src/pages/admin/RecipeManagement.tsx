@@ -11,7 +11,10 @@ import {
 import { AnimatePresence, motion } from 'motion/react';
 import React, { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import AdminSidebar from '../../components/admin/AdminSidebar';
+
+// 🎯 ĐỒNG BỘ: Thay đổi nhúng chân sang Sidebar hợp nhất nhận diện quyền hệ thống tự động
+import Sidebar from '../../components/layout/Sidebar';
+
 import SharedModal from '../../components/admin/Modal';
 import NotificationPanel from '../../components/common/NotificationPanel';
 import { useAuth } from '../../context/AuthContext';
@@ -42,9 +45,7 @@ export interface Recipe {
 
 const RecipeManagement: React.FC = () => {
   const { logout } = useAuth();
-  const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
-
   const [foodsCatalog, setFoodsCatalog] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -219,8 +220,8 @@ const RecipeManagement: React.FC = () => {
     }
   };
 
-  const handleAddRecipeImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleAddRecipeImageUpload = async (reactEvent: React.ChangeEvent<HTMLInputElement>) => {
+    const file = reactEvent.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) { alert('Chỉ chấp nhận file ảnh!'); return; }
     if (file.size > 8 * 1024 * 1024) { alert('Ảnh không được vượt quá 8 MB!'); return; }
@@ -332,7 +333,6 @@ const RecipeManagement: React.FC = () => {
     }
   };
 
-  // Helper dịch nhãn mức độ khó chuẩn tiếng Việt 🎯
   const getDifficultyLabel = (diff?: string) => {
     if (!diff) return 'Chưa xác định';
     switch (diff.toUpperCase()) {
@@ -345,7 +345,8 @@ const RecipeManagement: React.FC = () => {
 
   return (
     <div className="um-layout">
-      <AdminSidebar />
+      {/* 🎯 SỬA ĐỔI: Nhúng chân trực tiếp vào Sidebar hợp nhất phân quyền */}
+      <Sidebar />
 
       <div className="um-main unshifted">
         <header className="um-header">
@@ -563,7 +564,6 @@ const RecipeManagement: React.FC = () => {
                   <FormGroup label="Số người dự kiến" name="servings" type="number" placeholder="VD: 4" />
                   <FormGroup label="Calories" name="calories" type="number" placeholder="VD: 450" />
                   
-                  {/* 🎯 ĐÃ ĐỔI: Ô nhập tự do thành Dropdown select chọn mức độ ở Modal Thêm Mới */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Mức độ khó</label>
                     <select name="difficulty" className="um-search-input" style={{ paddingLeft: '1rem' }}>
@@ -680,7 +680,6 @@ const RecipeManagement: React.FC = () => {
                       <FormGroup label="Số người dự kiến" type="number" value={editData.servings ?? ''} onChange={(e: any) => setEditData({ ...editData, servings: e.target.value ? Number(e.target.value) : undefined })} />
                       <FormGroup label="Calories" type="number" value={editData.calories ?? ''} onChange={(e: any) => setEditData({ ...editData, calories: e.target.value ? Number(e.target.value) : undefined })} />
                       
-                      {/* 🎯 ĐÃ ĐỔI: Ô nhập tự do thành Dropdown select chọn mức độ ở Modal Chỉnh Sửa */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                         <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Mức độ khó</label>
                         <select className="um-search-input" value={editData.difficulty || 'MEDIUM'} onChange={(e: any) => setEditData({ ...editData, difficulty: e.target.value })} style={{ paddingLeft: '1rem' }}>
@@ -757,8 +756,6 @@ const RecipeManagement: React.FC = () => {
                         <DetailItem label="Thời gian dự kiến" value={viewRecipe.cookingTimeMinutes ? `${viewRecipe.cookingTimeMinutes} phút` : 'Chưa cập nhật'} />
                         <DetailItem label="Số người dự kiến" value={viewRecipe.servings ? `${viewRecipe.servings} người` : 'Chưa cập nhật'} />
                         <DetailItem label="Calories" value={viewRecipe.calories ? `${viewRecipe.calories} kcal` : 'Chưa cập nhật'} />
-                        
-                        {/* 🎯 ĐÃ ĐỔI: Nhãn hiển thị Tiếng Việt gọn gàng sạch sẽ */}
                         <DetailItem label="Mức độ khó" value={getDifficultyLabel(viewRecipe.difficulty)} />
                       </div>
 
@@ -841,7 +838,7 @@ const RecipeManagement: React.FC = () => {
   );
 };
 
-// --- Sidebar Helpers ---
+// --- Standard Helpers ---
 function FormGroup({ label, ...props }: any) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -861,21 +858,6 @@ function DetailItem({ label, value, isBadge }: any) {
         <span style={{ fontWeight: 600, color: '#1e293b' }}>{value || 'N/A'}</span>
       )}
     </div>
-  );
-}
-
-function SidebarLink({ icon, label, to, isExpanded, active, onClick }: any) {
-  return (
-    <NavLink to={to} onClick={onClick} className={`um-nav-item ${active ? 'active' : ''} ${isExpanded ? 'expanded' : 'collapsed'}`}>
-      <div className="um-nav-icon">{icon}</div>
-      <AnimatePresence>
-        {isExpanded && (
-          <motion.span initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="um-nav-label">
-            {label}
-          </motion.span>
-        )}
-      </AnimatePresence>
-    </NavLink>
   );
 }
 

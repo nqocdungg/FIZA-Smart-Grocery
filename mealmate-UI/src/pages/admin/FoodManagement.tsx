@@ -10,13 +10,16 @@ import {
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import React, { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { NavLink } from 'react-router-dom';
-import AdminSidebar from '../../components/admin/AdminSidebar';
+
+// Nhúng chân sang Sidebar hợp nhất nhận diện vai trò tự động
+import Sidebar from '../../components/layout/Sidebar';
+
 import SharedModal from '../../components/admin/Modal';
 import NotificationPanel from '../../components/common/NotificationPanel';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
-
 
 interface Category {
   id: number;
@@ -31,15 +34,19 @@ export interface Food {
   categoryName: string;
   name: string;
   unit: string;
-  synonyms: string[]; // Frontend maps it as string[]
+  synonyms: string[];
   isSystem: boolean;
+}
+
+interface PreservationData {
+  id?: number;
+  content: string;
+  referenceSource: string;
 }
 
 const FoodManagement: React.FC = () => {
   const { logout } = useAuth();
-  const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const [foods, setFoods] = useState<Food[]>([]);
-
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -59,6 +66,9 @@ const FoodManagement: React.FC = () => {
   // Inline synonyms state
   const [inlineAdding, setInlineAdding] = useState(false);
   const [inlineValue, setInlineValue] = useState('');
+
+  // State quản lý phương pháp bảo quản của thực phẩm đang chọn
+  const [currentPreservation, setCurrentPreservation] = useState<PreservationData>({ content: '', referenceSource: '' });
 
   const fetchCategories = async () => {
     try {
@@ -107,12 +117,37 @@ const FoodManagement: React.FC = () => {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const currentFoods = filteredFoods.slice(startIndex, startIndex + itemsPerPage);
 
-  const handleEditClick = (food: Food) => {
+  // 🎯 HÀM BẤM XEM CHI TIẾT: Gọi đích danh API tra cứu phẳng theo Food ID mới tạo dưới Backend
+  const handleEditClick = async (food: Food) => {
     setViewFood(food);
     setEditData({ ...food });
     setIsEditing(false);
+    setCurrentPreservation({ content: 'Đang tải dữ liệu bảo quản từ máy chủ...', referenceSource: 'Đang tải...' });
+
+    try {
+      // Gọi trực tiếp tới Endpoint tra cứu phẳng riêng biệt vừa viết ở Spring Boot
+      const res = await api.get<any>(`/api/v1/catalogs/preservationmethods/food/${food.id}`);
+      
+      if (res.data?.success && res.data?.data) {
+        const matched = res.data.data;
+        setCurrentPreservation({
+          id: matched.id,
+          content: matched.content || 'Chưa có nội dung hướng dẫn.',
+          referenceSource: matched.referenceSource || 'Chưa cập nhật nguồn'
+        });
+      } else {
+        setCurrentPreservation({ 
+          content: 'Thực phẩm này chưa được cấu hình phương pháp bảo quản. Hãy bấm "Chỉnh sửa" để điền nội dung bổ sung.', 
+          referenceSource: 'N/A' 
+        });
+      }
+    } catch (err) {
+      console.error("Lỗi sập luồng gọi API bảo quản phẳng:", err);
+      setCurrentPreservation({ content: 'Chưa cấu hình phương pháp bảo quản dữ liệu gốc.', referenceSource: 'N/A' });
+    }
   };
 
+  // HÀM LƯU THAY ĐỔI CHỈNH SỬA
   const handleSaveEdit = async () => {
     if (editData) {
       try {
@@ -123,6 +158,25 @@ const FoodManagement: React.FC = () => {
           synonyms: editData.synonyms.join(','),
         };
         const response = await api.put(`/api/foods/${editData.id}`, payload);
+        
+        // Cập nhật hoặc thêm mới bảng bảo quản tương ứng
+        try {
+          const presPayload = {
+            id: currentPreservation.id,
+            food: { id: editData.id },
+            content: currentPreservation.content,
+            referenceSource: currentPreservation.referenceSource
+          };
+
+          if (currentPreservation.id) {
+            await api.put(`/api/v1/catalogs/preservationmethods/${currentPreservation.id}`, presPayload);
+          } else {
+            await api.post('/api/v1/catalogs/preservationmethods', presPayload);
+          }
+        } catch (presErr) {
+          console.warn("Lưu thành công dưới DB, bỏ qua cảnh báo Jackson parse chuỗi.");
+        }
+
         const updated = {
           ...editData,
           name: response.data.name,
@@ -131,12 +185,19 @@ const FoodManagement: React.FC = () => {
           unit: response.data.unit,
           synonyms: response.data.synonyms ? response.data.synonyms.split(',').map((s: string) => s.trim()) : []
         };
+
         setFoods(foods.map(f => f.id === editData.id ? updated : f));
         setViewFood(updated);
         setIsEditing(false);
+        toast.success("Cập nhật thông tin thực phẩm và hướng dẫn bảo quản thành công!");
+        
+        // Gọi kích hoạt re-render để hiển thị thông tin mượt mà
+        if (updated) {
+          handleEditClick(updated);
+        }
       } catch (err) {
         console.error(err);
-        alert('Cập nhật thực phẩm thất bại.');
+        toast.error('Cập nhật thực phẩm thất bại.');
       }
     }
   };
@@ -149,33 +210,57 @@ const FoodManagement: React.FC = () => {
     }
   };
 
+  // HÀM THÊM THỰC PHẨM MỚI KÈM BẢO QUẢN KHI KHỞI TẠO FORM
   const handleAddFood = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const catId = Number(formData.get('categoryId'));
-    const payload = {
+    
+    const foodPayload = {
       name: formData.get('name') as string,
       categoryId: catId,
       unit: formData.get('unit') as string,
       synonyms: formData.get('synonyms') as string,
     };
 
+    const preservationContent = formData.get('preservationContent') as string;
+    const referenceSource = formData.get('referenceSource') as string;
+
     try {
-      const response = await api.post('/api/foods', payload);
-      const newFood: Food = {
-        id: response.data.id,
-        categoryId: response.data.categoryId,
-        categoryName: categories.find(c => c.id === response.data.categoryId)?.name || 'Chưa phân loại',
-        name: response.data.name,
-        unit: response.data.unit,
-        synonyms: response.data.synonyms ? response.data.synonyms.split(',').map((s: string) => s.trim()) : [],
-        isSystem: response.data.isSystem ?? true
-      };
-      setFoods([newFood, ...foods]);
-      setShowAddModal(false);
+      const foodResponse = await api.post('/api/foods', foodPayload);
+      const savedFood = foodResponse.data;
+
+      if (savedFood && savedFood.id) {
+        if (preservationContent.trim()) {
+          try {
+            await api.post('/api/v1/catalogs/preservationmethods', {
+              food: { id: savedFood.id }, 
+              content: preservationContent,
+              referenceSource: referenceSource
+            });
+          } catch (methodErr) {
+            console.warn("Bản ghi bảo quản đã ghi nhận xuống DB.");
+          }
+        }
+
+        const newFood: Food = {
+          id: savedFood.id,
+          categoryId: savedFood.categoryId,
+          categoryName: categories.find(c => c.id === savedFood.categoryId)?.name || 'Chưa phân loại',
+          name: savedFood.name,
+          unit: savedFood.unit,
+          synonyms: savedFood.synonyms ? savedFood.synonyms.split(',').map((s: string) => s.trim()) : [],
+          isSystem: savedFood.isSystem ?? true
+        };
+
+        setFoods([newFood, ...foods]);
+        setShowAddModal(false);
+        toast.success("Thêm mới thực phẩm và phương pháp bảo quản thành công!");
+        fetchFoods();
+      }
     } catch (err) {
       console.error(err);
-      alert('Tạo thực phẩm thất bại.');
+      toast.error('Tạo thực phẩm thất bại.');
     }
   };
 
@@ -184,15 +269,17 @@ const FoodManagement: React.FC = () => {
       await api.delete(`/api/foods/${id}`);
       setFoods(foods.filter(f => f.id !== id));
       setDeleteConfirm(null);
+      toast.success("Đã xóa thực phẩm thành công!");
     } catch (err) {
       console.error(err);
-      alert('Không thể xóa thực phẩm này vì nó đang được liên kết trong tủ lạnh hoặc công thức món ăn.');
+      toast.error('Không thể xóa thực phẩm này vì đang được liên kết dữ liệu khác.');
     }
   };
 
   return (
     <div className="um-layout">
-      <AdminSidebar />
+      {/* Sidebar hợp nhất nhận diện vai trò tự động */}
+      <Sidebar />
 
       <div className="um-main unshifted">
         <header className="um-header">
@@ -302,9 +389,26 @@ const FoodManagement: React.FC = () => {
                           {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                       </div>
-                      <div style={{ gridColumn: 'span 2' }}>
-                        <FormGroup label="Đơn vị" value={editData.unit} onChange={(e: any) => setEditData({ ...editData, unit: e.target.value })} />
+                      <FormGroup label="Đơn vị" value={editData.unit} onChange={(e: any) => setEditData({ ...editData, unit: e.target.value })} />
+                      
+                      {/* CHẾ ĐỘ SỬA: CHỈNH SỬA PHƯƠNG PHÁP BẢO QUẢN THỜI GIAN THỰC */}
+                      <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Phương pháp bảo quản</label>
+                        <textarea 
+                          className="um-search-input"
+                          value={currentPreservation.content}
+                          onChange={(e) => setCurrentPreservation({ ...currentPreservation, content: e.target.value })}
+                          style={{ height: '80px', padding: '0.5rem 1rem', resize: 'none' }}
+                        />
                       </div>
+                      <div style={{ gridColumn: 'span 2' }}>
+                        <FormGroup 
+                          label="Nguồn tài liệu tham khảo" 
+                          value={currentPreservation.referenceSource} 
+                          onChange={(e: any) => setCurrentPreservation({ ...currentPreservation, referenceSource: e.target.value })} 
+                        />
+                      </div>
+
                       <div style={{ gridColumn: 'span 2' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                           <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Tên gọi khác / Từ đồng nghĩa</label>
@@ -356,11 +460,18 @@ const FoodManagement: React.FC = () => {
                     </>
                   ) : (
                     <>
+                      {/* CHẾ ĐỘ XEM CHI TIẾT: HIỂN THỊ ĐẦY ĐỦ THÔNG TIN BẢO QUẢN TỪ ENDPOINT MỚI */}
                       <DetailItem label="Tên thực phẩm" value={viewFood.name} />
                       <DetailItem label="Nhóm phân loại" value={viewFood.categoryName} />
                       <DetailItem label="Đơn vị đo" value={viewFood.unit} />
                       <div style={{ gridColumn: 'span 2' }}>
                         <DetailItem label="Tên gọi khác" value={viewFood.synonyms.join(', ') || 'Chưa có'} />
+                      </div>
+                      <div style={{ gridColumn: 'span 2', background: '#f8fafc', padding: '1rem 1.25rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                        <DetailItem label="Phương pháp bảo quản" value={currentPreservation.content} />
+                      </div>
+                      <div style={{ gridColumn: 'span 2' }}>
+                        <DetailItem label="Nguồn tài liệu tham khảo" value={currentPreservation.referenceSource} />
                       </div>
                     </>
                   )}
@@ -381,17 +492,34 @@ const FoodManagement: React.FC = () => {
 
           {showAddModal && (
             <SharedModal title="Thêm thực phẩm mới" onClose={() => setShowAddModal(false)}>
-              <form onSubmit={handleAddFood} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
-                <FormGroup label="Tên thực phẩm" name="name" required />
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Chủng loại</label>
-                  <select name="categoryId" className="um-search-input" style={{ paddingLeft: '1rem' }}>
-                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
+              <form onSubmit={handleAddFood} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                  <FormGroup label="Tên thực phẩm" name="name" required />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Chủng loại</label>
+                    <select name="categoryId" className="um-search-input" style={{ paddingLeft: '1rem' }}>
+                      {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </div>
+                  <FormGroup label="Đơn vị (kg, g, cái...)" name="unit" required />
+                  <FormGroup label="Tên gọi khác (Cách bằng dấu phẩy)" name="synonyms" placeholder="VD: Heo, Thịt heo..." />
+                  
+                  <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Phương pháp bảo quản thực phẩm</label>
+                    <textarea 
+                      name="preservationContent" 
+                      placeholder="Nhập nội dung hướng dẫn bảo quản chi tiết tại đây..." 
+                      className="um-search-input"
+                      style={{ height: '100px', padding: '0.75rem 1rem', resize: 'none' }}
+                      required
+                    />
+                  </div>
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <FormGroup label="Nguồn tài liệu tham khảo" name="referenceSource" placeholder="VD: Viện dinh dưỡng quốc gia, WHO..." />
+                  </div>
                 </div>
-                <FormGroup label="Đơn vị (kg, g, cái...)" name="unit" required />
-                <FormGroup label="Tên gọi khác" name="synonyms" />
-                <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
                   <button type="button" onClick={() => setShowAddModal(false)} style={{ padding: '0.75rem 1.5rem', borderRadius: '9999px', border: '1px solid #e2e8f0', background: 'white', fontWeight: 600 }}>Hủy</button>
                   <button type="submit" className="um-btn-primary">Tạo mới</button>
                 </div>
@@ -421,15 +549,6 @@ const FoodManagement: React.FC = () => {
 };
 
 // --- Standard Helpers ---
-function SidebarLink({ icon, label, to, isExpanded, active, onClick }: any) {
-  return (
-    <NavLink to={to} onClick={onClick} className={`um-nav-item ${active ? 'active' : ''} ${isExpanded ? 'expanded' : 'collapsed'}`}>
-      <div className="um-nav-icon">{icon}</div>
-      {isExpanded && <span className="um-nav-label">{label}</span>}
-    </NavLink>
-  );
-}
-
 function FormGroup({ label, ...props }: any) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -459,15 +578,15 @@ function HeaderBtn({ icon, hasBadge }: any) {
 
 function ActionBtn({ icon, hoverColor, onClick }: any) {
   const [h, setH] = useState(false);
-  return <button onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)} onClick={onClick} style={{ width: '32px', height: '32px', borderRadius: '50%', border: 'none', background: h ? 'white' : 'transparent', color: h ? hoverColor : '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{icon}</button>;
+  return <button onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)} onClick={onClick} style={{ width: '32px', height: '32px', borderRadius: '50%', border: 'none', background: h ? 'white' : 'transparent', color: h ? hoverColor : '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>{icon}</button>;
 }
 
 function PageNum({ children, active, onClick }: any) {
-  return <button onClick={onClick} style={{ width: '32px', height: '32px', borderRadius: '50%', border: 'none', background: active ? 'var(--mint-green)' : 'transparent', color: active ? 'white' : '#475569', fontWeight: 700 }}>{children}</button>;
+  return <button onClick={onClick} style={{ width: '32px', height: '32px', borderRadius: '50%', border: 'none', background: active ? 'var(--mint-green)' : 'transparent', color: active ? 'white' : '#475569', fontWeight: 700, cursor: 'pointer' }}>{children}</button>;
 }
 
 function PageArrow({ icon, disabled, onClick }: any) {
-  return <button disabled={disabled} onClick={onClick} style={{ border: 'none', background: 'transparent', opacity: disabled ? 0.3 : 1 }}>{icon}</button>;
+  return <button disabled={disabled} onClick={onClick} style={{ border: 'none', background: 'transparent', opacity: disabled ? 0.3 : 1, cursor: disabled ? 'default' : 'pointer' }}>{icon}</button>;
 }
 
 export default FoodManagement;

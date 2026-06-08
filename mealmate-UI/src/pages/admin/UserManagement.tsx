@@ -11,14 +11,16 @@ import { AnimatePresence, motion } from 'motion/react';
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { NavLink } from 'react-router-dom';
-import AdminSidebar from '../../components/admin/AdminSidebar';
+
+// Sử dụng Sidebar hợp nhất nhận diện vai trò tự động
+import Sidebar from '../../components/layout/Sidebar';
+
 import SharedModal from '../../components/admin/Modal';
 import ProfileModal from '../../components/layout/ProfileModal';
 import NotificationPanel from '../../components/common/NotificationPanel';
 import { useAuth } from '../../context/AuthContext';
 import { AUTH_ROLES, getAuthRoleName, getRoleId, getRoleLabel } from '../../features/auth/role';
 import api from '../../services/api';
-
 
 interface Role {
   id: number;
@@ -61,6 +63,7 @@ const readUsersResponse = (payload: any): User[] => {
         ...user,
         id: Number(user.id ?? 0),
         fullName: String(user.fullName ?? user.full_name ?? ''),
+        avatarUrl: user.avatarUrl || user.avatarurl || user.avatar_url || undefined,
         email: String(user.email ?? ''),
         role,
         roleName: typeof rawRole === 'string' ? rawRole : rawRole?.name,
@@ -69,7 +72,7 @@ const readUsersResponse = (payload: any): User[] => {
 };
 
 const UserManagement: React.FC = () => {
-  const { logout, user: loggedInAdmin } = useAuth(); // Trích xuất thông tin admin đang đăng nhập
+  const { logout, user: loggedInAdmin } = useAuth(); 
   const [users, setUsers] = useState<User[]>([]);
 
   const [isLoading, setIsLoading] = useState(false);
@@ -150,57 +153,80 @@ const UserManagement: React.FC = () => {
 
   const handleEditClick = (user: User) => {
     setViewUser(user);
-    setShowProfileModal(true); // Cứ bấm vào mắt là kích hoạt hiện ProfileModal lên
+    setShowProfileModal(true); 
   };
 
+  // 🎯 TẬP TRUNG XỬ LÝ: Bắn payload thô sang Endpoint Đăng ký hệ thống chung của dự án
   const handleAddUser = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const roleName = formData.get('role') as string;
+    const inputPassword = formData.get('password') as string;
+    const selectedGender = formData.get('gender') as string;
 
-    const newUser = {
+    const payload = {
       fullName: formData.get('name') as string,
       email: formData.get('email') as string,
       phone: formData.get('phone') as string,
-      gender: formData.get('gender') as string,
-      passwordHash: 'dummy_hash', // Mật khẩu tạm thời cho admin tạo
-      role: {
-        id: getRoleId(roleName),
-        name: roleName
-      }
+      gender: selectedGender, 
+      password: inputPassword, // Chuỗi mật khẩu thô chuẩn luồng RegisterRequest
     };
 
     try {
-      const response = await api.post('/api/v1/users/users', newUser);
-      if (response.data?.success) {
-        const createdUser = response.data.data || response.data;
-        setUsers([createdUser, ...users]);
+      // 🚀 BẮN THẲNG QUA ENDPOINT REGISTER CỦA DỰ ÁN ĐỂ TỰ ĐỘNG BĂM MẬT KHẨU VÀ TỰ ĐỘNG TẠO LUÔN GIA ĐÌNH MẶC ĐỊNH
+      const response = await api.post('/api/auth/register', payload);
+      
+      if (response.data?.success || response.status === 200 || response.status === 21) {
+        
+        // Nếu vai trò Admin gán cho người dùng này khác vai trò HOUSEKEEPER mặc định của luồng register, 
+        // Admin sẽ thực hiện thêm một lệnh phụ nhỏ để đồng bộ cập nhật Role ID/Role Name của người dùng lên DB.
+        const createdUserEmail = payload.email;
+        
+        if (roleName !== AUTH_ROLES.HOUSEKEEPER) {
+          try {
+            // Quét tìm thông tin User thô vừa sinh ra để bóc tách lấy ID thật
+            const userSearchRes = await api.get(`/api/v1/users/users/search-member?keyword=${createdUserEmail}`);
+            if (userSearchRes.data?.success && userSearchRes.data?.data) {
+              const generatedId = userSearchRes.data.data.id;
+              
+              // Gọi lệnh cập nhật đè quyền hệ thống của Admin lên tài khoản này
+              await api.put(`/api/v1/users/users/${generatedId}`, {
+                ...userSearchRes.data.data,
+                role: {
+                  id: getRoleId(roleName),
+                  name: roleName
+                }
+              });
+            }
+          } catch (updateRoleErr) {
+            console.error("Lỗi đồng bộ gán đè quyền Admin lên tài khoản mới:", updateRoleErr);
+          }
+        }
+
         setShowAddModal(false);
-        toast.success("Thêm người dùng mới thành công!");
+        toast.success("Tạo người dùng mới qua luồng mã hóa hệ thống thành công!");
+        fetchUsers(); // Tải lại bảng để đồng bộ dữ liệu chuẩn đét hiển thị lên màn hình
       }
     } catch (err: any) {
-      console.error("Lỗi chi tiết:", err);
+      console.error("Lỗi chi tiết khi gọi luồng Register:", err);
       let errorMsg = "Lỗi khi thêm người dùng";
       if (err.response && err.response.data) {
         errorMsg = err.response.data.message || err.response.data.error || errorMsg;
       } else if (err.message) {
         errorMsg = err.message;
       }
-
       toast.error(errorMsg);
     }
   };
 
-  // Trích xuất ID admin đăng nhập bằng phương thức an toàn để so sánh
   const myAdminData = loggedInAdmin as any;
   const loggedInAdminId = Number(myAdminData?.id || myAdminData?.userId || 0);
 
   return (
     <div className="um-layout">
-      {/* Sidebar - Consistent with RecipeManagement */}
-      <AdminSidebar />
+      {/* Sidebar hợp nhất nhận diện vai trò tự động */}
+      <Sidebar />
 
-      {/* Main Content */}
       <div className="um-main unshifted">
         <header className="um-header">
           <div className="um-header-left">
@@ -215,7 +241,6 @@ const UserManagement: React.FC = () => {
         <div className="um-main-container">
           <main className="um-content">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="um-card">
-              {/* Toolbar Section */}
               <div className="um-toolbar-sticky">
                 <div className="um-toolbar-controls">
                   <div className="um-search-container">
@@ -226,7 +251,7 @@ const UserManagement: React.FC = () => {
                       value={searchQuery}
                       onChange={(e) => {
                         setSearchQuery(e.target.value);
-                        setCurrentPage(1); // Reset to page 1 on search
+                        setCurrentPage(1); 
                       }}
                     />
                   </div>
@@ -237,7 +262,7 @@ const UserManagement: React.FC = () => {
                       value={roleFilter}
                       onChange={(e) => {
                         setRoleFilter(e.target.value);
-                        setCurrentPage(1); // Reset to page 1 on filter
+                        setCurrentPage(1); 
                       }}
                     >
                       <option value={ROLE_FILTER_ALL}>Tất cả</option>
@@ -315,13 +340,6 @@ const UserManagement: React.FC = () => {
                         </td>
                       </tr>
                     ))}
-                    {currentUsers.length === 0 && (
-                      <tr>
-                        <td colSpan={6} style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>
-                          Không tìm thấy người dùng phù hợp
-                        </td>
-                      </tr>
-                    )}
                   </tbody>
                 </table>
               </div>
@@ -366,7 +384,7 @@ const UserManagement: React.FC = () => {
                   <FormGroup label="Họ tên" name="name" placeholder="VD: Nguyễn Văn A" required />
                   <FormGroup label="Số điện thoại" name="phone" placeholder="090..." required />
                   <FormGroup label="Email" name="email" type="email" placeholder="email@example.com" required autoComplete="none" />
-                  <FormGroup label="Mật khẩu" name="password" type="password" placeholder="Mật khẩu" required autoComplete="none" />
+                  <FormGroup label="Mật khẩu" name="password" type="password" placeholder="Mật khẩu ít nhất 6 ký tự" minLength={6} required autoComplete="none" />
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Vai trò</label>
                     <select name="role" className="um-search-input" style={{ paddingLeft: '1rem' }}>
@@ -412,7 +430,6 @@ const UserManagement: React.FC = () => {
             </SharedModal>
           )}
 
-          {/* GIAO DIỆN PROFILE MODAL MỚI CHO TẤT CẢ NGƯỜI DÙNG KHI BẤM VÀO MẮT */}
           {showProfileModal && viewUser && (
             <ProfileModal
               isOpen={showProfileModal}
@@ -421,7 +438,7 @@ const UserManagement: React.FC = () => {
                 setViewUser(null);
               }}
               familyName={viewUser.familyName || "Hệ thống"}
-              isMe={Number(viewUser.id) === loggedInAdminId} // Trùng ID admin thì mở quyền sửa (true), người khác thì khóa chỉ cho xem (false)
+              isMe={Number(viewUser.id) === loggedInAdminId} 
               memberData={{
                 id: viewUser.id,
                 fullName: viewUser.fullName,
@@ -439,7 +456,7 @@ const UserManagement: React.FC = () => {
   );
 };
 
-// --- Sidebar Helpers ---
+// --- Helpers ---
 function FormGroup({ label, ...props }: any) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -449,48 +466,21 @@ function FormGroup({ label, ...props }: any) {
   );
 }
 
-function DetailItem({ label, value, isBadge }: any) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-      <span style={{ fontSize: '10px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>{label}</span>
-      {isBadge ? (
-        <span className="um-role-badge" style={{ alignSelf: 'flex-start' }}>{value}</span>
-      ) : (
-        <span style={{ fontWeight: 600, color: '#1e293b' }}>{value || 'N/A'}</span>
-      )}
-    </div>
-  );
-}
-
-function SidebarLink({ icon, label, to, isExpanded, active, onClick }: any) {
-  return (
-    <NavLink
-      to={to}
-      onClick={onClick}
-      className={`um-nav-item ${active ? 'active' : ''} ${isExpanded ? 'expanded' : 'collapsed'}`}
-    >
-      <div className="um-nav-icon">
-        {icon}
-      </div>
-      <AnimatePresence>
-        {isExpanded && (
-          <motion.span
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -10 }}
-            className="um-nav-label"
-          >
-            {label}
-          </motion.span>
-        )}
-      </AnimatePresence>
-    </NavLink>
-  );
-}
-
 function HeaderBtn({ icon, hasBadge }: any) {
   return (
-    <button style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'white', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', position: 'relative', transition: 'box-shadow 0.2s' }}>
+    <button style={{ 
+      width: '40px', 
+      height: '40px', 
+      borderRadius: '50%', 
+      backgroundColor: 'white', 
+      border: 'none', 
+      display: 'flex', 
+      alignItems: 'center', 
+      justifyContent: 'center', 
+      cursor: 'pointer', 
+      position: 'relative', 
+      transition: 'box-shadow 0.2s' 
+    }}>
       {icon}
       {hasBadge && <span style={{ position: 'absolute', top: '10px', right: '10px', width: '8px', height: '8px', backgroundColor: '#ef4444', borderRadius: '50%', border: '2px solid #F0F4F2' }} />}
     </button>
