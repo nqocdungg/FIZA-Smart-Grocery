@@ -50,6 +50,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.math.MathContext;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -150,8 +151,10 @@ public class RecommendationService {
                     .recipeId(recipe.getRecipeId())
                     .recipeName(recipe.getRecipeName())
                     .imageUrl(recipe.getImageUrl())
+                    .difficulty(recipe.getDifficulty())
                     .score(score.finalScore())
                     .matchPercent(score.matchPercent())
+                    .expiryPriorityScore(score.expiryPriorityScore())
                     .availableIngredients(score.availableIngredients())
                     .missingIngredients(score.missingIngredients())
                     .reasons(buildRecommendationReasons(score, recipe.getPreferredMealTime(), normalizedMealType))
@@ -159,8 +162,10 @@ public class RecommendationService {
         }
 
         List<RecipeRecommendationResponse> topRecommendations = recommendations.stream()
-                .sorted(Comparator.comparing(RecipeRecommendationResponse::getScore).reversed()
-                        .thenComparing(RecipeRecommendationResponse::getMatchPercent, Comparator.reverseOrder())
+                .sorted(Comparator.comparing(RecipeRecommendationResponse::getMatchPercent, Comparator.reverseOrder())
+                        .thenComparing(RecipeRecommendationResponse::getExpiryPriorityScore, Comparator.reverseOrder())
+                        .thenComparingInt(response -> difficultyRank(response.getDifficulty()))
+                        .thenComparing(RecipeRecommendationResponse::getScore, Comparator.reverseOrder())
                         .thenComparing(RecipeRecommendationResponse::getRecipeId))
                 .limit(top)
                 .toList();
@@ -209,16 +214,19 @@ public class RecommendationService {
 
         for (RecipeIngredientNeedProjection ingredient : ingredients) {
             FridgeStockSnapshot stock = fridgeItems.get(ingredient.getFoodId());
-            BigDecimal availableQty = stock == null ? BigDecimal.ZERO : defaultBigDecimal(stock.availableQuantity());
             BigDecimal requiredQty = defaultBigDecimal(ingredient.getRequiredQuantity());
+            BigDecimal availableQty = stock == null
+                    ? BigDecimal.ZERO
+                    : convertQuantity(stock.availableQuantity(), stock.unit(), ingredient.getUnit());
+            BigDecimal comparableAvailableQty = availableQty == null ? BigDecimal.ZERO : availableQty;
 
-            if (availableQty.compareTo(requiredQty) >= 0) {
+            if (comparableAvailableQty.compareTo(requiredQty) >= 0) {
                 matchedIngredientCount++;
                 availableIngredients.add(IngredientAvailabilityDto.builder()
                         .foodId(ingredient.getFoodId())
                         .name(ingredient.getFoodName())
                         .requiredQuantity(requiredQty)
-                        .availableQuantity(availableQty)
+                        .availableQuantity(comparableAvailableQty)
                         .unit(resolveUnit(ingredient.getUnit(), stock == null ? null : stock.unit()))
                         .build());
             } else {
@@ -226,7 +234,7 @@ public class RecommendationService {
                         .foodId(ingredient.getFoodId())
                         .name(ingredient.getFoodName())
                         .requiredQuantity(requiredQty)
-                        .missingQuantity(requiredQty.subtract(availableQty).max(BigDecimal.ZERO))
+                        .missingQuantity(requiredQty.subtract(comparableAvailableQty).max(BigDecimal.ZERO))
                         .unit(resolveUnit(ingredient.getUnit(), stock == null ? null : stock.unit()))
                         .build());
             }
@@ -403,8 +411,10 @@ public class RecommendationService {
                 .filter(candidate -> selectedRecipeDates.getOrDefault(candidate.getRecipeId(), List.of()).stream()
                         .noneMatch(date::equals))
                 .filter(candidate -> !selectedRecipeNamesByDate.getOrDefault(date, Set.of()).contains(normalizeRecipeNameKey(candidate.getRecipeName())))
-                .sorted(Comparator.comparing(RecipeRecommendationResponse::getScore).reversed()
-                        .thenComparing(RecipeRecommendationResponse::getMatchPercent, Comparator.reverseOrder())
+                .sorted(Comparator.comparing(RecipeRecommendationResponse::getMatchPercent, Comparator.reverseOrder())
+                        .thenComparing(RecipeRecommendationResponse::getExpiryPriorityScore, Comparator.reverseOrder())
+                        .thenComparingInt(response -> difficultyRank(response.getDifficulty()))
+                        .thenComparing(RecipeRecommendationResponse::getScore, Comparator.reverseOrder())
                         .thenComparing(RecipeRecommendationResponse::getRecipeId))
                 .limit(Math.max(1, scoringProperties.getDraftRandomPoolSize()))
                 .toList();
@@ -472,8 +482,10 @@ public class RecommendationService {
                 .recipeId(candidate.getRecipeId())
                 .recipeName(candidate.getRecipeName())
                 .imageUrl(candidate.getImageUrl())
+                .difficulty(candidate.getDifficulty())
                 .score(candidate.getScore() - penalty)
                 .matchPercent(candidate.getMatchPercent())
+                .expiryPriorityScore(candidate.getExpiryPriorityScore())
                 .availableIngredients(candidate.getAvailableIngredients())
                 .missingIngredients(candidate.getMissingIngredients())
                 .reasons(candidate.getReasons())
@@ -490,8 +502,10 @@ public class RecommendationService {
                 .recipeId(candidate.getRecipeId())
                 .recipeName(candidate.getRecipeName())
                 .imageUrl(candidate.getImageUrl())
+                .difficulty(candidate.getDifficulty())
                 .score(candidate.getScore())
                 .matchPercent(candidate.getMatchPercent())
+                .expiryPriorityScore(candidate.getExpiryPriorityScore())
                 .availableIngredients(candidate.getAvailableIngredients())
                 .missingIngredients(candidate.getMissingIngredients())
                 .reasons(reasons)
@@ -859,6 +873,19 @@ public class RecommendationService {
         return scoringProperties.getMealTypeMismatchScore();
     }
 
+    private int difficultyRank(String difficulty) {
+        if (difficulty == null || difficulty.isBlank()) {
+            return 3;
+        }
+
+        return switch (difficulty.trim().toUpperCase(Locale.ROOT)) {
+            case "EASY" -> 0;
+            case "MEDIUM" -> 1;
+            case "HARD" -> 2;
+            default -> 3;
+        };
+    }
+
     private String normalizeMealType(String mealType) {
         if (mealType == null) {
             throw new ResponseStatusException(BAD_REQUEST, "mealType is required");
@@ -948,6 +975,65 @@ public class RecommendationService {
 
     private BigDecimal defaultBigDecimal(BigDecimal value) {
         return value == null ? BigDecimal.ZERO : value;
+    }
+
+    private BigDecimal convertQuantity(BigDecimal quantity, String fromUnit, String toUnit) {
+        if (quantity == null) {
+            return null;
+        }
+
+        String from = normalizeUnit(fromUnit);
+        String to = normalizeUnit(toUnit);
+
+        if (from == null && to == null) {
+            return quantity;
+        }
+
+        if (from == null || to == null) {
+            return null;
+        }
+
+        if (from.equals(to)) {
+            return quantity;
+        }
+
+        BigDecimal fromFactor = unitFactorToBase(from);
+        BigDecimal toFactor = unitFactorToBase(to);
+        String fromGroup = unitGroup(from);
+        String toGroup = unitGroup(to);
+
+        if (fromFactor == null || toFactor == null || fromGroup == null || !fromGroup.equals(toGroup)) {
+            return null;
+        }
+
+        return quantity.multiply(fromFactor).divide(toFactor, MathContext.DECIMAL64);
+    }
+
+    private String normalizeUnit(String unit) {
+        if (unit == null || unit.trim().isEmpty()) {
+            return null;
+        }
+
+        return unit.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private String unitGroup(String unit) {
+        return switch (unit) {
+            case "mg", "g", "kg" -> "mass";
+            case "ml", "l", "lit", "liter", "litre", "lít" -> "volume";
+            default -> null;
+        };
+    }
+
+    private BigDecimal unitFactorToBase(String unit) {
+        return switch (unit) {
+            case "mg" -> new BigDecimal("0.001");
+            case "g" -> BigDecimal.ONE;
+            case "kg" -> new BigDecimal("1000");
+            case "ml" -> BigDecimal.ONE;
+            case "l", "lit", "liter", "litre", "lít" -> new BigDecimal("1000");
+            default -> null;
+        };
     }
 
     private String resolveUnit(String preferred, String fallback) {

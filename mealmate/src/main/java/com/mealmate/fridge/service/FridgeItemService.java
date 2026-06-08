@@ -37,6 +37,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.math.MathContext;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -297,21 +298,16 @@ public class FridgeItemService {
         return draftsByRecipeId.values()
                 .stream()
                 .map(draft -> toRecipeSuggestionResponse(draft, stockByFoodId, today, favoriteRecipeIds))
-                .filter(response -> !onlyMatched || !response.getMatchedIngredients().isEmpty())
+                .filter(response -> !onlyMatched || response.getCoveragePercent() > 0)
                 .sorted(
-                        // Ưu tiên phần trăm khớp cao nhất, rồi đến công thức nấu được ngay,
-                        // rồi đến nguyên liệu sắp hết hạn, cuối cùng theo tên.
+                        // Sort by match percent first, then expiring ingredients, then easier recipes.
                         Comparator.comparingInt(RecipeSuggestionResponse::getCoveragePercent).reversed()
-                                .thenComparing(
-                                        Comparator.<RecipeSuggestionResponse>comparingInt(
-                                                response -> Boolean.TRUE.equals(response.getCanCook()) ? 1 : 0
-                                        ).reversed()
-                                )
                                 .thenComparing(
                                         Comparator.<RecipeSuggestionResponse>comparingInt(
                                                 response -> response.getExpiringIngredients().size()
                                         ).reversed()
                                 )
+                                .thenComparingInt(response -> difficultyRank(response.getDifficulty()))
                                 .thenComparing(RecipeSuggestionResponse::getName)
                 )
                 .limit(normalizedLimit)
@@ -500,8 +496,8 @@ public class FridgeItemService {
 
         int totalIngredients = Math.max(draft.ingredients.size(), 1);
         int sufficientCount = totalIngredients - missingIngredients.size();
-        int coveragePercent = (int) Math.round((matchedIngredients.size() * 100.0) / totalIngredients);
-        double coverageRatio = matchedIngredients.size() / (double) totalIngredients;
+        int coveragePercent = (int) Math.round((sufficientCount * 100.0) / totalIngredients);
+        double coverageRatio = sufficientCount / (double) totalIngredients;
         double quantityRatio = sufficientCount / (double) totalIngredients;
         double urgencyRatio = expiringIngredients.size() / (double) totalIngredients;
         int score = (int) Math.round(
@@ -517,6 +513,8 @@ public class FridgeItemService {
         response.setImageUrl(draft.imageUrl);
         response.setDescription(draft.description);
         response.setInstructions(draft.instructions);
+        response.setReferenceLink(draft.referenceLink);
+        response.setAuthor(draft.author);
         response.setCookingTimeMinutes(draft.cookingTimeMinutes);
         response.setServings(draft.servings);
         response.setCalories(draft.calories);
@@ -542,9 +540,11 @@ public class FridgeItemService {
         BigDecimal requiredQuantity = ingredient.getRequiredQuantity() == null
                 ? BigDecimal.ZERO
                 : ingredient.getRequiredQuantity();
-        boolean hasCompatibleQuantity = stock != null
-                && isSameUnit(ingredient.getRequiredUnit(), stock.unit)
-                && stock.quantity.compareTo(requiredQuantity) >= 0;
+        BigDecimal comparableAvailableQuantity = stock == null
+                ? null
+                : convertQuantity(stock.quantity, stock.unit, ingredient.getRequiredUnit());
+        boolean hasCompatibleQuantity = comparableAvailableQuantity != null
+                && comparableAvailableQuantity.compareTo(requiredQuantity) >= 0;
         boolean expiringSoon = stock != null
                 && stock.nearestExpiryDate != null
                 && !stock.nearestExpiryDate.isBefore(today)
@@ -577,6 +577,79 @@ public class FridgeItemService {
         }
 
         return first.equalsIgnoreCase(second);
+    }
+
+    private BigDecimal convertQuantity(BigDecimal quantity, String fromUnit, String toUnit) {
+        if (quantity == null) {
+            return null;
+        }
+
+        String from = normalizeUnit(fromUnit);
+        String to = normalizeUnit(toUnit);
+
+        if (from == null && to == null) {
+            return quantity;
+        }
+
+        if (from == null || to == null) {
+            return null;
+        }
+
+        if (from.equals(to)) {
+            return quantity;
+        }
+
+        BigDecimal fromFactor = unitFactorToBase(from);
+        BigDecimal toFactor = unitFactorToBase(to);
+        String fromGroup = unitGroup(from);
+        String toGroup = unitGroup(to);
+
+        if (fromFactor == null || toFactor == null || fromGroup == null || !fromGroup.equals(toGroup)) {
+            return null;
+        }
+
+        return quantity.multiply(fromFactor).divide(toFactor, MathContext.DECIMAL64);
+    }
+
+    private String normalizeUnit(String unit) {
+        String normalized = normalizeBlank(unit);
+        if (normalized == null) {
+            return null;
+        }
+
+        return normalized.toLowerCase(Locale.ROOT);
+    }
+
+    private String unitGroup(String unit) {
+        return switch (unit) {
+            case "mg", "g", "kg" -> "mass";
+            case "ml", "l", "lit", "liter", "litre", "lít" -> "volume";
+            default -> null;
+        };
+    }
+
+    private BigDecimal unitFactorToBase(String unit) {
+        return switch (unit) {
+            case "mg" -> new BigDecimal("0.001");
+            case "g" -> BigDecimal.ONE;
+            case "kg" -> new BigDecimal("1000");
+            case "ml" -> BigDecimal.ONE;
+            case "l", "lit", "liter", "litre", "lít" -> new BigDecimal("1000");
+            default -> null;
+        };
+    }
+
+    private int difficultyRank(String difficulty) {
+        if (difficulty == null || difficulty.isBlank()) {
+            return 3;
+        }
+
+        return switch (difficulty.trim().toUpperCase(Locale.ROOT)) {
+            case "EASY" -> 0;
+            case "MEDIUM" -> 1;
+            case "HARD" -> 2;
+            default -> 3;
+        };
     }
 
     private void validateRemoveRequest(RemoveFridgeItemRequest request) {
@@ -705,6 +778,8 @@ public class FridgeItemService {
         private final String imageUrl;
         private final String description;
         private final String instructions;
+        private final String referenceLink;
+        private final String author;
         private final Integer cookingTimeMinutes;
         private final Integer servings;
         private final Integer calories;
@@ -718,6 +793,8 @@ public class FridgeItemService {
             this.imageUrl = projection.getImageUrl();
             this.description = projection.getDescription();
             this.instructions = projection.getInstructions();
+            this.referenceLink = projection.getReferenceLink();
+            this.author = projection.getAuthor();
             this.cookingTimeMinutes = projection.getCookingTimeMinutes();
             this.servings = projection.getServings();
             this.calories = projection.getCalories();

@@ -230,6 +230,11 @@ class RecommendationServiceTest {
             public String getPreferredMealTime() {
                 return mealTime;
             }
+
+            @Override
+            public String getDifficulty() {
+                return "EASY";
+            }
         };
     }
 

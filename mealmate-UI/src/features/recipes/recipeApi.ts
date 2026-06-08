@@ -21,6 +21,7 @@ export interface RecipeIngredientDetail {
 }
 
 export interface RecipeDetail extends Omit<RecipeCatalogItem, 'ingredients'> {
+  description?: string | null;
   instructions?: string | null;
   referenceLink?: string | null;
   author?: string | null;

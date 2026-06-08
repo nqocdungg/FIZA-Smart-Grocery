@@ -35,7 +35,8 @@ public interface RecommendationRepository extends Repository<com.mealmate.catalo
                 r.id as recipeId,
                 r.name as recipeName,
                 r.image_url as imageUrl,
-                r.preferred_meal_time as preferredMealTime
+                r.preferred_meal_time as preferredMealTime,
+                r.difficulty as difficulty
             from recipes r
             join recipe_ingredients ri on ri.recipe_id = r.id
             where ri.food_id in :foodIds

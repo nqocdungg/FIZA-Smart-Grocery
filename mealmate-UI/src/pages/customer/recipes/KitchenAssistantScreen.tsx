@@ -31,6 +31,13 @@ type RankedRecipe = RecipeFromApi & { rank: number };
 
 type ToastState = { message: string; variant: "success" | "info" };
 
+const difficultyRank = (difficulty?: string) => {
+  if (difficulty === "EASY") return 0;
+  if (difficulty === "MEDIUM") return 1;
+  if (difficulty === "HARD") return 2;
+  return 3;
+};
+
 type ChatLine = { icon: string; text: string };
 
 // Build các dòng tin nhắn của Trợ lý nhà bếp — ngắn gọn, dễ thương, có icon đầu dòng.
@@ -134,9 +141,11 @@ const KitchenAssistantScreen: React.FC<KitchenAssistantScreenProps> = ({ onBackT
 
       const sorted = [...data].sort((a, b) => {
         if (b.coveragePercent !== a.coveragePercent) return b.coveragePercent - a.coveragePercent;
-        const aExpiring = a.expiringIngredients.length > 0 ? 1 : 0;
-        const bExpiring = b.expiringIngredients.length > 0 ? 1 : 0;
+        const aExpiring = a.expiringIngredients.length;
+        const bExpiring = b.expiringIngredients.length;
         if (bExpiring !== aExpiring) return bExpiring - aExpiring;
+        const difficultyDiff = difficultyRank(a.difficulty) - difficultyRank(b.difficulty);
+        if (difficultyDiff !== 0) return difficultyDiff;
         return b.score - a.score;
       });
 

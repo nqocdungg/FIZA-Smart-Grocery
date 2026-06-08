@@ -14,6 +14,10 @@ public interface RecipeSuggestionProjection {
 
     String getDescription();
 
+    String getReferenceLink();
+
+    String getAuthor();
+
     Integer getCookingTimeMinutes();
 
     Integer getServings();

@@ -19,6 +19,10 @@ public class RecipeSuggestionResponse {
 
     private String instructions;
 
+    private String referenceLink;
+
+    private String author;
+
     private Integer cookingTimeMinutes;
 
     private Integer servings;

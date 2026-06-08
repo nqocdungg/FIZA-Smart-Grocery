@@ -270,7 +270,6 @@
   border-radius: 12px;
   border: 1px dashed #e2e8f0;
   background: #ffffff;
-  cursor: pointer;
   transition: border-color 160ms ease, background 160ms ease;
 }
 
@@ -373,6 +372,16 @@
   flex-shrink: 0;
   padding: 3px 10px;
   border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.recipe-detail-ingredient-expiring {
+  flex-shrink: 0;
+  padding: 3px 10px;
+  border-radius: 12px;
+  background: #fef3c7;
+  color: #b45309;
   font-size: 11px;
   font-weight: 700;
 }
@@ -511,4 +520,52 @@
 
 .recipe-detail-steps-card .recipe-detail-empty {
   padding: 8px 0;
+}
+
+.recipe-detail-reference-card {
+  background: #f8fafc;
+  border: 1px solid #e8eef4;
+  border-radius: 18px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.recipe-detail-reference-row {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  color: #334155;
+  font-size: 13.5px;
+  line-height: 20px;
+}
+
+.recipe-detail-reference-row span {
+  color: #64748b;
+  font-weight: 700;
+}
+
+.recipe-detail-reference-row strong {
+  color: #1e293b;
+  font-weight: 700;
+}
+
+.recipe-detail-reference-row a {
+  color: var(--fiza-primary-light, #0e9a7e);
+  font-weight: 700;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.recipe-detail-reference-row a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 560px) {
+  .recipe-detail-reference-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
 }

@@ -28,6 +28,13 @@ type FilterDropdown = "meal" | "difficulty" | null;
 
 type ToastState = { message: string; variant: "success" | "info" };
 
+const difficultyRank = (difficulty?: string) => {
+  if (difficulty === "EASY") return 0;
+  if (difficulty === "MEDIUM") return 1;
+  if (difficulty === "HARD") return 2;
+  return 3;
+};
+
 const normalize = (value: string) =>
   value
     .toLowerCase()
@@ -202,14 +209,13 @@ const RecipeBrowser: React.FC<RecipeBrowserProps> = ({ variant, onBack, searchVa
       return true;
     });
 
-    // Sắp xếp:
-    //   1. % khớp nguyên liệu (coveragePercent) cao nhất trước.
-    //   2. Nếu bằng % khớp → ưu tiên công thức có nguyên liệu sắp hết hạn.
+    // Sắp xếp theo % khớp, số badge sắp hết hạn, rồi độ dễ.
     return [...filtered].sort((a, b) => {
       if (b.coveragePercent !== a.coveragePercent) return b.coveragePercent - a.coveragePercent;
-      const aExpiring = a.expiringIngredients.length > 0 ? 1 : 0;
-      const bExpiring = b.expiringIngredients.length > 0 ? 1 : 0;
-      return bExpiring - aExpiring;
+      const aExpiring = a.expiringIngredients.length;
+      const bExpiring = b.expiringIngredients.length;
+      if (bExpiring !== aExpiring) return bExpiring - aExpiring;
+      return difficultyRank(a.difficulty) - difficultyRank(b.difficulty);
     });
   }, [recipes, keyword, statusFilter, favoriteOnly, favoriteIds, mealFilter, difficultyFilter]);
 

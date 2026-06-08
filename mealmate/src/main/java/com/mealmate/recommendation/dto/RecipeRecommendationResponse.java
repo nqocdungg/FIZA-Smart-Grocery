@@ -19,9 +19,13 @@ public class RecipeRecommendationResponse {
 
     private String imageUrl;
 
+    private String difficulty;
+
     private Integer score;
 
     private Integer matchPercent;
+
+    private int expiryPriorityScore;
 
     private List<IngredientAvailabilityDto> availableIngredients;
 

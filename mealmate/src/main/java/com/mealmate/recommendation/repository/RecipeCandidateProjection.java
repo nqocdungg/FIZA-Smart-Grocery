@@ -9,4 +9,6 @@ public interface RecipeCandidateProjection {
     String getImageUrl();
 
     String getPreferredMealTime();
+
+    String getDifficulty();
 }

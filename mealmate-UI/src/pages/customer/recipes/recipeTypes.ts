@@ -18,6 +18,8 @@ export type RecipeFromApi = {
   imageUrl?: string;
   description?: string;
   instructions?: string;
+  referenceLink?: string;
+  author?: string;
   cookingTimeMinutes?: number;
   servings?: number;
   calories?: number;

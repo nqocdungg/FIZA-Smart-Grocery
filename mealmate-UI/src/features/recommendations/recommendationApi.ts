@@ -43,8 +43,10 @@ export type RecipeRecommendation = {
   recipeId: number;
   recipeName: string;
   imageUrl?: string;
+  difficulty?: "EASY" | "MEDIUM" | "HARD" | string;
   score: number;
   matchPercent: number;
+  expiryPriorityScore?: number;
   availableIngredients: IngredientAvailabilityDto[];
   missingIngredients: MissingIngredientDto[];
   reasons: string[];

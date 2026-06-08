@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import "./RecipeDetailPopup.css";
 
+import { fetchRecipeDetail } from "@/features/recipes/recipeApi";
 import {
   difficultyClass,
   difficultyLabel,
@@ -44,42 +45,67 @@ const RecipeDetailPopup: React.FC<RecipeDetailPopupProps> = ({
   onAddMissingToShopping,
 }) => {
   const [imageFailed, setImageFailed] = useState(false);
+  const [referenceInfo, setReferenceInfo] = useState<{
+    referenceLink?: string | null;
+    author?: string | null;
+    instructions?: string | null;
+    description?: string | null;
+  } | null>(null);
+
+  useEffect(() => {
+    let isActive = true;
+    setReferenceInfo(null);
+
+    fetchRecipeDetail(recipe.recipeId)
+      .then((detail) => {
+        if (!isActive) return;
+        setReferenceInfo({
+          referenceLink: detail.referenceLink,
+          author: detail.author,
+          instructions: detail.instructions,
+          description: detail.description,
+        });
+      })
+      .catch(() => undefined);
+
+    return () => {
+      isActive = false;
+    };
+  }, [recipe.recipeId]);
+
+  const displayRecipe = useMemo<RecipeFromApi>(
+    () => ({
+      ...recipe,
+      referenceLink: referenceInfo?.referenceLink ?? recipe.referenceLink,
+      author: referenceInfo?.author ?? recipe.author,
+      instructions: referenceInfo?.instructions ?? recipe.instructions,
+      description: referenceInfo?.description ?? recipe.description,
+    }),
+    [recipe, referenceInfo]
+  );
 
   const ingredients = useMemo(() => {
     const byId = new Map<number, RecipeIngredientFromApi>();
-    recipe.matchedIngredients.forEach((item) => byId.set(item.foodId, item));
-    recipe.missingIngredients.forEach((item) => {
+    displayRecipe.matchedIngredients.forEach((item) => byId.set(item.foodId, item));
+    displayRecipe.missingIngredients.forEach((item) => {
       if (!byId.has(item.foodId)) byId.set(item.foodId, item);
     });
     return Array.from(byId.values());
-  }, [recipe]);
+  }, [displayRecipe]);
 
-  const [checkedIds, setCheckedIds] = useState<Set<number>>(
-    () => new Set(ingredients.filter((item) => item.sufficientQuantity).map((item) => item.foodId))
-  );
-
-  const toggleChecked = (foodId: number) => {
-    setCheckedIds((current) => {
-      const next = new Set(current);
-      if (next.has(foodId)) next.delete(foodId);
-      else next.add(foodId);
-      return next;
-    });
-  };
-
-  const steps = useMemo(() => splitInstructions(recipe.instructions), [recipe.instructions]);
-  const missingIngredients = recipe.missingIngredients;
-  const showImage = Boolean(recipe.imageUrl) && !imageFailed;
+  const steps = useMemo(() => splitInstructions(displayRecipe.instructions), [displayRecipe.instructions]);
+  const missingIngredients = displayRecipe.missingIngredients;
+  const showImage = Boolean(displayRecipe.imageUrl) && !imageFailed;
 
   return (
     <div className="recipe-detail-overlay" onClick={onClose}>
       <section className="recipe-detail-dialog" onClick={(event) => event.stopPropagation()}>
         <div className="recipe-detail-hero">
           {showImage ? (
-            <img src={recipe.imageUrl} alt={recipe.name} onError={() => setImageFailed(true)} />
+            <img src={displayRecipe.imageUrl} alt={displayRecipe.name} onError={() => setImageFailed(true)} />
           ) : (
             <span className="recipe-detail-hero-emoji" aria-hidden="true">
-              {recipeEmoji(recipe.name)}
+              {recipeEmoji(displayRecipe.name)}
             </span>
           )}
 
@@ -90,7 +116,7 @@ const RecipeDetailPopup: React.FC<RecipeDetailPopupProps> = ({
               aria-label={isFavorite ? "Bỏ khỏi yêu thích" : "Thêm vào yêu thích"}
               aria-pressed={isFavorite}
               disabled={isFavoritePending}
-              onClick={() => onToggleFavorite(recipe)}
+              onClick={() => onToggleFavorite(displayRecipe)}
             >
               <Heart filled={isFavorite} />
             </button>
@@ -101,13 +127,13 @@ const RecipeDetailPopup: React.FC<RecipeDetailPopupProps> = ({
 
           <div className="recipe-detail-hero-caption">
             <div className="recipe-detail-hero-tags">
-              <span className="recipe-detail-meal">{mealTimeLabel(recipe.preferredMealTime)}</span>
-              <span className={`recipe-detail-diff ${difficultyClass(recipe.difficulty)}`}>
-                {difficultyLabel(recipe.difficulty)}
+              <span className="recipe-detail-meal">{mealTimeLabel(displayRecipe.preferredMealTime)}</span>
+              <span className={`recipe-detail-diff ${difficultyClass(displayRecipe.difficulty)}`}>
+                {difficultyLabel(displayRecipe.difficulty)}
               </span>
             </div>
-            <h2>{recipe.name}</h2>
-            {recipe.description && <p>{recipe.description}</p>}
+            <h2>{displayRecipe.name}</h2>
+            {displayRecipe.description && <p>{displayRecipe.description}</p>}
           </div>
         </div>
 
@@ -120,7 +146,7 @@ const RecipeDetailPopup: React.FC<RecipeDetailPopupProps> = ({
                   <path d="M12 7v5l3 2" />
                 </svg>
               }
-              value={recipe.cookingTimeMinutes ? `${recipe.cookingTimeMinutes}'` : "—"}
+              value={displayRecipe.cookingTimeMinutes ? `${displayRecipe.cookingTimeMinutes}'` : "—"}
               label="Thời gian"
             />
             <Stat
@@ -132,7 +158,7 @@ const RecipeDetailPopup: React.FC<RecipeDetailPopupProps> = ({
                   <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                 </svg>
               }
-              value={recipe.servings ? `${recipe.servings}` : "—"}
+              value={displayRecipe.servings ? `${displayRecipe.servings}` : "—"}
               label="Khẩu phần"
             />
             <Stat
@@ -141,7 +167,7 @@ const RecipeDetailPopup: React.FC<RecipeDetailPopupProps> = ({
                   <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
                 </svg>
               }
-              value={recipe.calories ? `${recipe.calories}` : "—"}
+              value={displayRecipe.calories ? `${displayRecipe.calories}` : "—"}
               label="Kcal"
             />
             <Stat
@@ -152,7 +178,7 @@ const RecipeDetailPopup: React.FC<RecipeDetailPopupProps> = ({
                   <path d="M12 22V12" />
                 </svg>
               }
-              value={`${recipe.ingredientCount}`}
+              value={`${displayRecipe.ingredientCount}`}
               label="Nguyên liệu"
             />
           </div>
@@ -161,24 +187,23 @@ const RecipeDetailPopup: React.FC<RecipeDetailPopupProps> = ({
           <section className="recipe-detail-section">
             <div className="recipe-detail-section-head">
               <h3>Nguyên liệu</h3>
-              <span className={`recipe-detail-match-pill ${recipe.coveragePercent > 90 ? "high" : recipe.coveragePercent >= 50 ? "medium" : "low"}`}>
-                Khớp {recipe.coveragePercent}%
+              <span className={`recipe-detail-match-pill ${displayRecipe.coveragePercent > 90 ? "high" : displayRecipe.coveragePercent >= 50 ? "medium" : "low"}`}>
+                Khớp {displayRecipe.coveragePercent}%
               </span>
             </div>
 
             <div className="recipe-detail-ingredients-card">
               <div className="recipe-detail-ingredients">
                 {ingredients.map((item) => {
-                  const checked = checkedIds.has(item.foodId);
                   const available = item.sufficientQuantity;
-                  const statusClass = item.expiringSoon ? "expired" : available ? "available" : "missing";
+                  const statusClass = available ? "available" : "missing";
 
                   return (
-                    <label
+                    <div
                       className={`recipe-detail-ingredient ${statusClass}`}
                       key={item.foodId}
                     >
-                      <input type="checkbox" checked={checked} onChange={() => toggleChecked(item.foodId)} />
+                      <input type="checkbox" checked={available} disabled readOnly />
                       <span className="recipe-detail-ingredient-check" aria-hidden="true" />
                       <span className="recipe-detail-ingredient-main">
                         <strong>{item.foodName}</strong>
@@ -189,10 +214,13 @@ const RecipeDetailPopup: React.FC<RecipeDetailPopupProps> = ({
                             : ""}
                         </small>
                       </span>
+                      {item.expiringSoon && (
+                        <span className="recipe-detail-ingredient-expiring">Sắp hết hạn</span>
+                      )}
                       <span className={`recipe-detail-ingredient-status ${statusClass}`}>
-                        {item.expiringSoon ? "Sắp hết hạn" : available ? "Khả dụng" : "Thiếu"}
+                        {available ? "Khả dụng" : "Thiếu"}
                       </span>
-                    </label>
+                    </div>
                   );
                 })}
               </div>
@@ -217,6 +245,26 @@ const RecipeDetailPopup: React.FC<RecipeDetailPopupProps> = ({
               )}
             </div>
           </section>
+
+          <section className="recipe-detail-section">
+            <h3>Nguồn tham khảo</h3>
+            <div className="recipe-detail-reference-card">
+              <div className="recipe-detail-reference-row">
+                <span>Tác giả</span>
+                <strong>{displayRecipe.author || "Chưa cập nhật"}</strong>
+              </div>
+              <div className="recipe-detail-reference-row">
+                <span>Link tham khảo</span>
+                {displayRecipe.referenceLink ? (
+                  <a href={displayRecipe.referenceLink} target="_blank" rel="noreferrer">
+                    {displayRecipe.referenceLink}
+                  </a>
+                ) : (
+                  <strong>Chưa cập nhật</strong>
+                )}
+              </div>
+            </div>
+          </section>
         </div>
 
         <footer className="recipe-detail-footer">
@@ -229,7 +277,7 @@ const RecipeDetailPopup: React.FC<RecipeDetailPopupProps> = ({
             type="button"
             className="recipe-detail-shop-button"
             disabled={missingIngredients.length === 0}
-            onClick={() => onAddMissingToShopping(recipe, missingIngredients)}
+            onClick={() => onAddMissingToShopping(displayRecipe, missingIngredients)}
           >
             Thêm nguyên liệu thiếu vào danh sách đi chợ
           </button>
