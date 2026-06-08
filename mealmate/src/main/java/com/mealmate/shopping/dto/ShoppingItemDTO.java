@@ -9,6 +9,7 @@ public class ShoppingItemDTO {
     private String foodName;
     private String categoryName;
     private String foodIcon;
+    private String colorCode;
     private Double quantity;
     private String unit;
     private Long assignedTo;

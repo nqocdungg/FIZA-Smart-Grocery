@@ -229,28 +229,28 @@ const DailyPlanGrid: React.FC<DailyPlanGridProps> = ({ plans, activeDate, onCard
                 onMouseLeave={() => setEdgeHover(null)}
             >
                 <div className="daily-plan-grid-container">
-                {plans.map((plan, index) => (
-                    <div
-                        key={plan.plannedDate}
-                        className={[
-                            'daily-plan-card-shell',
-                            centerIndex === index ? 'is-centered' : '',
-                            edgeCardIndex === index ? 'is-edge-affordance' : '',
-                        ].filter(Boolean).join(' ')}
-                        style={{ '--note-rotation': `${noteRotations[index % noteRotations.length]}deg` } as React.CSSProperties}
-                    >
-                        <DailyPlanCard
-                            data={plan}
-                            isActive={plan.plannedDate === activeDate}
-                            onClick={() => {
-                                if (Date.now() - lastDragEndAt.current < 180) {
-                                    return;
-                                }
-                                onCardClick?.(plan.plannedDate);
-                            }}
-                        />
-                    </div>
-                ))}
+                    {plans.map((plan, index) => (
+                        <div
+                            key={plan.plannedDate}
+                            className={[
+                                'daily-plan-card-shell',
+                                centerIndex === index ? 'is-centered' : '',
+                                edgeCardIndex === index ? 'is-edge-affordance' : '',
+                            ].filter(Boolean).join(' ')}
+                            style={{ '--note-rotation': `${noteRotations[index % noteRotations.length]}deg` } as React.CSSProperties}
+                        >
+                            <DailyPlanCard
+                                data={plan}
+                                isActive={plan.plannedDate === activeDate}
+                                onClick={() => {
+                                    if (Date.now() - lastDragEndAt.current < 180) {
+                                        return;
+                                    }
+                                    onCardClick?.(plan.plannedDate);
+                                }}
+                            />
+                        </div>
+                    ))}
                 </div>
             </div>
 

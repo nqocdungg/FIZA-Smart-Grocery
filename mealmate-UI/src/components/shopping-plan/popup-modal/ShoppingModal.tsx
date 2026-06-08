@@ -1,6 +1,7 @@
 import DatePicker from "@/components/common/DatePicker";
 import { useAuth } from "@/context/AuthContext";
 import { deleteShoppingList, getFamilyMembers, getPlanDetail, importToFridge, saveShoppingPlan, searchFoods, toggleItemStatus } from "@/features/shopping-plan/shoppingApi";
+import { getPendingShoppingItems, type PendingShoppingItem } from "@/features/shopping-plan/shoppingSuggestions";
 import { Edit3, Filter, Plus, Search, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
@@ -8,7 +9,6 @@ import FrequentItems from "../FrequentItems";
 import ReceivedItems from "../ReceivedItems";
 import AddItemPopover from "../popover-modal/AddItemPopover";
 import CategoryGroup from "./CategoryGroup";
-import { getPendingShoppingItems, type PendingShoppingItem } from "@/features/shopping-plan/shoppingSuggestions";
 import './ShoppingModal.css';
 
 interface ShoppingModalProps {
@@ -87,12 +87,15 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
         }
     }, [isOpen, defaultFilter]);
 
-    const categoryIcons: Record<string, string> = {
-        'Rau củ': '🥦',
-        'Thịt & Hải sản': '🥩',
-        'Sữa & Trứng': '🥛',
-        'Gia vị': '🧂',
-        'Đồ khô': '🍞'
+    const categoryIconMap: Record<string, string> = {
+        'vegetable': '🥦',
+        'meat': '🥩',
+        'dairy': '🥛',
+        'fish': '🐟',
+        'fruit': '🍎',
+        'spice': '🧂',
+        'dry-food': '🍞',
+        'drink': '🥤'
     };
 
     useEffect(() => {
@@ -147,11 +150,16 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
         return items;
     };
     const groupedItems = getFilteredLocalItems().reduce((acc: any, item: any) => {
-        const category = item.categoryName || item.category || 'Khác';
-        if (!acc[category]) acc[category] = [];
-        acc[category].push(item);
+        const categoryName = item.categoryName || 'Khác';
+        if (!acc[categoryName]) acc[categoryName] = {
+            items: [],
+            iconKey: item.foodIcon,
+            color: item.colorCode
+        };
+        acc[categoryName].items.push(item);
         return acc;
     }, {});
+
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSearchTerm(e.target.value);
     };
@@ -230,8 +238,8 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
         };
 
         setLocalItems(prev => [...prev, newItem]);
-        setActiveFood(null); // Đóng popover
-        setSearchTerm(''); // Xóa ô search
+        setActiveFood(null);
+        setSearchTerm('');
     };
 
     const handleAddFromSuggestions = (item: any) => {
@@ -482,7 +490,7 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
                                     {searchResults.map(food => (
                                         <div key={food.id} className="search-result-item" onClick={() => handleAddClick(food)}>
                                             <span className="result-icon-wrapper">
-                                                {categoryIcons[food.category] || '📦'}
+                                                {categoryIconMap[food.categoryName] || '📦'}
                                             </span>
                                             <span className="result-name">{food.name || food.foodName}</span>
                                             <span className="result-unit">{food.unit || 'kg'}</span>
@@ -568,20 +576,25 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
 
                     <div className="modal-right-column">
                         <div className="modal-body-scroll">
-                            {groupedItems && Object.keys(groupedItems).map(categoryName => (
-                                <CategoryGroup
-                                    key={categoryName}
-                                    categoryName={categoryName}
-                                    mode={mode}
-                                    members={members}
-                                    items={groupedItems[categoryName]}
-                                    icon={categoryIcons[categoryName] || '📦'}
-                                    onUpdate={handleUpdateItem}
-                                    onDelete={handleDeleteItem}
-                                    onToggleStatus={handleToggleItemStatus}
-                                    filterStatus={filterStatus}
-                                />
-                            ))}
+                            {groupedItems && Object.keys(groupedItems).map(categoryName => {
+                                const group = groupedItems[categoryName];
+                                return (
+                                    <CategoryGroup
+                                        key={categoryName}
+                                        categoryName={categoryName}
+                                        mode={mode}
+                                        members={members}
+                                        items={group.items}
+                                        icon={categoryIconMap[group.iconKey] || '📦'}
+                                        categoryColor={group.color || '#F1F5F9'}
+                                        onUpdate={handleUpdateItem}
+                                        onDelete={handleDeleteItem}
+                                        onToggleStatus={handleToggleItemStatus}
+                                        filterStatus={filterStatus}
+                                    />
+                                )
+                            }
+                            )};
 
                             {mode === 'CREATE' && isHousekeeper && (
                                 <button className="add-food-dashed-btn" onClick={handleTriggerAddFood}>

@@ -37,6 +37,7 @@ public class ShoppingMapper {
                 categoryRepository.findById(catId).ifPresent(cat -> {
                     dto.setCategoryName(cat.getName());
                     dto.setFoodIcon(cat.getIconKey());
+                    dto.setColorCode(cat.getColorCode());
                 });
             }
         }
