@@ -3,18 +3,14 @@ import {
   Users, 
   UtensilsCrossed, 
   BookOpen, 
-  Bell, 
   Settings, 
   Leaf,
-  BarChart3,
   Search,
   Plus,
   Trash2,
   X,
   ChevronRight,
-  LogOut,
-  Eye,
-  Link2
+  Eye
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { NavLink } from 'react-router-dom';
@@ -38,11 +34,26 @@ import Modal from '../../components/admin/Modal';
 import api from '../../services/api';
 
 export interface UnidentifiedItem {
-  id: string;
+  id: number; 
   type: 'meat' | 'ingredient';
-  generalName: string; 
-  actualName: string;  
+  familyId?: number;
+  foodId?: number;
+  generalName: string;
+  actualName: string;
+  quantity?: number;
+  storageLocation?: string;
+  specificLocation?: string;
+  addedDate?: string;
+  expiryDate?: string;
+  status?: string;
+  imageUrl?: string;
   note: string;
+  removedReason?: string;
+  removedReasonNote?: string;
+  removedAt?: string;
+  removedBy?: number;
+  createdAt?: string;
+  updatedAt?: string;
   submittedBy: string;
   submittedAt: string;
 }
@@ -62,12 +73,7 @@ const PerformanceManagement: React.FC = () => {
     userActivity: []
   });
   
-  // Unidentified items (kept local since it's a review queue)
-  const [unidentifiedItems, setUnidentifiedItems] = useState<UnidentifiedItem[]>([
-    { id: 'ui-1', type: 'meat', generalName: 'Thịt chung 1', actualName: 'Thịt cá sấu', note: 'Mua tại chợ đầu mối, cần cách chế biến phù hợp', submittedBy: 'Nguyễn Văn A', submittedAt: '2026-05-15' },
-    { id: 'ui-2', type: 'meat', generalName: 'Thịt chung 2', actualName: 'Thịt lươn đồng', note: 'Đặc sản vùng quê', submittedBy: 'Trần Thị B', submittedAt: '2026-05-16' },
-    { id: 'ui-3', type: 'ingredient', generalName: 'Nguyên liệu chung 1', actualName: 'Gia vị Tây Bắc', note: 'Mắc khén, hạt dổi hỗn hợp', submittedBy: 'Lê Văn C', submittedAt: '2026-05-14' },
-  ]);
+  const [unidentifiedItems, setUnidentifiedItems] = useState<UnidentifiedItem[]>([]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [uiSearchQuery, setUiSearchQuery] = useState('');
@@ -77,13 +83,13 @@ const PerformanceManagement: React.FC = () => {
   
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
-  const [step, setStep] = useState(2); // Start directly at step 2 (Select food)
+  const [step, setStep] = useState(2); 
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [newVariants, setNewVariants] = useState<string>('');
   const [itemSearch, setItemSearch] = useState('');
   const [categories, setCategories] = useState<any[]>([]);
   const [approvingItem, setApprovingItem] = useState<UnidentifiedItem | null>(null);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null); 
   const [viewingItem, setViewingItem] = useState<UnidentifiedItem | null>(null);
   const [isLinkingMode, setIsLinkingMode] = useState(false);
   const [selectedLinkFood, setSelectedLinkFood] = useState<any | null>(null);
@@ -95,6 +101,27 @@ const PerformanceManagement: React.FC = () => {
   const [approveUnit, setApproveUnit] = useState('kg');
   const [approveSynonyms, setApproveSynonyms] = useState('');
 
+  const translateStorageLocation = (loc: string) => {
+    if (!loc) return '—';
+    switch (loc.toUpperCase()) {
+      case 'COOL': return 'Ngăn mát';
+      case 'FREEZER': return 'Ngăn đông';
+      case 'DRY': return 'Tủ đồ khô';
+      default: return loc;
+    }
+  };
+
+  const translateSpecificLocation = (loc: string) => {
+    if (!loc) return '—';
+    switch (loc.toUpperCase()) {
+      case 'VEGETABLE_DRAWER': return 'Ngăn hộc rau củ';
+      case 'DOOR_SHELF': return 'Cánh cửa tủ lạnh';
+      case 'TOP_SHELF': return 'Kệ ngăn trên cùng';
+      case 'MIDDLE_SHELF': return 'Kệ ngăn giữa';
+      case 'BOTTOM_SHELF': return 'Kệ ngăn dưới';
+      default: return loc.replace(/_/g, ' ');
+    }
+  };
 
   const fetchStats = async () => {
     try {
@@ -106,6 +133,17 @@ const PerformanceManagement: React.FC = () => {
       }
     } catch (err) {
       console.error('Lỗi khi tải thống kê:', err);
+    }
+  };
+
+  const fetchUnidentifiedItems = async () => {
+    try {
+      const response = await api.get('/api/v1/admin/unidentified-items');
+      const data = response.data?.data || response.data || [];
+      setUnidentifiedItems(data);
+    } catch (err: any) {
+      console.error('Lỗi khi tải danh sách định danh từ DB:', err?.response?.data || err?.message || err);
+      setUnidentifiedItems([]);
     }
   };
 
@@ -135,8 +173,8 @@ const PerformanceManagement: React.FC = () => {
     fetchStats();
     fetchFoods();
     fetchCategories();
+    fetchUnidentifiedItems(); 
   }, []);
-
 
   const handleAddInlineVariant = async (foodId: number) => {
     if (!inlineValue.trim()) return;
@@ -238,12 +276,25 @@ const PerformanceManagement: React.FC = () => {
     setItemSearch('');
   };
 
+  // 🎯 SỬA CHÍNH XÁC LOGIC MAP TỪ GENERALNAME SANG DROPDOWN VÀ HIỂN THỊ TỪ ĐỒNG NGHĨA
   const handleOpenApproveModal = (item: UnidentifiedItem) => {
     setApprovingItem(item);
-    setApproveName(item.actualName);
-    setApproveCategory(item.type === 'meat' ? 1 : 6);
+    
+    const actualName = item.actualName || (item as any).actualname || '';
+    const generalName = item.generalName || (item as any).generalname || '';
+    
+    setApproveName(actualName);
+    
+    // Tìm ID danh mục trong mảng categories khớp với chuỗi tiếng Việt lấy lên từ DB
+    const matchedCategory = categories.find(
+      cat => cat.name?.toLowerCase() === generalName.toLowerCase()
+    );
+    // Nếu tìm thấy thì tự chọn danh mục đó, nếu không thì fallback về giá trị mặc định đầu tiên
+    setApproveCategory(matchedCategory ? matchedCategory.id : (categories[0]?.id || 1));
+    
     setApproveUnit('kg');
-    setApproveSynonyms(item.generalName);
+    // Từ đồng nghĩa ban đầu mặc định gợi ý chính là tên người dùng gõ vào
+    setApproveSynonyms(actualName);
   };
 
   const handleSaveApproval = async () => {
@@ -256,10 +307,13 @@ const PerformanceManagement: React.FC = () => {
         synonyms: approveSynonyms,
         imageUrl: 'https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=500'
       };
+      
       await api.post('/api/foods', payload);
+      await api.delete(`/api/v1/admin/unidentified-items/${approvingItem.id}`);
+      
       alert(`Đã duyệt thực phẩm "${approveName}" vào hệ thống.`);
-      setUnidentifiedItems(unidentifiedItems.filter(i => i.id !== approvingItem.id));
       setApprovingItem(null);
+      fetchUnidentifiedItems();
       fetchFoods();
       fetchStats();
     } catch (err) {
@@ -268,18 +322,25 @@ const PerformanceManagement: React.FC = () => {
     }
   };
 
-  const handleConfirmDeleteQueue = (id: string) => {
-    setUnidentifiedItems(unidentifiedItems.filter(i => i.id !== id));
-    setConfirmDeleteId(null);
+  const handleConfirmDeleteQueue = async (id: number) => {
+    try {
+      await api.delete(`/api/v1/admin/unidentified-items/${Number(id)}`);
+      setConfirmDeleteId(null);
+      fetchUnidentifiedItems();
+    } catch (err) {
+      console.error('Xóa hàng chờ lỗi:', err);
+      alert('Không thể xóa mục hàng chờ này.');
+    }
   };
 
   const handleSaveSynonymMapping = async () => {
     if (!viewingItem || !selectedLinkFood) return;
     try {
       const food = selectedLinkFood;
+      const viewingActualName = viewingItem.actualName || (viewingItem as any).actualname || '';
       const currentVariants = food.synonyms ? food.synonyms.split(',').map((s: string) => s.trim()).filter((s: string) => s.length > 0) : [];
-      if (!currentVariants.includes(viewingItem.actualName.trim())) {
-        const updatedVariants = [...currentVariants, viewingItem.actualName.trim()].join(', ');
+      if (!currentVariants.includes(viewingActualName.trim())) {
+        const updatedVariants = [...currentVariants, viewingActualName.trim()].join(', ');
         const payload = {
           name: food.name,
           categoryId: food.categoryId || food.category?.id || 1,
@@ -288,13 +349,14 @@ const PerformanceManagement: React.FC = () => {
           synonyms: updatedVariants
         };
         await api.put(`/api/foods/${food.id}`, payload);
-        alert(`Đã liên kết thành công! Đã thêm "${viewingItem.actualName}" làm từ đồng nghĩa của "${food.name}".`);
+        await api.delete(`/api/v1/admin/unidentified-items/${viewingItem.id}`);
+        alert(`Đã liên kết thành công! Đã thêm "${viewingActualName}" làm từ đồng nghĩa của "${food.name}".`);
       } else {
-        alert(`"${viewingItem.actualName}" đã tồn tại trong từ đồng nghĩa của "${food.name}".`);
+        alert(`"${viewingActualName}" đã tồn tại trong từ đồng nghĩa của "${food.name}".`);
       }
-      setUnidentifiedItems(unidentifiedItems.filter(i => i.id !== viewingItem.id));
       setViewingItem(null);
       setIsLinkingMode(false);
+      fetchUnidentifiedItems();
       fetchFoods();
     } catch (err) {
       console.error(err);
@@ -302,8 +364,6 @@ const PerformanceManagement: React.FC = () => {
     }
   };
 
-
-  // Filter foods for synonym display
   const foodSynonyms = foods.filter(f => f.synonyms && (f.synonyms as string).trim().length > 0).map(f => ({
     id: f.id,
     originalName: f.name,
@@ -323,10 +383,8 @@ const PerformanceManagement: React.FC = () => {
 
   return (
     <div className="um-layout">
-      {/* Sidebar */}
       <AdminSidebar />
 
-      {/* Main Content */}
       <div className="um-main unshifted">
         <header className="um-header">
           <div className="um-header-left">
@@ -383,7 +441,7 @@ const PerformanceManagement: React.FC = () => {
 
             {/* Charts Section */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="um-card" style={{ height: '400px' }}>
+              <div className="um-card" style={{ height: '400px' }}>
                 <h3 style={{ marginBottom: '1.5rem', fontSize: '1rem', fontWeight: 800, color: 'var(--fiza-primary)' }}>Lượt truy cập trong tuần</h3>
                 <ResponsiveContainer width="100%" height="85%">
                   <BarChart data={stats.userActivity}>
@@ -394,9 +452,9 @@ const PerformanceManagement: React.FC = () => {
                     <Bar dataKey="users" fill="var(--mint-green)" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
-              </motion.div>
+              </div>
 
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="um-card" style={{ height: '400px' }}>
+              <div className="um-card" style={{ height: '400px' }}>
                 <h3 style={{ marginBottom: '1.5rem', fontSize: '1rem', fontWeight: 800, color: 'var(--fiza-primary)' }}>Phân loại thực phẩm</h3>
                 <ResponsiveContainer width="100%" height="85%">
                   <PieChart>
@@ -407,18 +465,18 @@ const PerformanceManagement: React.FC = () => {
                       paddingAngle={5}
                       dataKey="value"
                     >
-                      {stats.foodStats.map((_: any, index: number) => (
+                      {stats.foodStats?.map((_: any, index: number) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
                     <Tooltip />
                   </PieChart>
                 </ResponsiveContainer>
-              </motion.div>
+              </div>
             </div>
 
             {/* Unidentified Items Section */}
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="um-card">
+            <div className="um-card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', gap: '2rem' }}>
                 <div>
                   <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--fiza-primary)' }}>Yêu cầu định danh thực phẩm (Người dùng nhập)</h3>
@@ -442,69 +500,73 @@ const PerformanceManagement: React.FC = () => {
                 <table className="um-table">
                   <thead>
                     <tr>
-                      <th style={{ width: '120px' }}>Phân loại</th>
-                      <th style={{ width: '150px' }}>Tên loại chung</th>
+                      <th style={{ width: '150px' }}>Phân loại</th>
                       <th>Cụ thể (Người dùng nhập)</th>
-                      <th>Ghi chú / Chú thích</th>
-                      <th>Người gửi</th>
-                      <th>Ngày gửi</th>
+                      <th style={{ width: '120px' }}>Trạng thái</th>
+                      <th>Ghi chú</th>
+                      <th style={{ width: '140px' }}>Ngày gửi</th>
                       <th style={{ textAlign: 'center', width: '100px' }}>Hành động</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {unidentifiedItems.filter(item => 
-                      item.actualName.toLowerCase().includes(uiSearchQuery.toLowerCase()) || 
-                      item.generalName.toLowerCase().includes(uiSearchQuery.toLowerCase()) ||
-                      (item.type === 'meat' ? 'thịt' : 'nguyên liệu').includes(uiSearchQuery.toLowerCase())
-                    ).map(item => (
-                      <tr key={item.id}>
-                        <td>
-                          {item.type === 'meat' ? (
+                    {unidentifiedItems.filter(item => {
+                      const actualNameStr = item?.actualName || (item as any)?.actualname || '';
+                      const generalNameStr = item?.generalName || (item as any)?.generalname || '';
+                      
+                      return (
+                        actualNameStr.toLowerCase().includes(uiSearchQuery.toLowerCase()) ||
+                        generalNameStr.toLowerCase().includes(uiSearchQuery.toLowerCase())
+                      );
+                    }).map(item => {
+                      const id = item.id;
+                      const actualName = item.actualName || (item as any).actualname || '-';
+                      const status = item.status || '-';
+                      const note = item.note || '-';
+                      const submittedAt = item.submittedAt || (item as any).submittedat || '-';
+                      const generalName = item.generalName || (item as any).generalname || 'Khác';
+
+                      let badgeStyle = { backgroundColor: '#F3E8FF', color: '#9333EA' }; 
+                      
+                      if (generalName.toLowerCase().includes("thịt")) {
+                        badgeStyle = { backgroundColor: '#FEF3C7', color: '#D97706' }; 
+                      } else if (generalName.toLowerCase().includes("hải sản") || generalName.toLowerCase().includes("cá")) {
+                        badgeStyle = { backgroundColor: '#E0F2FE', color: '#0369A1' }; 
+                      } else if (generalName.toLowerCase().includes("rau") || generalName.toLowerCase().includes("củ") || generalName.toLowerCase().includes("trái cây")) {
+                        badgeStyle = { backgroundColor: '#DCFCE7', color: '#15803D' }; 
+                      } else if (generalName.toLowerCase().includes("trứng") || generalName.toLowerCase().includes("sữa")) {
+                        badgeStyle = { backgroundColor: '#FCE7F3', color: '#C11574' }; 
+                      }
+
+                      return (
+                        <tr key={id}>
+                          <td>
                             <span style={{ 
                               padding: '0.25rem 0.75rem', 
                               borderRadius: '9999px', 
                               fontSize: '10px', 
                               fontWeight: 800, 
                               textTransform: 'uppercase',
-                              backgroundColor: '#FEF3C7',
-                              color: '#D97706'
+                              ...badgeStyle
                             }}>
-                              Thịt
+                              {generalName}
                             </span>
-                          ) : (
-                            <span style={{ 
-                              padding: '0.25rem 0.75rem', 
-                              borderRadius: '9999px', 
-                              fontSize: '10px', 
-                              fontWeight: 800, 
-                              textTransform: 'uppercase',
-                              backgroundColor: '#F3E8FF',
-                              color: '#9333EA'
-                            }}>
-                              Nguyên liệu
-                            </span>
-                          )}
-                        </td>
-                        <td>
-                          <span style={{ fontWeight: 700, color: '#64748b', fontSize: '0.875rem' }}>
-                            {item.generalName}
-                          </span>
-                        </td>
-                        <td style={{ fontWeight: 800, color: 'var(--fiza-primary)' }}>{item.actualName}</td>
-                        <td style={{ fontSize: '0.875rem', color: '#64748b', maxWidth: '300px' }}>{item.note}</td>
-                        <td style={{ fontSize: '0.875rem', color: '#334155', fontWeight: 600 }}>{item.submittedBy}</td>
-                        <td style={{ fontSize: '0.875rem', color: '#64748b' }}>{item.submittedAt}</td>
-                        <td>
-                          <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem' }}>
-                            <ActionBtn icon={<Eye size={18} />} hoverColor="var(--fiza-primary)" onClick={() => { setViewingItem(item); setIsLinkingMode(false); }} />
-                            <ActionBtn icon={<Trash2 size={18} />} hoverColor="#ef4444" onClick={() => setConfirmDeleteId(item.id)} />
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td style={{ fontWeight: 800, color: 'var(--fiza-primary)' }}>{actualName}</td>
+                          <td style={{ fontSize: '0.875rem', color: '#64748b' }}>{status}</td>
+                          <td style={{ fontSize: '0.875rem', color: '#64748b', maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{note}</td>
+                          <td style={{ fontSize: '0.875rem', color: '#64748b' }}>{submittedAt}</td>
+                          <td>
+                            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem' }}>
+                              <ActionBtn icon={<Eye size={18} />} hoverColor="var(--fiza-primary)" onClick={() => { setViewingItem(item); setIsLinkingMode(false); }} />
+                              <ActionBtn icon={<Trash2 size={18} />} hoverColor="#ef4444" onClick={() => setConfirmDeleteId(id)} />
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                     {unidentifiedItems.length === 0 && (
                       <tr>
-                        <td colSpan={7} style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>
+                        <td colSpan={6} style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>
                           Không có yêu cầu định danh thực phẩm nào cần xử lý.
                         </td>
                       </tr>
@@ -512,10 +574,10 @@ const PerformanceManagement: React.FC = () => {
                   </tbody>
                 </table>
               </div>
-            </motion.div>
+            </div>
 
             {/* Synonym Management */}
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="um-card">
+            <div className="um-card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', gap: '2rem' }}>
                 <div>
                   <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--fiza-primary)' }}>Quản lý tên gọi địa phương</h3>
@@ -539,118 +601,113 @@ const PerformanceManagement: React.FC = () => {
                 </div>
               </div>
 
-              {isLoading ? (
-                <div style={{ padding: '4rem', textAlign: 'center', color: '#94a3b8', fontWeight: 600 }}>Đang tải danh sách tên gọi...</div>
-              ) : (
-                <div style={{ overflowX: 'auto' }}>
-                  <table className="um-table">
-                    <thead>
-                      <tr>
-                        <th>Tên chuẩn</th>
-                        <th style={{ width: '120px' }}>Loại</th>
-                        <th>Các biến thể / Tên gọi khác</th>
-                        <th style={{ textAlign: 'center', width: '120px' }}>Hành động</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredSynonyms.map(item => (
-                        <tr key={item.id}>
-                          <td style={{ fontWeight: 800, color: 'var(--fiza-primary)' }}>{item.originalName}</td>
-                          <td>
-                            <span style={{ 
-                              padding: '0.25rem 0.75rem', 
-                              borderRadius: '9999px', 
-                              fontSize: '10px', 
-                              fontWeight: 800, 
-                              textTransform: 'uppercase',
-                              backgroundColor: '#E1F2EB',
-                              color: 'var(--mint-green)'
-                            }}>
-                              Thực phẩm
-                            </span>
-                          </td>
-                          <td>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.65rem', alignItems: 'center' }}>
-                              {item.variants.map((v, idx) => (
-                                <div key={idx} style={{ 
-                                  display: 'flex', 
-                                  alignItems: 'center', 
-                                  gap: '0.35rem', 
-                                  padding: '0.25rem 0.85rem', 
-                                  backgroundColor: '#E1F2EB', 
-                                  borderRadius: '9999px',
-                                  border: '1px solid #6DD4B4',
-                                  transition: 'all 0.2s'
-                                }}>
-                                  <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--fiza-primary)' }}>{v}</span>
-                                  <button 
-                                    onClick={() => handleRemoveVariant(item.id, idx)}
-                                    style={{ border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', padding: 0 }}
-                                  >
-                                    <X size={14} color="var(--fiza-primary)" />
-                                  </button>
-                                </div>
-                              ))}
-                              
-                              {inlineAdding === item.id ? (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                  <input 
-                                    autoFocus 
-                                    value={inlineValue}
-                                    onChange={(e) => setInlineValue(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && handleAddInlineVariant(item.id)}
-                                    onBlur={() => {
-                                      if (!inlineValue.trim()) setInlineAdding(null);
-                                      else handleAddInlineVariant(item.id);
-                                    }}
-                                    placeholder="Nhập tên gọi khác..."
-                                    style={{ 
-                                      padding: '0.25rem 0.75rem', 
-                                      borderRadius: '9999px', 
-                                      border: '1.5px solid var(--mint-green)', 
-                                      fontSize: '0.8125rem',
-                                      outline: 'none',
-                                      width: '180px',
-                                      background: 'white'
-                                    }}
-                                  />
-                                  <button onClick={() => handleAddInlineVariant(item.id)} style={{ border: 'none', background: 'var(--mint-green)', color: 'white', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 6px rgba(109, 212, 180, 0.2)' }}>
-                                    <Plus size={16} />
-                                  </button>
-                                  <button onClick={() => { setInlineValue(''); setInlineAdding(null); }} style={{ border: 'none', background: '#f1f5f9', color: '#94a3b8', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                                    <X size={16} />
-                                  </button>
-                                </div>
-                              ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table className="um-table">
+                  <thead>
+                    <tr>
+                      <th>Tên chuẩn</th>
+                      <th style={{ width: '120px' }}>Loại</th>
+                      <th>Các biến thể / Tên gọi khác</th>
+                      <th style={{ textAlign: 'center', width: '120px' }}>Hành động</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredSynonyms.map(item => (
+                      <tr key={item.id}>
+                        <td style={{ fontWeight: 800, color: 'var(--fiza-primary)' }}>{item.originalName}</td>
+                        <td>
+                          <span style={{ 
+                            padding: '0.25rem 0.75rem', 
+                            borderRadius: '9999px', 
+                            fontSize: '10px', 
+                            fontWeight: 800, 
+                            textTransform: 'uppercase',
+                            backgroundColor: '#E1F2EB',
+                            color: 'var(--mint-green)'
+                          }}>
+                            Thực phẩm
+                          </span>
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.65rem', alignItems: 'center' }}>
+                            {item.variants.map((v, idx) => (
+                              <div key={idx} style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '0.35rem', 
+                                padding: '0.25rem 0.85rem', 
+                                backgroundColor: '#E1F2EB', 
+                                borderRadius: '9999px', 
+                                border: '1px solid #6DD4B4',
+                                transition: 'all 0.2s'
+                              }}>
+                                <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--fiza-primary)' }}>{v}</span>
                                 <button 
-                                  onClick={() => { setInlineAdding(item.id); setInlineValue(''); }}
-                                  className="um-btn-add"
-                                  style={{ padding: '0.25rem 1rem', height: '32px' }}
+                                  onClick={() => handleRemoveVariant(item.id, idx)}
+                                  style={{ border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', padding: 0 }}
                                 >
-                                  <Plus size={16} /> THÊM
+                                  <X size={14} color="var(--fiza-primary)" />
                                 </button>
-                              )}
-                            </div>
-                          </td>
-                          <td>
-                            <div style={{ display: 'flex', justifyContent: 'center' }}>
-                              <ActionBtn icon={<Trash2 size={18} />} hoverColor="#ef4444" onClick={() => handleDeleteSynonymMapping(item.id)} />
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                      {filteredSynonyms.length === 0 && (
-                        <tr>
-                          <td colSpan={4} style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>
-                            Không tìm thấy tên gọi địa phương nào.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </motion.div>
+                              </div>
+                            ))}
+                            {inlineAdding === item.id ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <input 
+                                  autoFocus 
+                                  value={inlineValue}
+                                  onChange={(e) => setInlineValue(e.target.value)}
+                                  onKeyDown={(e) => e.key === 'Enter' && handleAddInlineVariant(item.id)}
+                                  onBlur={() => {
+                                    if (!inlineValue.trim()) setInlineAdding(null);
+                                    else handleAddInlineVariant(item.id);
+                                  }}
+                                  placeholder="Nhập tên gọi khác..."
+                                  style={{ 
+                                    padding: '0.25rem 0.75rem', 
+                                    borderRadius: '9999px', 
+                                    border: '1px solid var(--mint-green)', 
+                                    fontSize: '0.8125rem',
+                                    outline: 'none',
+                                    width: '180px',
+                                    background: 'white'
+                                  }}
+                                />
+                                <button onClick={() => handleAddInlineVariant(item.id)} style={{ border: 'none', background: 'var(--mint-green)', color: 'white', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 6px rgba(109, 212, 180, 0.2)' }}>
+                                  <Plus size={16} />
+                                </button>
+                                <button onClick={() => { setInlineValue(''); setInlineAdding(null); }} style={{ border: 'none', background: '#f1f5f9', color: '#94a3b8', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                                  <X size={16} />
+                                </button>
+                              </div>
+                            ) : (
+                              <button 
+                                onClick={() => { setInlineAdding(item.id); setInlineValue(''); }}
+                                className="um-btn-add"
+                                style={{ padding: '0.25rem 1rem', height: '32px' }}
+                              >
+                                <Plus size={16} /> THÊM
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', justifyContent: 'center' }}>
+                            <ActionBtn icon={<Trash2 size={18} />} hoverColor="#ef4444" onClick={() => handleDeleteSynonymMapping(item.id)} />
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {filteredSynonyms.length === 0 && (
+                      <tr>
+                        <td colSpan={4} style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>
+                          Không tìm thấy tên gọi địa phương nào.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
 
           </main>
         </div>
@@ -751,7 +808,9 @@ const PerformanceManagement: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '1rem', border: '1px solid #e2e8f0', fontSize: '0.875rem' }}>
                 <p style={{ color: '#64748b', marginBottom: '0.25rem' }}>Người dùng nhập:</p>
-                <p style={{ fontWeight: 800, color: '#1e293b' }}>{approvingItem.actualName} ({approvingItem.generalName})</p>
+                <p style={{ fontWeight: 800, color: '#1e293b' }}>
+                  {(approvingItem.actualName || (approvingItem as any).actualname)} ({(approvingItem.generalName || (approvingItem as any).generalname)})
+                </p>
                 {approvingItem.note && <p style={{ color: '#64748b', marginTop: '0.5rem', fontStyle: 'italic' }}>Ghi chú: {approvingItem.note}</p>}
               </div>
 
@@ -768,6 +827,7 @@ const PerformanceManagement: React.FC = () => {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Nhóm thực phẩm</label>
+                {/* 🎯 DROPDOWN ĐÃ ĐƯỢC CHỌN SẴN THEO GENERALNAME LẤY TỪ DATABASE */}
                 <select 
                   value={approveCategory} 
                   onChange={(e) => setApproveCategory(Number(e.target.value))} 
@@ -804,6 +864,7 @@ const PerformanceManagement: React.FC = () => {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Từ đồng nghĩa / Tên gọi khác (phân cách bằng dấu phẩy)</label>
+                {/* 🎯 ĐÃ ĐƯỢC ĐỔI THÀNH APPROVESYNONYMS ĐỂ HIỂN THỊ ĐÚNG MÓN NGƯỜI DÙNG TỰ GÕ */}
                 <input 
                   type="text" 
                   value={approveSynonyms} 
@@ -843,7 +904,9 @@ const PerformanceManagement: React.FC = () => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '1rem', border: '1px solid #e2e8f0', fontSize: '0.875rem' }}>
                   <p style={{ color: '#64748b', marginBottom: '0.25rem' }}>Liên kết tên gọi của người dùng:</p>
-                  <p style={{ fontWeight: 800, color: '#1e293b' }}>{viewingItem.actualName} ({viewingItem.generalName})</p>
+                  <p style={{ fontWeight: 800, color: '#1e293b' }}>
+                    {(viewingItem.actualName || (viewingItem as any).actualname)} ({(viewingItem.generalName || (viewingItem as any).generalname)})
+                  </p>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -912,16 +975,27 @@ const PerformanceManagement: React.FC = () => {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                  <DetailItem label="Tên loại chung" value={viewingItem.generalName} isBadge />
-                  <DetailItem label="Tên cụ thể (Người dùng nhập)" value={viewingItem.actualName} />
-                  <DetailItem label="Loại" value={viewingItem.type === 'meat' ? 'Thịt' : 'Nguyên liệu/Gia vị'} />
-                  <DetailItem label="Người gửi" value={viewingItem.submittedBy} />
-                  <DetailItem label="Ngày gửi" value={viewingItem.submittedAt} />
+                  <DetailItem label="Nhóm phân loại" value={viewingItem.generalName || (viewingItem as any).generalname} isBadge />
+                  <DetailItem label="Tên cụ thể (Người dùng nhập)" value={viewingItem.actualName || (viewingItem as any).actualname} />
+                  <DetailItem label="Số lượng trong tủ" value={viewingItem.quantity != null ? `${viewingItem.quantity}` : '—'} />
+                  <DetailItem label="Khu vực lưu trữ chính" value={translateStorageLocation(viewingItem.storageLocation || (viewingItem as any).storagelocation)} />
+                  <DetailItem label="Vị trí chi tiết trong tủ" value={translateSpecificLocation(viewingItem.specificLocation || (viewingItem as any).specificlocation)} />
+                  <DetailItem label="Hạn sử dụng" value={viewingItem.expiryDate || (viewingItem as any).expirydate || '—'} />
+                  <DetailItem label="Trạng thái lưu trữ" value={(viewingItem.status === 'STORED' ? 'Đang lưu trữ' : viewingItem.status) || '—'} />
+                  <DetailItem label="Ngày đưa vào tủ" value={viewingItem.submittedAt || (viewingItem as any).submittedat} />
                 </div>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginTop: '1rem', borderTop: '1px dashed #e2e8f0', paddingTop: '1rem' }}>
+                  <DetailItem label="Mã gia đình (Family ID)" value={viewingItem.familyId || (viewingItem as any).familyid ? `${viewingItem.familyId || (viewingItem as any).familyid}` : '—'} />
+                  <DetailItem label="Mã thực phẩm (Food ID)" value={viewingItem.foodId || (viewingItem as any).foodid ? `${viewingItem.foodId || (viewingItem as any).foodid}` : '—'} />
+                  <DetailItem label="Thời điểm tạo bản ghi" value={viewingItem.createdAt || (viewingItem as any).createdat || '—'} />
+                  <DetailItem label="Thời điểm cập nhật" value={viewingItem.updatedAt || (viewingItem as any).updatedat || '—'} />
+                </div>
+                
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginTop: '0.5rem' }}>
                   <span style={{ fontSize: '10px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Ghi chú / Chú thích của người dùng</span>
                   <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '1rem', border: '1px solid #e2e8f0', fontSize: '0.875rem', color: '#475569', lineHeight: 1.5 }}>
-                    {viewingItem.note || 'Không có ghi chú.'}
+                    {viewingItem.note || 'Không có ghi chú từ gia đình.'}
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.5rem', flexDirection: 'column' }}>
@@ -930,7 +1004,7 @@ const PerformanceManagement: React.FC = () => {
                       onClick={() => setViewingItem(null)} 
                       style={{ flex: 1, padding: '0.75rem', borderRadius: '9999px', border: '1px solid #e2e8f0', background: 'white', fontWeight: 600, cursor: 'pointer' }}
                     >
-                      Đóng
+                      Đóng cửa sổ
                     </button>
                     <button 
                       onClick={() => {
@@ -940,7 +1014,7 @@ const PerformanceManagement: React.FC = () => {
                       }}
                       style={{ flex: 1, padding: '0.75rem', borderRadius: '9999px', border: '1px solid #e2e8f0', background: 'white', color: '#3b82f6', fontWeight: 600, cursor: 'pointer' }}
                     >
-                      Liên kết thực phẩm sẵn có
+                      Liên kết món sẵn có
                     </button>
                   </div>
                   <button 
@@ -951,7 +1025,7 @@ const PerformanceManagement: React.FC = () => {
                     className="um-btn-primary" 
                     style={{ width: '100%', marginTop: '0.5rem' }}
                   >
-                    Duyệt thực phẩm mới
+                    Duyệt tạo thực phẩm mới hệ thống
                   </button>
                 </div>
               </div>
@@ -990,10 +1064,9 @@ const PerformanceManagement: React.FC = () => {
   );
 };
 
-// --- Copy helpers ---
 function SidebarLink({ icon, label, to, isExpanded, active, onClick }: any) {
   return (
-    <NavLink to={to} onClick={onClick} className={`um-nav-item ${active ? 'active' : ''} ${isExpanded ? 'expanded' : 'collapsed'}`}>
+    <NavLink to={to} onClick={onClick} className={`um-nav-item ${active ? 'active' : ''} ${isExpanded ? 'expanded' : 'collapsed'}`} >
       <div className="um-nav-icon">{icon}</div>
       <AnimatePresence>
         {isExpanded && (
@@ -1006,7 +1079,6 @@ function SidebarLink({ icon, label, to, isExpanded, active, onClick }: any) {
   );
 }
 
-
 function HeaderBtn({ icon, hasBadge }: any) {
   return (
     <button style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'white', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', position: 'relative' }}>
@@ -1015,6 +1087,7 @@ function HeaderBtn({ icon, hasBadge }: any) {
     </button>
   );
 }
+
 function ActionBtn({ icon, hoverColor, onClick }: any) {
   const [hover, setHover] = useState(false);
   return (
