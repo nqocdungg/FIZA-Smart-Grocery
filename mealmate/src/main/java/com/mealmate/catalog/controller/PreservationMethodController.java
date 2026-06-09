@@ -28,7 +28,7 @@ public class PreservationMethodController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Created", service.save(entity)));
     }
 
-    // 🎯 THÊM ĐOẠN API MỚI NÀY: Tra cứu gọn gàng, đập tan lỗi ByteBuddyInterceptor
+    // Tra cứu gọn gàng, đập tan lỗi ByteBuddyInterceptor
     @GetMapping("/food/{foodId}")
     public ResponseEntity<ApiResponse<PreservationMethodResponse>> getByFoodId(@PathVariable Long foodId) {
         PreservationMethod method = service.findByFoodId(foodId);
@@ -46,5 +46,17 @@ public class PreservationMethodController {
                 .build();
 
         return ResponseEntity.ok(new ApiResponse<>(true, "Success", response));
+    }
+
+    // 🎯 THÊM HÀM NÀY VÀO: Đón đầu request cập nhật (PUT) từ Front-end, giải quyết triệt để lỗi static resource
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<PreservationMethod>> update(
+            @PathVariable Long id, 
+            @RequestBody PreservationMethod entity
+    ) {
+        // Gán cứng ID từ đường dẫn vào entity để JPA hiểu đây là luồng UPDATE ghi đè thay vì tạo mới
+        entity.setId(id); 
+        return ResponseEntity.ok(new ApiResponse<>(true, "Updated", service.save(entity)));
     }
 }
