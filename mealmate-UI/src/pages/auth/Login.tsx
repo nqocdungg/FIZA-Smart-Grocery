@@ -85,7 +85,19 @@ const Login: React.FC = () => {
       // 2. KỸ THUẬT NẠP TRƯỚC (PRE-FETCH): Gọi ngay các API phụ để kéo thông tin chi tiết
       if (currentToken) {
         try {
-          // A. Tải thông tin tên nhóm gia đình hiện tại
+          // A. Tải thông tin chi tiết của chính người dùng đang đăng nhập để lấy avatar chuẩn từ DB
+          const resCurrentUser = await api.get('/api/v1/users/users/current', {
+            headers: { 'Authorization': `Bearer ${currentToken}` }
+          });
+          if (resCurrentUser.data?.success && resCurrentUser.data?.data) {
+            const curUserData = resCurrentUser.data.data;
+            detailedAvatar = curUserData.avatarUrl || detailedAvatar;
+            detailedPhone = curUserData.phone || detailedPhone;
+            detailedGender = curUserData.gender || detailedGender;
+            detailedRoleName = curUserData.roleName || detailedRoleName;
+          }
+
+          // B. Tải thông tin tên nhóm gia đình hiện tại
           const resGroup = await api.get('/api/v1/users/familys/current', {
             headers: { 'Authorization': `Bearer ${currentToken}` }
           });

@@ -21,6 +21,7 @@ import NotificationPanel from '../../components/common/NotificationPanel';
 import { useAuth } from '../../context/AuthContext';
 import { AUTH_ROLES, getAuthRoleName, getRoleId, getRoleLabel } from '../../features/auth/role';
 import api from '../../services/api';
+import defaultAvatar from '@/assets/avatar/26.svg';
 
 interface Role {
   id: number;
@@ -48,6 +49,8 @@ const ROLE_OPTIONS = [
   { value: AUTH_ROLES.HOUSEKEEPER, label: getRoleLabel(AUTH_ROLES.HOUSEKEEPER) },
   { value: AUTH_ROLES.CUSTOMER, label: getRoleLabel(AUTH_ROLES.CUSTOMER) },
 ];
+
+
 
 const readUsersResponse = (payload: any): User[] => {
   const users = payload?.success ? payload.data : payload;
@@ -304,9 +307,10 @@ const UserManagement: React.FC = () => {
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                             <div style={{ width: '32px', height: '32px', borderRadius: '50%', overflow: 'hidden' }}>
                               <img
-                                src={user.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.fullName}`}
+                                src={user.avatarUrl || defaultAvatar}
                                 alt=""
                                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                onError={(e) => { (e.target as HTMLImageElement).src = defaultAvatar; }}
                               />
                             </div>
                             <span style={{ fontWeight: 700, color: '#1e293b' }}>{user.fullName}</span>

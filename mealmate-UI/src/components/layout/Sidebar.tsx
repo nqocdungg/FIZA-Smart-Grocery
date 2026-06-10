@@ -21,7 +21,7 @@ const hasRealFamilyName = (value?: string | null) => {
   return Boolean(
     value &&
     !value.includes("Đang tải") &&
-    !value.includes("Äang") &&
+    !value.includes("Ä ang") &&
     !value.includes("Chưa có gia đình") &&
     !value.includes("ChÆ°a")
   );
