@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.mealmate.catalog.model.Food;
 import com.mealmate.catalog.repository.FoodRepository;
+import com.mealmate.catalog.repository.FoodProjection;
 import com.mealmate.common.dto.ApiResponse;
 import com.mealmate.shopping.dto.FrequentItemSuggestionDTO;
 import com.mealmate.shopping.dto.DailyPlanSummaryDTO;
@@ -63,9 +64,9 @@ public class ShoppingController {
     }
 
     @GetMapping("/foods/search")
-    public ResponseEntity<ApiResponse<List<Food>>> searchFoods(@RequestParam String query) {
+    public ResponseEntity<ApiResponse<List<FoodProjection>>> searchFoods(@RequestParam String query) {
         return ResponseEntity
-                .ok(new ApiResponse<>(true, "Success", foodRepository.findByNameContainingIgnoreCase(query)));
+                .ok(new ApiResponse<>(true, "Success", foodRepository.searchFoods(query, null)));
     }
 
     @DeleteMapping("/{listId}")

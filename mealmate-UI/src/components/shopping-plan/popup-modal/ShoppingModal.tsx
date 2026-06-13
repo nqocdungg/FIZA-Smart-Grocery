@@ -23,6 +23,35 @@ interface ShoppingModalProps {
     defaultFilter?: 'ALL' | 'PENDING' | 'DONE';
 }
 
+const getCategoryInfo = (categoryName?: string) => {
+    const name = categoryName?.toLowerCase() || '';
+    if (name.includes('rau')) {
+        return { icon: '🥦', color: '#B2EBD9', key: 'vegetable' };
+    }
+    if (name.includes('thịt') || name.includes('thit')) {
+        return { icon: '🥩', color: '#FFD6D6', key: 'meat' };
+    }
+    if (name.includes('hải sản') || name.includes('hai san') || name.includes('cá') || name.includes('ca')) {
+        return { icon: '🐟', color: '#D7ECFF', key: 'fish' };
+    }
+    if (name.includes('sữa') || name.includes('sua') || name.includes('trứng') || name.includes('trung') || name.includes('dairy')) {
+        return { icon: '🥛', color: '#F3E8FF', key: 'dairy' };
+    }
+    if (name.includes('trái cây') || name.includes('trai cay') || name.includes('quả') || name.includes('qua') || name.includes('fruit')) {
+        return { icon: '🍎', color: '#FFE1A8', key: 'fruit' };
+    }
+    if (name.includes('gia vị') || name.includes('gia vi') || name.includes('spice')) {
+        return { icon: '🧂', color: '#ECEFF1', key: 'spice' };
+    }
+    if (name.includes('khô') || name.includes('kho') || name.includes('dry')) {
+        return { icon: '🍞', color: '#F5E6D3', key: 'dry-food' };
+    }
+    if (name.includes('uống') || name.includes('uong') || name.includes('drink') || name.includes('nước') || name.includes('nuoc')) {
+        return { icon: '🥤', color: '#E0F7FA', key: 'drink' };
+    }
+    return { icon: '📦', color: '#F1F5F9', key: 'other' };
+};
+
 const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, onSuccess, plans, defaultFilter = 'ALL' }: ShoppingModalProps) => {
     if (!isOpen) return null;
     const { user } = useAuth();
@@ -225,13 +254,18 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
     const handleConfirmAddItem = (config: { quantity: number; assignedTo: number | null; note: string }) => {
         if (!activeFood) return;
 
+        const category = activeFood.category || activeFood.categoryName || 'Khác';
+        const catInfo = getCategoryInfo(category);
+
         const newItem: any = {
             id: Date.now(),
             foodId: activeFood.id,
             foodName: activeFood.name || activeFood.foodName,
             quantity: config.quantity,
             unit: activeFood.unit || 'kg',
-            categoryName: activeFood.category || 'Khác',
+            categoryName: category,
+            foodIcon: catInfo.key,
+            colorCode: catInfo.color,
             note: config.note,
             assignedTo: config.assignedTo,
             isPurchased: false
@@ -487,21 +521,24 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
                             {/* 3. RENDER SEARCH RESULTS (Dropdown nổi) */}
                             {isHousekeeper && showResults && (
                                 <div className="search-results-dropdown">
-                                    {searchResults.map(food => (
-                                        <div key={food.id} className="search-result-item" onClick={() => handleAddClick(food)}>
-                                            <span className="result-icon-wrapper">
-                                                {categoryIconMap[food.categoryName] || '📦'}
-                                            </span>
-                                            <span className="result-name">{food.name || food.foodName}</span>
-                                            <span className="result-unit">{food.unit || 'kg'}</span>
-                                            <button className="add-btn-small" onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleAddClick(food);
-                                            }}>
-                                                <Plus size={16} />
-                                            </button>
-                                        </div>
-                                    ))}
+                                    {searchResults.map(food => {
+                                        const catInfo = getCategoryInfo(food.category || food.categoryName);
+                                        return (
+                                            <div key={food.id} className="search-result-item" onClick={() => handleAddClick(food)}>
+                                                <span className="result-icon-wrapper" style={{ backgroundColor: catInfo.color }}>
+                                                    {catInfo.icon}
+                                                </span>
+                                                <span className="result-name">{food.name || food.foodName}</span>
+                                                <span className="result-unit">{food.unit || 'kg'}</span>
+                                                <button className="add-btn-small" onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleAddClick(food);
+                                                }}>
+                                                    <Plus size={16} />
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
                                     {searchResults.length === 0 && <div className="no-result">Không tìm thấy thực phẩm</div>}
                                 </div>
                             )}
@@ -511,6 +548,7 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
                                 <div className="popover-anchor">
                                     <AddItemPopover
                                         foodName={activeFood.name || activeFood.foodName}
+                                        foodIcon={getCategoryInfo(activeFood.category || activeFood.categoryName).icon}
                                         unit={activeFood.unit || 'kg'}
                                         members={members}
                                         onConfirm={handleConfirmAddItem}
