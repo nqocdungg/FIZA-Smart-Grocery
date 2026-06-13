@@ -6,7 +6,7 @@ spring:
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/mealmate}
     username: postgres
-    password: 123456
+    password: admin
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -15,14 +15,6 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-
-logging:
-  level:
-    org.hibernate.SQL: WARN
-    org.hibernate.orm.results: WARN
-    org.hibernate.type.descriptor.sql.BasicBinder: WARN
-    org.springframework.web: INFO
-    com.mealmate: INFO
   mail:
     host: smtp.gmail.com
     port: 587
@@ -31,6 +23,14 @@ logging:
     properties:
       mail.smtp.auth: true
       mail.smtp.starttls.enable: true
+logging:
+  level:
+    org.hibernate.SQL: WARN
+    org.hibernate.orm.results: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+    org.springframework.web: INFO
+    com.mealmate: INFO
+    
 
 jwt:
   secret: ${JWT_SECRET:dGhpcy1pcy1hLXNlY3VyZS1rZXktZm9yLW1lYWxtYXRlLWp3dC0yNTY=}
