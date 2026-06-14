@@ -62,4 +62,45 @@ public class EmailService {
             throw new RuntimeException("Không thể gửi email xác thực. Vui lòng thử lại sau.");
         }
     }
+    public void sendTemporaryPasswordEmail(String toEmail, String tempPassword) {
+        if (mailSender == null) {
+            log.warn("JavaMailSender chưa được cấu hình. Bỏ qua gửi email tới: {}", toEmail);
+            return;
+        }
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setTo(toEmail);
+            helper.setSubject("Fiza - Cấp mật khẩu tạm thời khôi phục tài khoản");
+
+            String htmlContent = """
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
+                        <h2 style="color: #00bcd4; text-align: center;">🔐 Mật khẩu tạm thời Fiza</h2>
+                        <p>Chào bạn,</p>
+                        <p>Hệ thống nhận được yêu cầu khôi phục mật khẩu từ bạn. Chúng tôi đã đặt lại và cấp cho bạn một mật khẩu đăng nhập tạm thời dưới đây:</p>
+                        
+                        <div style="text-align: center; margin: 30px 0; background-color: #f5f5f5; padding: 15px; border-radius: 5px; border: 1px dashed #00bcd4;">
+                            <span style="font-size: 24px; font-weight: bold; color: #e67e22; letter-spacing: 2px;">%s</span>
+                        </div>
+                        
+                        <p style="color: #ff5722; font-weight: 500;">⚠️ Lưu ý bảo mật:</p>
+                        <ul>
+                            <li>Hãy sử dụng mật khẩu này để đăng nhập ngay vào hệ thống Fiza.</li>
+                            <li>Sau khi đăng nhập thành công, vui lòng truy cập vào phần <strong>Cài đặt tài khoản (Profile)</strong> để đổi lại mật khẩu cá nhân của bạn.</li>
+                        </ul>
+                        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+                        <p style="color: #999; font-size: 12px; text-align: center;">Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email.</p>
+                    </div>
+                    """.formatted(tempPassword);
+
+            helper.setText(htmlContent, true);
+            mailSender.send(message);
+
+            log.info("📧 [FIZA SUCCESS] Đã gửi thành công mật khẩu tạm về Gmail: {}", toEmail);
+        } catch (MessagingException e) {
+            log.error("❌ Lỗi gửi email mật khẩu tạm tới: {}", toEmail, e);
+            throw new RuntimeException("Không thể gửi email khôi phục mật khẩu. Vui lòng thử lại sau.");
+        }
+    }
 }

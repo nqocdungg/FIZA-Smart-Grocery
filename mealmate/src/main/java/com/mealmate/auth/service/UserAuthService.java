@@ -113,18 +113,18 @@ public class UserAuthService {
      * Login user.
      */
     public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new BadCredentialsException("Email hoặc mật khẩu không đúng"));
+        User user = userRepository.findByEmailOrPhone(request.getEmail())
+                .orElseThrow(() -> new BadCredentialsException("Tài khoản hoặc mật khẩu không chính xác"));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-            throw new BadCredentialsException("Email hoặc mật khẩu không đúng");
+            throw new BadCredentialsException("Tài khoản hoặc mật khẩu không chính xác");
         }
 
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", user.getId());
         claims.put("fullName", user.getFullName());
-        claims.put("email", user.getEmail());
-        claims.put("gender", user.getGender() != null ? user.getGender() : "OTHER"); // 🎯 BỔ SUNG: Nạp vào Token khi Đăng nhập
+        claims.put("email", user.getEmail()); // Giữ nguyên email gốc làm subject nhận diện JWT
+        claims.put("gender", user.getGender() != null ? user.getGender() : "OTHER");
         claims.put("role", user.getRole() != null ? user.getRole().getName() : "CUSTOMER");
 
         String token = jwtService.generateToken(claims, user.getEmail());
@@ -138,7 +138,7 @@ public class UserAuthService {
                 .email(user.getEmail())
                 .fullName(user.getFullName())
                 .role(user.getRole() != null ? user.getRole().getName() : "CUSTOMER")
-                .gender(user.getGender() != null ? user.getGender() : "OTHER") // 🎯 BỔ SUNG: Trả về cho Front-end khi Đăng nhập
+                .gender(user.getGender() != null ? user.getGender() : "OTHER")
                 .familyId(user.getFamilyId())
                 .familyName(user.getFamily() != null ? user.getFamily().getName() : null)
                 .build();

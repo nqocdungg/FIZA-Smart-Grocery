@@ -6,24 +6,38 @@ import { login as loginRequest } from '@/features/auth/api/authApi';
 import { AuthInput, AuthButton, AuthLayout } from '@/components/auth/AuthComponents';
 import { getAuthRedirectPath } from '@/features/auth/role';
 import api from "@/services/api"; // 🎯 GIỮ NGUYÊN: Sử dụng instance axios cấu hình chung để gọi các API bổ sung
+import ForgotPasswordModal from '@/components/auth/ForgotPasswordModal'; // 🎯 THÊM MỚI: Nhúng modal quên mật khẩu
 import './Login.css';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
-  const [email, setEmail] = useState('');
+  
+  // 🎯 ĐỔI TÊN ĐỂ ĐỒNG BỘ: Sử dụng 'identifier' đại diện cho cả Email lẫn Số điện thoại
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{ identifier?: string; password?: string }>({});
   const [submitError, setSubmitError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // 🎯 THÊM MỚI: Cờ hiệu kiểm soát ẩn hiện Modal Quên mật khẩu
+  const [isForgotOpen, setIsForgotOpen] = useState<boolean>(false);
+
+  // 🎯 CẬP NHẬT: Cho phép validate cả định dạng Email HOẶC Số điện thoại (chỉ chứa số, 9-11 ký tự)
   const validate = () => {
     const newErrors: { identifier?: string; password?: string } = {};
-    if (!email.trim()) {
-      newErrors.identifier = 'Vui lòng nhập Email.';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      newErrors.identifier = 'Định dạng Email không hợp lệ.';
+    const inputTrimmed = identifier.trim();
+
+    if (!inputTrimmed) {
+      newErrors.identifier = 'Vui lòng nhập Email hoặc Số điện thoại.';
+    } else {
+      const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputTrimmed);
+      const isPhone = /^\d{9,11}$/.test(inputTrimmed);
+
+      if (!isEmail && !isPhone) {
+        newErrors.identifier = 'Email hoặc Số điện thoại không hợp lệ.';
+      }
     }
 
     if (!password) {
@@ -63,8 +77,8 @@ const Login: React.FC = () => {
       localStorage.removeItem("currentFamilyName");
       localStorage.removeItem("familyMembersCache");
 
-      // 1. Gọi API đăng nhập để bốc thông tin Token xác thực cơ bản
-      const response = await loginRequest({ email, password });
+      // 1. Gọi API đăng nhập (truyền giá trị identifier đã gõ vào trường email của request body)
+      const response = await loginRequest({ email: identifier.trim(), password });
       const currentToken = response.accessToken ?? '';
 
       // Đặt các biến cục bộ bọc lót dữ liệu chi tiết
@@ -78,14 +92,12 @@ const Login: React.FC = () => {
         localStorage.setItem("currentFamilyName", detailedFamilyName.trim());
       }
 
-      // 🎯 Ép kiểu trung gian sang 'any' để bypass qua bộ lọc TypeScript của AuthResponse gốc
       const rawResponse = response as any;
       let detailedAvatar = rawResponse.avatarUrl || rawResponse.avatar_url || undefined;
 
-      // 2. KỸ THUẬT NẠP TRƯỚC (PRE-FETCH): Gọi ngay các API phụ để kéo thông tin chi tiết
+      // 2. KỸ THUẬT NẠP TRƯỚC (PRE-FETCH)
       if (currentToken) {
         try {
-          // A. Tải thông tin chi tiết của chính người dùng đang đăng nhập để lấy avatar chuẩn từ DB
           const resCurrentUser = await api.get('/api/v1/users/users/current', {
             headers: { 'Authorization': `Bearer ${currentToken}` }
           });
@@ -97,7 +109,6 @@ const Login: React.FC = () => {
             detailedRoleName = curUserData.roleName || detailedRoleName;
           }
 
-          // B. Tải thông tin tên nhóm gia đình hiện tại
           const resGroup = await api.get('/api/v1/users/familys/current', {
             headers: { 'Authorization': `Bearer ${currentToken}` }
           });
@@ -110,7 +121,6 @@ const Login: React.FC = () => {
             detailedFamilyId = Number(groupData.id);
           }
 
-          // B. Tải danh sách thành viên đầy đủ trường để bóc tách thông tin cá nhân của chính mình
           const resMembers = await api.get('/api/v1/users/users/family/members', {
             headers: { 'Authorization': `Bearer ${currentToken}` }
           });
@@ -126,7 +136,6 @@ const Login: React.FC = () => {
               localStorage.setItem("currentFamilyName", detailedFamilyName);
             }
 
-            // Định dạng và lưu bộ nhớ đệm danh sách thành viên phục vụ hệ thống
             const formattedMembers = dbMembers.map((m: any) => {
               const rName = String(m.roleName || m.role?.name || m.role).toUpperCase();
               const isOwner = rName.includes("CHỦ NHÀ") || rName.includes("HOUSEKEEPER");
@@ -142,13 +151,12 @@ const Login: React.FC = () => {
             });
             localStorage.setItem("familyMembersCache", JSON.stringify(formattedMembers));
 
-            // Tìm kiếm chính xác bản ghi của bản thân trong danh sách theo userId nhận về lúc login
             const mySelf = formattedMembers.find((m: any) => Number(m.id) === Number(response.userId));
             if (mySelf) {
               detailedPhone = mySelf.phone;
               detailedGender = mySelf.gender;
               detailedRoleName = mySelf.roleName;
-              detailedAvatar = mySelf.avatarUrl || detailedAvatar; // Đồng bộ avatarUrl chuẩn chỉ
+              detailedAvatar = mySelf.avatarUrl || detailedAvatar;
             }
           }
         } catch (extraErr) {
@@ -156,14 +164,14 @@ const Login: React.FC = () => {
         }
       }
 
-      // 3. Gọi hàm login của AuthContext để đồng bộ cục dữ liệu HOÀN HẢO lên Global State & LocalStorage
+      // 3. Đồng bộ dữ liệu lên Global State & LocalStorage
       login({
         userId: response.userId,
         email: response.email,
         fullName: response.fullName,
         accessToken: currentToken,
         tokenType: response.tokenType,
-        role: response.role, // Giữ lại cho phân quyền admin
+        role: response.role,
         phone: detailedPhone,
         gender: detailedGender,
         roleName: detailedRoleName,
@@ -172,7 +180,7 @@ const Login: React.FC = () => {
         avatarUrl: detailedAvatar 
       });
 
-      // 4. KIỂM TRA PHÂN QUYỀN VÀ ĐIỀU HƯỚNG CHUẨN XÁC
+      // 4. Điều hướng sau đăng nhập
       navigate(getAuthRedirectPath(response.role), { replace: true });
       
     } catch (error) {
@@ -190,15 +198,16 @@ const Login: React.FC = () => {
       <div className="login-container">
         <form className="login-form" onSubmit={handleLogin}>
           
+          {/* 🎯 CẬP NHẬT: Cho phép nhập Email hoặc Số điện thoại */}
           <div className="input-group">
             <AuthInput 
-              label="Email"
-              placeholder="Nhập email của bạn"
-              value={email}
-              autoComplete="email"
+              label="Tài khoản"
+              placeholder="Nhập email hoặc số điện thoại của bạn"
+              value={identifier}
+              autoComplete="username"
               disabled={isSubmitting}
               onChange={(e) => {
-                setEmail(e.target.value);
+                setIdentifier(e.target.value);
                 if (errors.identifier) setErrors({ ...errors, identifier: '' });
               }}
               className={errors.identifier ? 'input-error' : ''}
@@ -206,6 +215,7 @@ const Login: React.FC = () => {
             {errors.identifier && <span className="error-text">{errors.identifier}</span>}
           </div>
 
+          {/* 🎯 CẬP NHẬT: Tích hợp sự kiện click mở modal Quên mật khẩu vào rightLabel */}
           <div className="input-group">
             <AuthInput 
               label="Mật khẩu"
@@ -218,7 +228,15 @@ const Login: React.FC = () => {
                 setPassword(e.target.value);
                 if (errors.password) setErrors({ ...errors, password: '' });
               }}
-              rightLabel={<span className="forgot-pass">Quên mật khẩu?</span>}
+              rightLabel={
+                <span 
+                  className="forgot-pass" 
+                  onClick={() => !isSubmitting && setIsForgotOpen(true)}
+                  style={{ cursor: 'pointer', userSelect: 'none' }}
+                >
+                  Quên mật khẩu?
+                </span>
+              }
               endAdornment={
                 <button
                   type="button"
@@ -249,6 +267,12 @@ const Login: React.FC = () => {
           </span>
         </footer>
       </div>
+
+      {/* 🎯 THÊM MỚI: Thả component Modal Quên mật khẩu nằm ở đáy layout */}
+      <ForgotPasswordModal 
+        isOpen={isForgotOpen} 
+        onClose={() => setIsForgotOpen(false)} 
+      />
     </AuthLayout>
   );
 };
