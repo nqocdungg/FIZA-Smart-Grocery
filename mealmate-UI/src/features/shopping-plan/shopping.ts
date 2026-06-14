@@ -114,4 +114,3 @@ export interface WeeklyShoppingAggregate {
   isPurchased: boolean;
   itemIds: number[];
 }
-
