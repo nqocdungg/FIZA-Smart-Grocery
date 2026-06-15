@@ -30,4 +30,6 @@ public interface ShoppingImportCandidateProjection {
     String getUnit();
 
     String getNote();
+    
+    java.time.LocalDateTime getImportedToFridgeAt();
 }

@@ -48,7 +48,7 @@ const ShoppingItemRow: React.FC<RowProps> = ({ item, mode, members = [], onUpdat
         return (
             <div className="shopping-row-edit">
                 <div className="food-info-edit">
-                    <span className="food-name">{item.foodName || 'Thực phẩm'}</span>
+                    <span className="food-name">{item.customName || item.custom_name || item.foodName || 'Thực phẩm'}</span>
                     <input
                         className="item-note-input"
                         type="text"
@@ -118,7 +118,7 @@ const ShoppingItemRow: React.FC<RowProps> = ({ item, mode, members = [], onUpdat
 
             <div className="food-info-display">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span className="food-name-display">{item.foodName}</span>
+                    <span className="food-name-display">{item.customName || item.custom_name || item.foodName}</span>
                     {isImported && <span className="imported-badge">Đã trong tủ</span>}
                 </div>
                 <input

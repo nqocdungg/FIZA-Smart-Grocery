@@ -9,9 +9,10 @@ interface FrequentItemsProps {
     plans: DailyPlanCardData[];
     onAddSuccess?: () => void;
     onItemAdd?: (item: any) => void;
+    canCreatePlan?: boolean;
 }
 
-const FrequentItems: React.FC<FrequentItemsProps> = ({ familyId, plans, onAddSuccess, onItemAdd }) => {
+const FrequentItems: React.FC<FrequentItemsProps> = ({ familyId, plans, onAddSuccess, onItemAdd, canCreatePlan }) => {
     const [frequentItems, setFrequentItems] = useState<any[]>([]);
 
     useEffect(() => {
@@ -100,8 +101,6 @@ const FrequentItems: React.FC<FrequentItemsProps> = ({ familyId, plans, onAddSuc
 
     // Fallback data nếu danh sách trống hoặc API chưa có dữ liệu
     const displayItems = frequentItems.length > 0 ? frequentItems : [
-        { id: 101, foodName: 'Sữa tươi nguyên chất', unit: '2L' },
-        { id: 102, foodName: 'Trứng gà ta', unit: '10 quả' },
     ];
 
     return (
@@ -123,13 +122,14 @@ const FrequentItems: React.FC<FrequentItemsProps> = ({ familyId, plans, onAddSuc
                         </div>
                         <span className="frequent-item-name">{item.foodName}</span>
                         <span className="frequent-item-unit">{item.unit}</span>
-                        <button
+                        {canCreatePlan && (<button
                             className="frequent-add-btn"
                             onClick={() => handleAddClick(item)}
                             title="Thêm vào danh sách"
                         >
                             +
                         </button>
+                        )}
                     </div>
                 ))}
             </div>

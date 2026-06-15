@@ -1,0 +1,15 @@
+DB_URL=jdbc:postgresql://localhost:5432/mealmate
+DB_USERNAME=postgres
+DB_PASSWORD=your_password
+
+MAIL_USERNAME=[your_email@gmail.com](mailto:your_email@gmail.com)
+MAIL_PASSWORD=your_app_password
+
+JWT_SECRET=your_jwt_secret
+JWT_EXPIRATION=3600000
+
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+
+APP_BASE_URL=http://localhost:8080

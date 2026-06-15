@@ -23,6 +23,7 @@ public class ShoppingMapper {
         dto.setUnit(item.getUnit());
         dto.setIsPurchased(item.getIsPurchased());
         dto.setNote(item.getNote());
+        dto.setCustomName(item.getCustomName());
         dto.setImportedToFridgeAt(item.getImportedToFridgeAt());
         if (item.getFridgeItem() != null) {
             dto.setFridgeItemId(item.getFridgeItem().getId());

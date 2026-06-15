@@ -1,6 +1,7 @@
 import DatePicker from "@/components/common/DatePicker";
 import { useAuth } from "@/context/AuthContext";
-import { deleteShoppingList, getFamilyMembers, getPlanDetail, importToFridge, saveShoppingPlan, searchFoods, toggleItemStatus } from "@/features/shopping-plan/shoppingApi";
+import api from "@/services/api";
+import { deleteShoppingList, getFamilyMembers, getPlanDetail, importToFridge, importFromShopping, saveShoppingPlan, searchFoods, toggleItemStatus } from "@/features/shopping-plan/shoppingApi";
 import { getPendingShoppingItems, type PendingShoppingItem } from "@/features/shopping-plan/shoppingSuggestions";
 import { Edit3, Filter, Plus, Search, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -72,6 +73,100 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
     const [showFilterMenu, setShowFilterMenu] = useState(false);
     const [toggledPendingIds, setToggledPendingIds] = useState<Record<number, boolean>>({});
     const [showSuggestions, setShowSuggestions] = useState(false);
+    const [genericFoods, setGenericFoods] = useState<any[]>([]);
+    const [showImportReview, setShowImportReview] = useState(false);
+
+    interface ImportDraft {
+        quantity: number;
+        storageLocation: 'COOL' | 'FREEZER' | 'DRY';
+        specificLocation: string;
+        expiryDate: string;
+        note: string;
+    }
+    const [importDrafts, setImportDrafts] = useState<Record<number, ImportDraft>>({});
+
+    const storageLocationOptions = [
+        { label: "Ngăn mát", value: "COOL" },
+        { label: "Ngăn đông", value: "FREEZER" },
+        { label: "Tủ đồ khô", value: "DRY" },
+    ];
+
+    const specificLocationOptions = [
+        { label: "Kệ trên", value: "TOP_SHELF" },
+        { label: "Kệ giữa", value: "MIDDLE_SHELF" },
+        { label: "Kệ dưới", value: "BOTTOM_SHELF" },
+        { label: "Ngăn rau củ", value: "VEGETABLE_DRAWER" },
+        { label: "Ngăn trái cây", value: "FRUIT_DRAWER" },
+        { label: "Cánh tủ", value: "DOOR_SHELF" },
+    ];
+
+    const itemsToImport = localItems.filter(item => item.isPurchased && !item.importedToFridgeAt && !item.imported_to_fridge_at);
+
+    useEffect(() => {
+        if (showImportReview) {
+            const drafts: Record<number, ImportDraft> = {};
+            itemsToImport.forEach(item => {
+                drafts[item.id] = {
+                    quantity: item.quantity,
+                    storageLocation: 'COOL',
+                    specificLocation: '',
+                    expiryDate: '',
+                    note: item.note || ''
+                };
+            });
+            setImportDrafts(drafts);
+        }
+    }, [showImportReview, localItems]);
+
+    const handleConfirmImport = async () => {
+        for (const item of itemsToImport) {
+            const draft = importDrafts[item.id];
+            if (!draft || !draft.expiryDate) {
+                toast.error(`Vui lòng chọn hạn sử dụng cho món "${item.customName || item.custom_name || item.foodName}"`);
+                return;
+            }
+            if (draft.quantity <= 0) {
+                toast.error(`Số lượng của món "${item.customName || item.custom_name || item.foodName}" phải lớn hơn 0`);
+                return;
+            }
+        }
+
+        const payloadItems = itemsToImport.map(item => {
+            const draft = importDrafts[item.id];
+            return {
+                shoppingListItemId: item.id,
+                foodId: item.foodId,
+                customName: item.customName || item.custom_name || null,
+                quantity: draft.quantity,
+                storageLocation: draft.storageLocation,
+                specificLocation: draft.specificLocation || null,
+                addedDate: new Date().toISOString().slice(0, 10),
+                expiryDate: draft.expiryDate,
+                note: draft.note.trim() || null
+            };
+        });
+
+        try {
+            const loadToastId = toast.loading("Đang nhập thực phẩm vào tủ lạnh...");
+            await importFromShopping(payloadItems);
+            toast.success("Đã nhập thực phẩm vào tủ lạnh thành công! 🧺✨", { id: loadToastId });
+            setShowImportReview(false);
+
+            const date = data.planned_date || data.plannedDate;
+            if (familyId && date) {
+                const updatedItems = await getPlanDetail(familyId, date);
+                setLocalItems(updatedItems || []);
+                if (data) {
+                    data.items = updatedItems || [];
+                }
+            }
+            if (onSuccess) {
+                onSuccess();
+            }
+        } catch (error: any) {
+            toast.error("Nhập tủ lạnh thất bại: " + error.message);
+        }
+    };
 
     const placeholderText = showSearchCue
         ? `Nhập thực phẩm muốn thêm cho hôm nay...`
@@ -113,6 +208,17 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
             if (getPendingShoppingItems().length > 0) {
                 setShowSuggestions(true);
             }
+
+            // Fetch generic foods to append to search fallback
+            api.get('/api/foods')
+                .then(res => {
+                    const list = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+                    const filtered = list.filter((f: any) => f.name.toLowerCase().includes('khác'));
+                    setGenericFoods(filtered);
+                })
+                .catch(err => {
+                    console.error("Lỗi lấy generic foods:", err);
+                });
         }
     }, [isOpen, defaultFilter]);
 
@@ -251,7 +357,7 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
         setShowResults(false);
     };
 
-    const handleConfirmAddItem = (config: { quantity: number; assignedTo: number | null; note: string }) => {
+    const handleConfirmAddItem = (config: { quantity: number; assignedTo: number | null; note: string; customName?: string; unit?: string }) => {
         if (!activeFood) return;
 
         const category = activeFood.category || activeFood.categoryName || 'Khác';
@@ -261,8 +367,10 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
             id: Date.now(),
             foodId: activeFood.id,
             foodName: activeFood.name || activeFood.foodName,
+            customName: config.customName,
+            custom_name: config.customName,
             quantity: config.quantity,
-            unit: activeFood.unit || 'kg',
+            unit: config.unit || activeFood.unit || 'kg',
             categoryName: category,
             foodIcon: catInfo.key,
             colorCode: catInfo.color,
@@ -382,7 +490,9 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
             plannedDate: currentDate,
             note: note,
             items: localItems.map(item => ({
+                id: (item.id && item.id < 1000000000000) ? item.id : null,
                 foodId: item.foodId,
+                customName: item.customName || item.custom_name || null,
                 quantity: item.quantity,
                 unit: item.unit,
                 assignedTo: item.assignedTo || null,
@@ -539,7 +649,29 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
                                             </div>
                                         );
                                     })}
-                                    {searchResults.length === 0 && <div className="no-result">Không tìm thấy thực phẩm</div>}
+                                    {searchResults.length === 0 && (
+                                        <>
+                                            <div className="no-result">Không tìm thấy thực phẩm. Bạn có thể chọn loại khác bên dưới:</div>
+                                            {genericFoods.map(food => {
+                                                const catInfo = getCategoryInfo(food.category || food.categoryName || food.name);
+                                                return (
+                                                    <div key={food.id} className="search-result-item fallback-item" onClick={() => handleAddClick(food)}>
+                                                        <span className="result-icon-wrapper" style={{ backgroundColor: catInfo.color }}>
+                                                            {catInfo.icon}
+                                                        </span>
+                                                        <span className="result-name" style={{ fontWeight: 600 }}>{food.name || food.foodName}</span>
+                                                        <span className="result-unit">{food.unit || 'kg'}</span>
+                                                        <button className="add-btn-small" onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleAddClick(food);
+                                                        }}>
+                                                            <Plus size={16} />
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })}
+                                        </>
+                                    )}
                                 </div>
                             )}
 
@@ -587,13 +719,14 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
                                 </div>
                             )}
                         </div>
-                        <button
+                        {isHousekeeper && (<button
                             className={`suggestions-toggle-btn ${showSuggestions ? 'active' : ''}`}
                             onClick={() => setShowSuggestions(prev => !prev)}
                             title="Bật/Tắt Gợi ý thực phẩm"
                         >
                             💡 Gợi ý
                         </button>
+                        )}
                         <button className="close-btn-top" onClick={onClose}>
                             <X size={24} />
                         </button>
@@ -658,7 +791,7 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
                         <div style={{ display: 'flex', gap: '12px' }}>
                             <button className="delete-list-btn" onClick={handleDeleteList}> <Trash2 size={16} />Xóa danh sách</button>
                             {localItems.some(item => item.isPurchased && !item.imported_to_fridge_at && !item.importedToFridgeAt) && (
-                                <button className="import-fridge-btn" onClick={handleImportToFridge}>
+                                <button className="import-fridge-btn" onClick={() => setShowImportReview(true)}>
                                     🧺 Nhập vào tủ lạnh
                                 </button>
                             )}
@@ -671,6 +804,117 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
                     </div>
                 </div>
             </div>
+
+            {showImportReview && (
+                <div className="import-review-overlay" onClick={() => setShowImportReview(false)}>
+                    <div className="import-review-container" onClick={(e) => e.stopPropagation()}>
+                        <div className="import-review-header">
+                            <h3>Nhập thực phẩm vào tủ lạnh</h3>
+                            <button className="close-btn-top" onClick={() => setShowImportReview(false)}>
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="import-review-body">
+                            {itemsToImport.map(item => {
+                                const draft = importDrafts[item.id] || {
+                                    quantity: item.quantity,
+                                    storageLocation: 'COOL',
+                                    specificLocation: '',
+                                    expiryDate: '',
+                                    note: item.note || ''
+                                };
+                                const updateDraft = (fields: Partial<ImportDraft>) => {
+                                    setImportDrafts(prev => ({
+                                        ...prev,
+                                        [item.id]: {
+                                            ...prev[item.id],
+                                            ...fields
+                                        }
+                                    }));
+                                };
+                                const catInfo = getCategoryInfo(item.categoryName || item.food?.category);
+                                return (
+                                    <div key={item.id} className="import-review-item-card">
+                                        <div className="import-review-item-info">
+                                            <div className="import-review-item-icon" style={{ backgroundColor: catInfo.color }}>
+                                                {catInfo.icon}
+                                            </div>
+                                            <div className="import-review-item-name">
+                                                {item.customName || item.custom_name || item.foodName}
+                                            </div>
+                                        </div>
+                                        <div className="import-review-fields-grid">
+                                            <div className="import-review-field">
+                                                <label>Số lượng nhập <span className="required-star">*</span></label>
+                                                <input
+                                                    type="number"
+                                                    value={draft.quantity}
+                                                    min="0.1"
+                                                    step="any"
+                                                    onChange={(e) => updateDraft({ quantity: parseFloat(e.target.value) || 0 })}
+                                                />
+                                            </div>
+                                            <div className="import-review-field">
+                                                <label>Đơn vị</label>
+                                                <input
+                                                    type="text"
+                                                    value={item.unit}
+                                                    disabled
+                                                    style={{ backgroundColor: '#f1f5f9', cursor: 'not-allowed' }}
+                                                />
+                                            </div>
+                                            <div className="import-review-field">
+                                                <label>Hạn sử dụng <span className="required-star">*</span></label>
+                                                <input
+                                                    type="date"
+                                                    value={draft.expiryDate}
+                                                    onChange={(e) => updateDraft({ expiryDate: e.target.value })}
+                                                />
+                                            </div>
+                                            <div className="import-review-field">
+                                                <label>Vị trí lưu trữ <span className="required-star">*</span></label>
+                                                <select
+                                                    value={draft.storageLocation}
+                                                    onChange={(e) => updateDraft({ storageLocation: e.target.value as any })}
+                                                >
+                                                    {storageLocationOptions.map(opt => (
+                                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div className="import-review-field">
+                                                <label>Vị trí cụ thể</label>
+                                                <select
+                                                    value={draft.specificLocation}
+                                                    onChange={(e) => updateDraft({ specificLocation: e.target.value })}
+                                                >
+                                                    <option value="">Chọn vị trí cụ thể</option>
+                                                    {specificLocationOptions.map(opt => (
+                                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div className="import-review-field wide">
+                                                <label>Ghi chú</label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Ghi chú thêm..."
+                                                    value={draft.note}
+                                                    onChange={(e) => updateDraft({ note: e.target.value })}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        <div className="import-review-footer">
+                            <button className="import-review-btn-cancel" onClick={() => setShowImportReview(false)}>Hủy</button>
+                            <button className="import-review-btn-confirm" onClick={handleConfirmImport}>Nhập vào tủ lạnh</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
