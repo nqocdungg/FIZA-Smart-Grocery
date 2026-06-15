@@ -3,7 +3,7 @@ import api from "@/services/api";
 import "./AddFoodToFridgeScreen.css";
 
 type AddFoodMode = "SHOPPING_PLAN" | "MANUAL";
-type ItemStatus = "selected" | "skipped";
+type ItemStatus = "idle" | "selected";
 type StorageLocation = "COOL" | "FREEZER" | "DRY";
 
 type FoodFromApi = {
@@ -114,7 +114,7 @@ const getCandidateIcon = (candidate: ShoppingImportCandidateFromApi) =>
   categoryIconMap[candidate.categoryIconKey || "default_food"] || categoryIconMap.default_food;
 
 const createDraft = (candidate: ShoppingImportCandidateFromApi): ShoppingDraft => ({
-  status: "selected",
+  status: "idle",
   quantity: String(candidate.quantity ?? ""),
   storageLocation: "COOL",
   specificLocation: "",
@@ -133,6 +133,7 @@ const AddFoodToFridgeScreen: React.FC<AddFoodToFridgeScreenProps> = ({ onCancel,
   const [shoppingDrafts, setShoppingDrafts] = useState<Record<number, ShoppingDraft>>({});
   const [isLoadingShopping, setIsLoadingShopping] = useState(false);
   const [isSubmittingShopping, setIsSubmittingShopping] = useState(false);
+  const [skippingItemIds, setSkippingItemIds] = useState<Set<number>>(new Set());
   const [shoppingError, setShoppingError] = useState("");
   const [manualForm, setManualForm] = useState<ManualFormState>({
     foodName: "",
@@ -153,8 +154,11 @@ const AddFoodToFridgeScreen: React.FC<AddFoodToFridgeScreenProps> = ({ onCancel,
 
   const selectedShoppingDrafts = Object.values(shoppingDrafts).filter((draft) => draft.status === "selected");
   const selectedCount = selectedShoppingDrafts.length;
-  const skippedCount = Object.values(shoppingDrafts).filter((draft) => draft.status === "skipped").length;
   const missingExpiryCount = selectedShoppingDrafts.filter((draft) => !draft.expiryDate).length;
+  const selectedItemsMissingRequiredInfo = selectedShoppingDrafts.some((draft) => {
+    const quantity = Number(draft.quantity);
+    return !Number.isFinite(quantity) || quantity <= 0 || !draft.storageLocation || !draft.expiryDate;
+  });
 
   const shoppingCandidatesByCategory = useMemo(() => {
     const grouped = new Map<string, ShoppingImportCandidateFromApi[]>();
@@ -256,6 +260,31 @@ const AddFoodToFridgeScreen: React.FC<AddFoodToFridgeScreenProps> = ({ onCancel,
       },
     }));
     setShoppingError("");
+  };
+
+  const handleSkipShoppingCandidate = async (shoppingListItemId: number) => {
+    setSkippingItemIds((current) => new Set(current).add(shoppingListItemId));
+    setShoppingError("");
+
+    try {
+      await api.patch(`/api/fridge-items/import-candidates/${shoppingListItemId}/skip`);
+      setShoppingCandidates((current) =>
+        current.filter((candidate) => candidate.shoppingListItemId !== shoppingListItemId)
+      );
+      setShoppingDrafts((current) => {
+        const next = { ...current };
+        delete next[shoppingListItemId];
+        return next;
+      });
+    } catch {
+      setShoppingError("Không bỏ qua được thực phẩm này. Vui lòng thử lại.");
+    } finally {
+      setSkippingItemIds((current) => {
+        const next = new Set(current);
+        next.delete(shoppingListItemId);
+        return next;
+      });
+    }
   };
 
   const updateManualForm = (nextValues: Partial<ManualFormState>) => {
@@ -469,6 +498,7 @@ const AddFoodToFridgeScreen: React.FC<AddFoodToFridgeScreenProps> = ({ onCancel,
                       {items.map((item) => {
                         const draft = shoppingDrafts[item.shoppingListItemId] || createDraft(item);
                         const status = draft.status;
+                        const isSkipping = skippingItemIds.has(item.shoppingListItemId);
 
                         return (
                           <article className={`shopping-item ${status === "selected" ? "selected" : ""}`} key={item.shoppingListItemId}>
@@ -478,9 +508,10 @@ const AddFoodToFridgeScreen: React.FC<AddFoodToFridgeScreenProps> = ({ onCancel,
                                 type="button"
                                 onClick={() =>
                                   updateShoppingDraft(item.shoppingListItemId, {
-                                    status: status === "selected" ? "skipped" : "selected",
+                                    status: status === "selected" ? "idle" : "selected",
                                   })
                                 }
+                                disabled={isSkipping}
                                 aria-label={status === "selected" ? "Bỏ chọn thực phẩm" : "Chọn thực phẩm"}
                               >
                                 {status === "selected" && <span />}
@@ -491,18 +522,12 @@ const AddFoodToFridgeScreen: React.FC<AddFoodToFridgeScreenProps> = ({ onCancel,
                                   <h4>{getCandidateDisplayName(item)}</h4>
                                   <div className="shopping-item-actions">
                                     <button
-                                      className={status === "selected" ? "active" : ""}
                                       type="button"
-                                      onClick={() => updateShoppingDraft(item.shoppingListItemId, { status: "selected" })}
+                                      className="shopping-skip-button"
+                                      onClick={() => handleSkipShoppingCandidate(item.shoppingListItemId)}
+                                      disabled={isSkipping}
                                     >
-                                      Đã mua
-                                    </button>
-                                    <button
-                                      className={status === "skipped" ? "active skip" : ""}
-                                      type="button"
-                                      onClick={() => updateShoppingDraft(item.shoppingListItemId, { status: "skipped" })}
-                                    >
-                                      Bỏ qua
+                                      {isSkipping ? "Đang bỏ qua..." : "Bỏ qua"}
                                     </button>
                                   </div>
                                 </div>
@@ -572,7 +597,7 @@ const AddFoodToFridgeScreen: React.FC<AddFoodToFridgeScreenProps> = ({ onCancel,
             <div className="add-fridge-summary-stats">
               <SummaryBox label="Đã chọn" value={selectedCount} variant="selected" />
               <SummaryBox label="Cần bổ sung HSD" value={missingExpiryCount} variant="warning" />
-              <SummaryBox label="Bỏ qua" value={skippedCount} variant="muted" />
+              <SummaryBox label="Chờ nhập" value={shoppingCandidates.length} variant="muted" />
             </div>
 
             <div className="add-fridge-note">
@@ -587,13 +612,10 @@ const AddFoodToFridgeScreen: React.FC<AddFoodToFridgeScreenProps> = ({ onCancel,
             {shoppingError && <div className="manual-form-error">{shoppingError}</div>}
 
             <div className="add-fridge-summary-actions">
-              <button type="button" onClick={onCancel} disabled={isSubmittingShopping}>
-                Hủy
-              </button>
               <button
                 type="button"
                 onClick={handleSubmitShoppingImport}
-                disabled={isSubmittingShopping || selectedCount === 0 || missingExpiryCount > 0}
+                disabled={isSubmittingShopping || selectedCount === 0 || selectedItemsMissingRequiredInfo}
               >
                 {isSubmittingShopping ? "Đang thêm..." : "Xác nhận thêm vào tủ"}
               </button>

@@ -89,6 +89,11 @@ public class FridgeItemController {
         return fridgeItemService.getShoppingImportCandidates();
     }
 
+    @PatchMapping("/import-candidates/{shoppingListItemId}/skip")
+    public void skipShoppingImportCandidate(@PathVariable Long shoppingListItemId) {
+        fridgeItemService.skipShoppingImportCandidate(shoppingListItemId);
+    }
+
     @PostMapping("/import-from-shopping")
     public ImportShoppingItemsResponse importFromShopping(
             @Valid @RequestBody ImportShoppingItemsRequest request

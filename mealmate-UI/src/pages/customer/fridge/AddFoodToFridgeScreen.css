@@ -250,6 +250,11 @@
   transform: rotate(-45deg);
 }
 
+.shopping-check:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .shopping-item-info {
   flex: 1;
   min-width: 0;
@@ -284,28 +289,32 @@
   flex-shrink: 0;
 }
 
-.shopping-item-actions button {
-  height: 24.45px;
-  min-width: 60.73px;
-  padding: 0 11.98px;
-  border: none;
-  border-radius: 9999px;
-  background: #f1f5f9;
-  color: #64748b;
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 16.5px;
+.shopping-skip-button {
+  min-height: 34px;
+  min-width: 92px;
+  padding: 0 14px;
+  border: 1.4px solid #fecaca;
+  border-radius: 10px;
+  background: #fff7f7;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
   cursor: pointer;
+  transition: background 180ms ease, border-color 180ms ease, color 180ms ease, transform 180ms ease;
 }
 
-.shopping-item-actions button.active {
-  background: #dcfce7;
-  color: #166534;
+.shopping-skip-button:hover:not(:disabled) {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #b91c1c;
+  transform: translateY(-1px);
 }
 
-.shopping-item-actions button.active.skip {
-  background: #f1f5f9;
-  color: #64748b;
+.shopping-skip-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+  transform: none;
 }
 
 .shopping-item-fields {
@@ -376,32 +385,36 @@
 }
 
 .add-fridge-summary {
-  padding: 23.98px;
+  padding: 18px;
   position: sticky;
   top: 150px;
-  max-height: calc(100vh - 174px);
-  overflow-y: auto;
+  max-height: calc(100vh - 164px);
+  overflow: visible;
 }
 
 .add-fridge-summary h2 {
-  margin: -0.4px 0 19.96px;
+  margin: 0 0 14px;
   color: #1e293b;
   font-size: 16px;
   font-weight: 600;
-  line-height: 24px;
+  line-height: 22px;
 }
 
 .add-fridge-summary-stats {
-  display: flex;
-  flex-direction: column;
-  gap: 11.98px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .summary-box {
-  height: 89.95px;
-  padding: 15.99px;
+  min-height: 72px;
+  padding: 12px;
   border-radius: 12px;
   box-sizing: border-box;
+}
+
+.summary-box:first-child {
+  grid-column: 1 / -1;
 }
 
 .summary-box.selected {
@@ -419,9 +432,9 @@
 .summary-box span {
   display: block;
   color: #64748b;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 400;
-  line-height: 18px;
+  line-height: 16px;
 }
 
 .summary-box.warning span {
@@ -430,11 +443,11 @@
 
 .summary-box strong {
   display: block;
-  margin-top: 3.98px;
+  margin-top: 2px;
   color: #4d9a80;
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
-  line-height: 36px;
+  line-height: 30px;
 }
 
 .summary-box.warning strong {
@@ -446,15 +459,18 @@
 }
 
 .add-fridge-note {
-  margin-top: 23.98px;
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #f8fafc;
 }
 
 .add-fridge-note h3 {
-  margin: 0 0 11.98px;
+  margin: 0 0 8px;
   color: #1e293b;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
-  line-height: 21px;
+  line-height: 18px;
 }
 
 .add-fridge-note ul {
@@ -463,16 +479,16 @@
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 7.99px;
+  gap: 6px;
 }
 
 .add-fridge-note li {
   color: #64748b;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 400;
-  line-height: 18px;
+  line-height: 16px;
   display: flex;
-  gap: 7.99px;
+  gap: 7px;
 }
 
 .add-fridge-note li::before {
@@ -481,10 +497,8 @@
 }
 
 .add-fridge-summary-actions {
-  margin-top: 23.98px;
-  display: flex;
-  flex-direction: column;
-  gap: 11.97px;
+  margin-top: 16px;
+  display: block;
 }
 
 .add-fridge-summary-actions button,
@@ -498,6 +512,10 @@
   font-weight: 500;
   line-height: 19.5px;
   cursor: pointer;
+}
+
+.add-fridge-summary-actions button {
+  width: 100%;
 }
 
 .add-fridge-summary-actions button:last-child,

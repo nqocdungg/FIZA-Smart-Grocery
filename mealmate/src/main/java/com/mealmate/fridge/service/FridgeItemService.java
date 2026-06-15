@@ -265,6 +265,29 @@ public class FridgeItemService {
                 .toList();
     }
 
+    @Transactional
+    public void skipShoppingImportCandidate(Long shoppingListItemId) {
+        Long familyId = getCurrentFamilyIdOrThrow();
+
+        ShoppingListItem shoppingItem = shoppingListItemRepository.findImportableByIdAndFamilyId(
+                        shoppingListItemId,
+                        familyId
+                )
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Shopping list item not found"));
+
+        if (!Boolean.TRUE.equals(shoppingItem.getIsPurchased())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Shopping list item is not purchased");
+        }
+
+        if (shoppingItem.getImportedToFridgeAt() != null) {
+            return;
+        }
+
+        shoppingItem.setImportedToFridgeAt(LocalDateTime.now());
+        shoppingItem.setFridgeItem(null);
+        shoppingListItemRepository.save(shoppingItem);
+    }
+
     public List<RecipeSuggestionResponse> getRecipeSuggestions(int limit) {
         // Gợi ý món ăn: chỉ hiển thị các công thức tận dụng được thực phẩm đang có,
         // ưu tiên công thức có phần trăm nguyên liệu khớp cao nhất.
