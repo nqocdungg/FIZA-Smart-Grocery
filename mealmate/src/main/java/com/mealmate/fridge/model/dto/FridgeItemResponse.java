@@ -20,6 +20,8 @@ public class FridgeItemResponse {
 
     private String standardFoodName;
 
+    private String customName;
+
     private String displayName;
 
     private String unit;

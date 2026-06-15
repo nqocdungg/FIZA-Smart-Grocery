@@ -29,6 +29,4 @@ public class UpdateFridgeItemRequest {
     private String imageUrl;
 
     private String note;
-
-    private String unit;
 }

@@ -14,6 +14,8 @@ public interface FridgeItemProjection {
 
     String getStandardFoodName();
 
+    String getCustomName();
+
     String getDisplayName();
 
     String getUnit();

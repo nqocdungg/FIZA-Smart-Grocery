@@ -212,7 +212,7 @@
   display: flex;
   align-items: flex-start;
   gap: 11.98px;
-  padding-right: 48px;
+  padding-right: 34px;
   box-sizing: border-box;
 }
 
@@ -246,6 +246,7 @@
 }
 
 .my-fridge-food-info {
+  flex: 1;
   min-width: 0;
 }
 
@@ -262,19 +263,19 @@
 
 .my-fridge-card-badges {
   position: absolute;
-  top: 20px;
-  right: 20px;
+  top: 18px;
+  right: 18px;
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 4px;
-  max-width: 64px;
+  max-width: 56px;
   pointer-events: none;
 }
 
 .fridge-item-badge {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   border-radius: 9999px;
   display: inline-flex;
@@ -303,8 +304,8 @@
 }
 
 .fridge-item-badge img {
-  width: 14px;
-  height: 14px;
+  width: 13px;
+  height: 13px;
   object-fit: contain;
 }
 

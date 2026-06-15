@@ -37,6 +37,7 @@ export type FridgeItemFromApi = {
   familyId: number;
   foodId: number;
   standardFoodName?: string;
+  customName?: string;
   displayName?: string;
   unit?: string;
   categoryId?: number;
@@ -52,6 +53,17 @@ export type FridgeItemFromApi = {
   status: FridgeItemStatus;
   imageUrl?: string;
   note?: string;
+};
+
+export type UpdateFridgeItemPayload = {
+  foodId?: number;
+  customName?: string | null;
+  quantity?: number;
+  storageLocation?: StorageLocation | "";
+  specificLocation?: string | null;
+  addedDate?: string | null;
+  expiryDate?: string | null;
+  note?: string | null;
 };
 
 type CategoryFromApi = {
@@ -147,8 +159,32 @@ const specificLocationLabelMap: Record<string, string> = {
   BOTTOM_SHELF: "Kệ dưới",
 };
 
+const normalizeSearchText = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .trim();
+
 const getFoodName = (item: FridgeItemFromApi) => {
-  return item.displayName || item.standardFoodName || "Thực phẩm";
+  const standardName = item.standardFoodName?.trim();
+  const categoryName = item.categoryName?.trim();
+  const normalizedStandardName = standardName ? normalizeSearchText(standardName) : "";
+  const normalizedCategoryName = categoryName ? normalizeSearchText(categoryName) : "";
+  const isOtherFood =
+    Boolean(normalizedStandardName && normalizedStandardName.endsWith(" khac")) ||
+    Boolean(
+      normalizedStandardName &&
+        normalizedCategoryName &&
+        normalizedStandardName === `${normalizedCategoryName} khac`
+    );
+
+  if (isOtherFood) {
+    return item.customName?.trim() || item.displayName?.trim() || standardName || "Thực phẩm";
+  }
+
+  return standardName || item.displayName?.trim() || item.customName?.trim() || "Thực phẩm";
 };
 
 const getFoodIcon = (item: FridgeItemFromApi) => {
@@ -491,9 +527,10 @@ const MyFridge: React.FC = () => {
     };
   }, [fridgeOverview.status]);
 
-  const handleSaveQuantity = async (fridgeItemId: number, newQuantityValue: number) => {
+  const handleSaveFoodDetails = async (fridgeItemId: number, payload: UpdateFridgeItemPayload) => {
     const response = await api.patch<FridgeItemFromApi>(`/api/fridge-items/${fridgeItemId}`, {
-      quantity: newQuantityValue,
+      ...payload,
+      storageLocation: payload.storageLocation || null,
     });
 
     setFridgeItems((prevItems) =>
@@ -790,7 +827,7 @@ const MyFridge: React.FC = () => {
           key={selectedFood.id}
           food={selectedFood}
           onClose={() => setSelectedFood(null)}
-          onSaveQuantity={handleSaveQuantity}
+          onSaveFoodDetails={handleSaveFoodDetails}
           onRemoveFood={handleRemoveFood}
           /* Nút Thêm vào kế hoạch đã chuyển sang popup cảnh báo */
         />

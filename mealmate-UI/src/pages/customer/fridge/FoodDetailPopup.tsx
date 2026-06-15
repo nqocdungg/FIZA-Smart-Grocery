@@ -1,7 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { PencilLine } from "lucide-react";
+import api from "@/services/api";
 import "./FoodDetailPopup.css";
 
-import type { FridgeItemFromApi, RemoveReasonCode } from "./MyFridge";
+import type { FridgeItemFromApi, RemoveReasonCode, UpdateFridgeItemPayload } from "./MyFridge";
 
 import iconAlert from "@/assets/icon/Icon-alert.svg";
 import iconClose from "@/assets/icon/Icon-close.svg";
@@ -10,10 +12,38 @@ import iconMinus from "@/assets/icon/Icon-minus.svg";
 import iconPlus from "@/assets/icon/Icon-plus.svg";
 import iconShopping from "@/assets/icon/Icon-shopping.svg";
 
+type StorageLocation = "COOL" | "FREEZER" | "DRY";
+
+type FoodFromApi = {
+  id: number;
+  categoryId?: number;
+  categoryName?: string;
+  name: string;
+  unit?: string;
+  synonyms?: string;
+};
+
+type SelectOption = {
+  label: string;
+  value: string;
+};
+
+type EditFormState = {
+  foodName: string;
+  selectedFood: FoodFromApi | null;
+  customName: string;
+  quantity: string;
+  storageLocation: StorageLocation | "";
+  specificLocation: string;
+  addedDate: string;
+  expiryDate: string;
+  note: string;
+};
+
 type FoodDetailPopupProps = {
   food: FridgeItemFromApi;
   onClose: () => void;
-  onSaveQuantity: (fridgeItemId: number, newQuantityValue: number) => Promise<void>;
+  onSaveFoodDetails: (fridgeItemId: number, payload: UpdateFridgeItemPayload) => Promise<void>;
   onRemoveFood: (
     fridgeItemId: number,
     removedReason: RemoveReasonCode,
@@ -29,6 +59,21 @@ const REMOVE_REASONS: Array<{ label: string; value: RemoveReasonCode }> = [
   { label: "Thực phẩm bị hỏng", value: "SPOILED" },
   { label: "Nhập sai thông tin", value: "WRONG_INFO" },
   { label: "Khác", value: "OTHER" },
+];
+
+const storageLocationOptions: SelectOption[] = [
+  { label: "Ngăn mát", value: "COOL" },
+  { label: "Ngăn đông", value: "FREEZER" },
+  { label: "Tủ đồ khô", value: "DRY" },
+];
+
+const specificLocationOptions: SelectOption[] = [
+  { label: "Kệ trên", value: "TOP_SHELF" },
+  { label: "Kệ giữa", value: "MIDDLE_SHELF" },
+  { label: "Kệ dưới", value: "BOTTOM_SHELF" },
+  { label: "Ngăn rau củ", value: "VEGETABLE_DRAWER" },
+  { label: "Ngăn trái cây", value: "FRUIT_DRAWER" },
+  { label: "Cánh tủ", value: "DOOR_SHELF" },
 ];
 
 const foodIconMap: Record<string, string> = {
@@ -68,8 +113,35 @@ const specificLocationLabelMap: Record<string, string> = {
   BOTTOM_SHELF: "Kệ dưới",
 };
 
+const normalizeSearchText = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .trim();
+
+const isOtherFoodName = (foodName?: string, categoryName?: string) => {
+  const normalizedName = normalizeSearchText(foodName || "");
+  const normalizedCategory = normalizeSearchText(categoryName || "");
+
+  return (
+    Boolean(normalizedName && normalizedName.endsWith(" khac")) ||
+    Boolean(normalizedName && normalizedCategory && normalizedName === `${normalizedCategory} khac`)
+  );
+};
+
+const isOtherFood = (food: Pick<FoodFromApi, "name" | "categoryName"> | null) =>
+  Boolean(food && isOtherFoodName(food.name, food.categoryName));
+
 const getFoodName = (food: FridgeItemFromApi) => {
-  return food.displayName || food.standardFoodName || "Thực phẩm";
+  const isOther = isOtherFoodName(food.standardFoodName, food.categoryName);
+
+  if (isOther) {
+    return food.customName?.trim() || food.displayName?.trim() || food.standardFoodName || "Thực phẩm";
+  }
+
+  return food.standardFoodName?.trim() || food.displayName?.trim() || food.customName?.trim() || "Thực phẩm";
 };
 
 const getFoodIcon = (food: FridgeItemFromApi) => {
@@ -180,73 +252,234 @@ const getExpiryMessage = (daysLeft: number | null) => {
   return "Sản phẩm vẫn còn hạn sử dụng tốt.";
 };
 
+const formatQuantityInput = (value: number) =>
+  Number.isInteger(value) ? String(value) : String(Number(value.toFixed(2)));
+
+const getInitialCustomName = (food: FridgeItemFromApi) => {
+  if (food.customName?.trim()) return food.customName.trim();
+  if (isOtherFoodName(food.standardFoodName, food.categoryName) && food.displayName !== food.standardFoodName) {
+    return food.displayName?.trim() || "";
+  }
+  return "";
+};
+
+const createInitialSelectedFood = (food: FridgeItemFromApi): FoodFromApi => ({
+  id: food.foodId,
+  name: food.standardFoodName || food.displayName || "Thực phẩm",
+  unit: food.unit,
+  categoryId: food.categoryId,
+  categoryName: food.categoryName,
+});
+
+const createInitialEditForm = (food: FridgeItemFromApi): EditFormState => {
+  const selectedFood = createInitialSelectedFood(food);
+
+  return {
+    foodName: selectedFood.name,
+    selectedFood,
+    customName: getInitialCustomName(food),
+    quantity: formatQuantityInput(Number(food.quantity)),
+    storageLocation: food.storageLocation || "COOL",
+    specificLocation: food.specificLocation || "",
+    addedDate: food.addedDate || "",
+    expiryDate: food.expiryDate || "",
+    note: food.note || "",
+  };
+};
+
 const FoodDetailPopup: React.FC<FoodDetailPopupProps> = ({
   food,
   onClose,
-  onSaveQuantity,
+  onSaveFoodDetails,
   onRemoveFood,
   onAddToShoppingPlan,
 }) => {
-  const formatQuantityInput = (value: number) =>
-    Number.isInteger(value) ? String(value) : String(Number(value.toFixed(2)));
-
-  const [quantityInput, setQuantityInput] = useState<string>(formatQuantityInput(food.quantity));
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState<EditFormState>(() => createInitialEditForm(food));
+  const [allFoods, setAllFoods] = useState<FoodFromApi[]>([]);
+  const [foodSuggestions, setFoodSuggestions] = useState<FoodFromApi[]>([]);
+  const [isSearchingFoods, setIsSearchingFoods] = useState(false);
   const [isRemoveConfirmOpen, setIsRemoveConfirmOpen] = useState(false);
   const [removeReason, setRemoveReason] = useState<RemoveReasonCode | "">("");
   const [customRemoveReason, setCustomRemoveReason] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [actionError, setActionError] = useState("");
 
+  const selectedEditFood = editForm.selectedFood;
+  const shouldShowCustomName = isOtherFood(selectedEditFood);
+  const hasTypedFoodName = editForm.foodName.trim().length > 0;
+  const showOtherFoodChoices = hasTypedFoodName && !isSearchingFoods && foodSuggestions.length === 0;
   const daysLeft = getDaysLeft(food.expiryDate);
   const expiryStatusClass = getExpiryStatusClass(daysLeft);
-  const step = food.unit === "g" ? 50 : 1;
+  const quantityValue = Number(editForm.quantity);
+  const quantityIsValid = Number.isFinite(quantityValue) && quantityValue > 0;
+  const activeUnit = selectedEditFood?.unit || food.unit || "";
+  const step = activeUnit === "g" ? 50 : 1;
   const minQuantity = step === 50 ? 0 : 1;
   const isConfirmDisabled = !removeReason || (removeReason === "OTHER" && !customRemoveReason.trim());
 
-  const quantityValue = Number(quantityInput);
-  const quantityIsValid = Number.isFinite(quantityValue) && quantityValue > 0;
+  const otherFoodsByCategory = useMemo(() => {
+    const grouped = new Map<string, FoodFromApi[]>();
+
+    allFoods.filter(isOtherFood).forEach((item) => {
+      const categoryName = item.categoryName || "Danh mục khác";
+      grouped.set(categoryName, [...(grouped.get(categoryName) || []), item]);
+    });
+
+    return Array.from(grouped.entries());
+  }, [allFoods]);
+
+  useEffect(() => {
+    if (!isEditing || allFoods.length > 0) return;
+
+    const loadFoods = async () => {
+      try {
+        const response = await api.get<FoodFromApi[]>("/api/foods");
+        setAllFoods(response.data);
+      } catch {
+        setAllFoods([]);
+      }
+    };
+
+    loadFoods();
+  }, [allFoods.length, isEditing]);
+
+  useEffect(() => {
+    if (!isEditing) {
+      setFoodSuggestions([]);
+      setIsSearchingFoods(false);
+      return;
+    }
+
+    const keyword = editForm.foodName.trim();
+
+    if (!keyword || editForm.selectedFood?.name === editForm.foodName) {
+      setFoodSuggestions([]);
+      setIsSearchingFoods(false);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(async () => {
+      setIsSearchingFoods(true);
+
+      try {
+        const response = await api.get<FoodFromApi[]>("/api/foods", {
+          params: { keyword },
+        });
+        setFoodSuggestions(response.data.filter((item) => !isOtherFood(item)));
+      } catch {
+        setFoodSuggestions([]);
+      } finally {
+        setIsSearchingFoods(false);
+      }
+    }, 250);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [editForm.foodName, editForm.selectedFood?.name, isEditing]);
+
+  const updateEditForm = (nextValues: Partial<EditFormState>) => {
+    setEditForm((current) => ({ ...current, ...nextValues }));
+    setActionError("");
+  };
+
+  const handleFoodNameChange = (value: string) => {
+    updateEditForm({
+      foodName: value,
+      selectedFood: null,
+      customName: "",
+    });
+  };
+
+  const handleSelectFood = (nextFood: FoodFromApi) => {
+    updateEditForm({
+      foodName: nextFood.name,
+      selectedFood: nextFood,
+      customName: isOtherFood(nextFood) ? editForm.foodName.trim() : "",
+    });
+    setFoodSuggestions([]);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditForm(createInitialEditForm(food));
+    setFoodSuggestions([]);
+    setActionError("");
+  };
 
   const handleDecrease = () => {
     const current = Number.isFinite(quantityValue) ? quantityValue : 0;
-    setQuantityInput(formatQuantityInput(Math.max(minQuantity, current - step)));
-    setActionError("");
+    updateEditForm({ quantity: formatQuantityInput(Math.max(minQuantity, current - step)) });
   };
 
   const handleIncrease = () => {
     const current = Number.isFinite(quantityValue) ? quantityValue : 0;
-    setQuantityInput(formatQuantityInput(current + step));
-    setActionError("");
+    updateEditForm({ quantity: formatQuantityInput(current + step) });
   };
 
   const handleQuantityInputChange = (raw: string) => {
-    // Cho phép nhập tự do bằng bàn phím (kể cả ô trống tạm thời và số thập phân).
     if (raw === "" || /^\d*([.,]\d{0,2})?$/.test(raw)) {
-      setQuantityInput(raw.replace(",", "."));
-      setActionError("");
+      updateEditForm({ quantity: raw.replace(",", ".") });
     }
   };
 
   const handleQuantityInputBlur = () => {
     if (!quantityIsValid) {
-      setQuantityInput(formatQuantityInput(Math.max(minQuantity || 1, 1)));
+      updateEditForm({ quantity: formatQuantityInput(Math.max(minQuantity || 1, 1)) });
     } else {
-      setQuantityInput(formatQuantityInput(quantityValue));
+      updateEditForm({ quantity: formatQuantityInput(quantityValue) });
     }
   };
 
-  const handleSave = async () => {
+  const validateEditForm = () => {
+    if (!selectedEditFood) {
+      return "Vui lòng chọn thực phẩm từ danh sách gợi ý.";
+    }
+
+    if (shouldShowCustomName && !editForm.customName.trim()) {
+      return "Vui lòng nhập tên thực phẩm cụ thể.";
+    }
+
     if (!quantityIsValid) {
-      setActionError("Số lượng phải lớn hơn 0.");
+      return "Số lượng phải lớn hơn 0.";
+    }
+
+    if (!editForm.storageLocation) {
+      return "Vui lòng chọn vị trí chính.";
+    }
+
+    if (!editForm.expiryDate) {
+      return "Vui lòng chọn hạn sử dụng.";
+    }
+
+    return "";
+  };
+
+  const handleSave = async () => {
+    const validationError = validateEditForm();
+
+    if (validationError) {
+      setActionError(validationError);
       return;
     }
+
+    if (!selectedEditFood) return;
 
     setIsSaving(true);
     setActionError("");
 
     try {
-      await onSaveQuantity(food.id, quantityValue);
+      await onSaveFoodDetails(food.id, {
+        foodId: selectedEditFood.id,
+        customName: shouldShowCustomName ? editForm.customName.trim() : "",
+        quantity: quantityValue,
+        storageLocation: editForm.storageLocation,
+        specificLocation: editForm.specificLocation || "",
+        addedDate: editForm.addedDate || null,
+        expiryDate: editForm.expiryDate,
+        note: editForm.note.trim() || "",
+      });
     } catch {
-      setActionError("Không lưu được số lượng.");
+      setActionError("Không lưu được thay đổi.");
     } finally {
       setIsSaving(false);
     }
@@ -288,119 +521,251 @@ const FoodDetailPopup: React.FC<FoodDetailPopupProps> = ({
 
         <div className="food-detail-body">
           <section className="food-detail-section">
-            <h3>Thông tin chi tiết</h3>
-
-            <div className="food-detail-info-grid">
-              <div className="food-detail-info-card">
-                <span>Danh mục</span>
-                <strong>{food.categoryName || "Chưa phân loại"}</strong>
-              </div>
-
-              <div className="food-detail-info-card">
-                <span>Số lượng</span>
-                <strong>{getQuantityText(food)}</strong>
-              </div>
-
-              <div className="food-detail-info-card">
-                <span>Vị trí chính</span>
-                <strong>{getStorageLocationText(food.storageLocation)}</strong>
-              </div>
-
-              <div className="food-detail-info-card">
-                <span>Vị trí cụ thể</span>
-                <strong>{getSpecificLocationText(food.specificLocation)}</strong>
-              </div>
-
-              <div className="food-detail-info-card">
-                <span>Ngày nhập</span>
-                <strong>{formatDateToDisplay(food.addedDate)}</strong>
-              </div>
-
-              <div className="food-detail-info-card">
-                <span>Hạn sử dụng</span>
-                <strong>{formatDateToDisplay(food.expiryDate)}</strong>
-              </div>
-            </div>
-          </section>
-
-          <section className={`food-detail-expiry-box ${expiryStatusClass}`}>
-            <div className="food-detail-expiry-top">
-              <span>Thời gian còn lại</span>
-              <strong>{getDaysLeftLabel(daysLeft)}</strong>
-            </div>
-
-            <div className="food-detail-expiry-track" style={{ backgroundColor: getProgressTrackColor(daysLeft) }}>
-              <div
-                className="food-detail-expiry-progress"
-                style={{
-                  width: getProgressWidth(food.addedDate, food.expiryDate),
-                  backgroundColor: getProgressColor(daysLeft),
-                }}
-              />
-            </div>
-
-            <p>{getExpiryMessage(daysLeft)}</p>
-          </section>
-
-          {onAddToShoppingPlan && (
-            <button
-              type="button"
-              className="food-detail-add-shopping"
-              onClick={() => onAddToShoppingPlan(food)}
-              disabled={isSaving}
-            >
-              <img src={iconShopping} alt="" />
-              Thêm vào Kế hoạch đi chợ
-            </button>
-          )}
-
-          <section className="food-detail-section">
-            <h3>Hướng dẫn bảo quản</h3>
-
-            <div className="food-detail-storage-box">
-              {(food.preservationMethods?.length ? food.preservationMethods : ["Chưa có hướng dẫn bảo quản cho thực phẩm này."]).map(
-                (method) => (
-                  <div className="food-detail-tip" key={method}>
-                    <img src={iconInfo} alt="" />
-                    <span>{method}</span>
-                  </div>
-                )
+            <div className="food-detail-section-title-row">
+              <h3>Thông tin chi tiết</h3>
+              {!isEditing && (
+                <button
+                  type="button"
+                  className="food-detail-edit-button"
+                  onClick={() => setIsEditing(true)}
+                  aria-label="Chỉnh sửa thông tin thực phẩm"
+                  title="Chỉnh sửa"
+                >
+                  <PencilLine size={16} strokeWidth={2.4} />
+                </button>
               )}
             </div>
+
+            {isEditing ? (
+              <div className="food-detail-edit-form">
+                <label className={`food-detail-field ${shouldShowCustomName ? "" : "wide"} food-detail-food-search`}>
+                  <span>
+                    Tên thực phẩm <strong>*</strong>
+                  </span>
+                  <input
+                    type="text"
+                    value={editForm.foodName}
+                    onChange={(event) => handleFoodNameChange(event.target.value)}
+                    placeholder="Nhập tên thực phẩm"
+                    autoComplete="off"
+                    disabled={isSaving}
+                  />
+
+                  {hasTypedFoodName && !selectedEditFood && (
+                    <div className="food-detail-food-suggestions">
+                      {isSearchingFoods && <p className="food-detail-suggestion-state">Đang tìm thực phẩm...</p>}
+
+                      {!isSearchingFoods &&
+                        foodSuggestions.map((suggestion) => (
+                          <button type="button" key={suggestion.id} onClick={() => handleSelectFood(suggestion)}>
+                            <strong>{suggestion.name}</strong>
+                            <span>
+                              {suggestion.categoryName || "Chưa có danh mục"}
+                              {suggestion.unit ? ` · ${suggestion.unit}` : ""}
+                            </span>
+                          </button>
+                        ))}
+
+                      {showOtherFoodChoices && (
+                        <div className="food-detail-other-foods">
+                          <p>Không có thực phẩm khớp. Chọn nhóm thực phẩm phù hợp:</p>
+                          {otherFoodsByCategory.map(([categoryName, items]) => (
+                            <div className="food-detail-other-category" key={categoryName}>
+                              <span>{categoryName}</span>
+                              <div>
+                                {items.map((item) => (
+                                  <button type="button" key={item.id} onClick={() => handleSelectFood(item)}>
+                                    {item.name}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </label>
+
+                {shouldShowCustomName && (
+                  <Field
+                    label="Tên thực phẩm cụ thể"
+                    required
+                    value={editForm.customName}
+                    onChange={(value) => updateEditForm({ customName: value })}
+                    placeholder="Nhập tên thực phẩm cụ thể"
+                    disabled={isSaving}
+                  />
+                )}
+
+                <Field
+                  label="Danh mục"
+                  value={selectedEditFood?.categoryName || ""}
+                  placeholder="Chọn thực phẩm trước"
+                  disabled
+                />
+                <Field
+                  label="Ngày nhập"
+                  type="date"
+                  value={editForm.addedDate}
+                  onChange={(value) => updateEditForm({ addedDate: value })}
+                  disabled={isSaving}
+                />
+                <Field
+                  label="Hạn sử dụng"
+                  required
+                  type="date"
+                  value={editForm.expiryDate}
+                  onChange={(value) => updateEditForm({ expiryDate: value })}
+                  disabled={isSaving}
+                />
+                <Field
+                  label="Vị trí chính"
+                  required
+                  as="select"
+                  options={storageLocationOptions}
+                  value={editForm.storageLocation}
+                  onChange={(value) => updateEditForm({ storageLocation: value as StorageLocation })}
+                  disabled={isSaving}
+                />
+                <Field
+                  label="Vị trí cụ thể"
+                  as="select"
+                  options={specificLocationOptions}
+                  value={editForm.specificLocation}
+                  onChange={(value) => updateEditForm({ specificLocation: value })}
+                  placeholder="Chọn vị trí cụ thể"
+                  disabled={isSaving}
+                />
+                <Field
+                  label="Ghi chú"
+                  value={editForm.note}
+                  onChange={(value) => updateEditForm({ note: value })}
+                  placeholder="Nhập ghi chú nếu có"
+                  wide
+                  multiline
+                  disabled={isSaving}
+                />
+
+                <div className="food-detail-edit-quantity-block">
+                  <span>Số lượng và đơn vị</span>
+                  <div className="food-detail-quantity-row">
+                    <button onClick={handleDecrease} aria-label="Giảm số lượng" disabled={isSaving}>
+                      <img src={iconMinus} alt="" className="food-detail-quantity-icon" />
+                    </button>
+
+                    <input
+                      className="food-detail-quantity-value"
+                      type="text"
+                      inputMode="decimal"
+                      value={editForm.quantity}
+                      onChange={(event) => handleQuantityInputChange(event.target.value)}
+                      onBlur={handleQuantityInputBlur}
+                      aria-label="Nhập số lượng"
+                      disabled={isSaving}
+                    />
+
+                    <div className="food-detail-unit" aria-label="Đơn vị">
+                      {activeUnit || "Đơn vị"}
+                    </div>
+
+                    <button onClick={handleIncrease} aria-label="Tăng số lượng" disabled={isSaving}>
+                      <img src={iconPlus} alt="" className="food-detail-quantity-icon" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="food-detail-info-grid">
+                <div className="food-detail-info-card">
+                  <span>Danh mục</span>
+                  <strong>{food.categoryName || "Chưa phân loại"}</strong>
+                </div>
+
+                <div className="food-detail-info-card">
+                  <span>Số lượng</span>
+                  <strong>{getQuantityText(food)}</strong>
+                </div>
+
+                <div className="food-detail-info-card">
+                  <span>Vị trí chính</span>
+                  <strong>{getStorageLocationText(food.storageLocation)}</strong>
+                </div>
+
+                <div className="food-detail-info-card">
+                  <span>Vị trí cụ thể</span>
+                  <strong>{getSpecificLocationText(food.specificLocation)}</strong>
+                </div>
+
+                <div className="food-detail-info-card">
+                  <span>Ngày nhập</span>
+                  <strong>{formatDateToDisplay(food.addedDate)}</strong>
+                </div>
+
+                <div className="food-detail-info-card">
+                  <span>Hạn sử dụng</span>
+                  <strong>{formatDateToDisplay(food.expiryDate)}</strong>
+                </div>
+              </div>
+            )}
           </section>
 
-          <section className="food-detail-section">
-            <h3>Cập nhật số lượng</h3>
+          {!isEditing && (
+            <>
+              <section className={`food-detail-expiry-box ${expiryStatusClass}`}>
+                <div className="food-detail-expiry-top">
+                  <span>Thời gian còn lại</span>
+                  <strong>{getDaysLeftLabel(daysLeft)}</strong>
+                </div>
 
-            <div className="food-detail-quantity-row">
-              <button onClick={handleDecrease} aria-label="Giảm số lượng" disabled={isSaving}>
-                <img src={iconMinus} alt="" className="food-detail-quantity-icon" />
-              </button>
+                <div className="food-detail-expiry-track" style={{ backgroundColor: getProgressTrackColor(daysLeft) }}>
+                  <div
+                    className="food-detail-expiry-progress"
+                    style={{
+                      width: getProgressWidth(food.addedDate, food.expiryDate),
+                      backgroundColor: getProgressColor(daysLeft),
+                    }}
+                  />
+                </div>
 
-              <input
-                className="food-detail-quantity-value"
-                type="text"
-                inputMode="decimal"
-                value={quantityInput}
-                onChange={(event) => handleQuantityInputChange(event.target.value)}
-                onBlur={handleQuantityInputBlur}
-                aria-label="Nhập số lượng"
-                disabled={isSaving}
-              />
+                <p>{getExpiryMessage(daysLeft)}</p>
+              </section>
 
-              <div className="food-detail-unit" aria-label="Đơn vị">
-                {food.unit || "Đơn vị"}
-              </div>
+              {onAddToShoppingPlan && (
+                <button
+                  type="button"
+                  className="food-detail-add-shopping"
+                  onClick={() => onAddToShoppingPlan(food)}
+                  disabled={isSaving}
+                >
+                  <img src={iconShopping} alt="" />
+                  Thêm vào Kế hoạch đi chợ
+                </button>
+              )}
 
-              <button onClick={handleIncrease} aria-label="Tăng số lượng" disabled={isSaving}>
-                <img src={iconPlus} alt="" className="food-detail-quantity-icon" />
-              </button>
-            </div>
+              <section className="food-detail-section">
+                <h3>Hướng dẫn bảo quản</h3>
 
-            {actionError && <p className="food-detail-action-error">{actionError}</p>}
+                <div className="food-detail-storage-box">
+                  {(food.preservationMethods?.length
+                    ? food.preservationMethods
+                    : ["Chưa có hướng dẫn bảo quản cho thực phẩm này."]
+                  ).map((method) => (
+                    <div className="food-detail-tip" key={method}>
+                      <img src={iconInfo} alt="" />
+                      <span>{method}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </>
+          )}
 
+          {actionError && <p className="food-detail-action-error">{actionError}</p>}
+
+          {isEditing ? (
             <div className="food-detail-action-row">
-              <button className="food-detail-cancel-button" onClick={onClose} disabled={isSaving}>
+              <button className="food-detail-cancel-button" onClick={handleCancelEdit} disabled={isSaving}>
                 Hủy
               </button>
 
@@ -408,16 +773,16 @@ const FoodDetailPopup: React.FC<FoodDetailPopupProps> = ({
                 {isSaving ? "Đang lưu..." : "Lưu thay đổi"}
               </button>
             </div>
-          </section>
+          ) : (
+            <section className="food-detail-remove-section">
+              <button className="food-detail-remove-button" onClick={() => setIsRemoveConfirmOpen(true)} disabled={isSaving}>
+                <img src={iconAlert} alt="" />
+                Loại khỏi tủ lạnh
+              </button>
 
-          <section className="food-detail-remove-section">
-            <button className="food-detail-remove-button" onClick={() => setIsRemoveConfirmOpen(true)} disabled={isSaving}>
-              <img src={iconAlert} alt="" />
-              Loại khỏi tủ lạnh
-            </button>
-
-            <p>Thực phẩm sẽ được loại khỏi danh sách hiện tại.</p>
-          </section>
+              <p>Thực phẩm sẽ được loại khỏi danh sách hiện tại.</p>
+            </section>
+          )}
         </div>
       </aside>
 
@@ -488,6 +853,72 @@ const FoodDetailPopup: React.FC<FoodDetailPopupProps> = ({
         </div>
       )}
     </div>
+  );
+};
+
+type FieldProps = {
+  label: string;
+  required?: boolean;
+  value?: string;
+  placeholder?: string;
+  type?: string;
+  as?: "input" | "select";
+  options?: Array<string | SelectOption>;
+  wide?: boolean;
+  multiline?: boolean;
+  disabled?: boolean;
+  onChange?: (value: string) => void;
+};
+
+const getOptionValue = (option: string | SelectOption) => (typeof option === "string" ? option : option.value);
+const getOptionLabel = (option: string | SelectOption) => (typeof option === "string" ? option : option.label);
+
+const Field: React.FC<FieldProps> = ({
+  label,
+  required,
+  value,
+  placeholder,
+  type = "text",
+  as = "input",
+  options = [],
+  wide,
+  multiline,
+  disabled,
+  onChange,
+}) => {
+  return (
+    <label className={`food-detail-field ${wide ? "wide" : ""} ${multiline ? "multiline" : ""}`}>
+      <span>
+        {label} {required && <strong>*</strong>}
+      </span>
+      {multiline ? (
+        <textarea
+          value={value || ""}
+          onChange={(event) => onChange?.(event.target.value)}
+          placeholder={placeholder}
+          disabled={disabled}
+        />
+      ) : as === "select" ? (
+        <select value={value || ""} onChange={(event) => onChange?.(event.target.value)} disabled={disabled}>
+          <option value="">{placeholder || `Chọn ${label.toLowerCase()}`}</option>
+          {options.map((option) => (
+            <option key={getOptionValue(option)} value={getOptionValue(option)}>
+              {getOptionLabel(option)}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <input
+          type={type}
+          value={value || ""}
+          onChange={(event) => onChange?.(event.target.value)}
+          placeholder={placeholder}
+          disabled={disabled}
+          min={type === "number" ? "0" : undefined}
+          step={type === "number" ? "0.01" : undefined}
+        />
+      )}
+    </label>
   );
 };
 
