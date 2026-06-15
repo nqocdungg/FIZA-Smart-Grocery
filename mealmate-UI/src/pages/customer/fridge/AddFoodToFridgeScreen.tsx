@@ -29,6 +29,7 @@ type ShoppingImportCandidateFromApi = {
   quantity: number;
   unit?: string;
   note?: string;
+  importedToFridgeAt?: string;
 };
 
 type ShoppingDraft = {
@@ -197,9 +198,10 @@ const AddFoodToFridgeScreen: React.FC<AddFoodToFridgeScreenProps> = ({ onCancel,
 
       try {
         const response = await api.get<ShoppingImportCandidateFromApi[]>("/api/fridge-items/import-candidates");
-        setShoppingCandidates(response.data);
+        const filtered = response.data.filter(candidate => !candidate.importedToFridgeAt);
+        setShoppingCandidates(filtered);
         setShoppingDrafts(
-          response.data.reduce<Record<number, ShoppingDraft>>((acc, candidate) => {
+          filtered.reduce<Record<number, ShoppingDraft>>((acc, candidate) => {
             acc[candidate.shoppingListItemId] = createDraft(candidate);
             return acc;
           }, {})

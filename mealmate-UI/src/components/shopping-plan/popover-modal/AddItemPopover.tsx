@@ -1,12 +1,13 @@
 import { Check, ChevronDown, Minus, Plus } from 'lucide-react';
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import './AddItemPopover.css';
 
 interface AddItemPopoverProps {
     foodName: string;
     foodIcon?: string;
     unit: string;
-    onConfirm: (data: { quantity: number; assignedTo: number | null; note: string }) => void;
+    onConfirm: (data: { quantity: number; assignedTo: number | null; note: string; customName?: string; unit?: string }) => void;
     onCancel: () => void;
     members?: any[];
 }
@@ -22,12 +23,38 @@ const AddItemPopover: React.FC<AddItemPopoverProps> = ({
     const [quantity, setQuantity] = useState(1);
     const [assigneeId, setAssigneeId] = useState<number | ''>('');
     const [note, setNote] = useState('');
+    const [customName, setCustomName] = useState('');
+    const [selectedUnit, setSelectedUnit] = useState(unit);
+
+    const isOther = foodName.toLowerCase().includes("khác");
 
     const getAssigneeName = () => {
         if (assigneeId === '') return 'Chọn người phụ trách';
         const found = members.find(m => m.id === assigneeId);
         return found ? found.fullName : 'Chọn người phụ trách';
     };
+
+    const handleConfirm = () => {
+        if (isOther && !customName.trim()) {
+            toast.error("Vui lòng nhập tên thực phẩm cụ thể!");
+            return;
+        }
+        onConfirm({
+            quantity,
+            assignedTo: assigneeId === '' ? null : assigneeId,
+            note,
+            customName: isOther ? customName.trim() : undefined,
+            unit: selectedUnit
+        });
+    };
+
+    React.useEffect(() => {
+        setSelectedUnit(unit);
+    }, [unit]);
+
+    const commonUnits = ["kg", "g", "quả", "hộp", "bó", "chai", "túi", "lít", "ml", "phần"];
+    const unitOptions = commonUnits.includes(unit.toLowerCase()) ? commonUnits : [unit, ...commonUnits];
+
     return (
         <div className="add-item-popover">
             {/*Tên thực phẩm */}
@@ -35,6 +62,18 @@ const AddItemPopover: React.FC<AddItemPopoverProps> = ({
                 <span className="popover-food-icon">{foodIcon}</span>
                 <span className="popover-food-name">{foodName}</span>
             </div>
+
+            {isOther && (
+                <div className="popover-row-vertical">
+                    <label className="required-label">TÊN THỰC PHẨM CỤ THỂ</label>
+                    <input
+                        className="custom-name-input"
+                        placeholder="Ví dụ: Rau cải cúc, Thịt bò Mỹ..."
+                        value={customName}
+                        onChange={(e) => setCustomName(e.target.value)}
+                    />
+                </div>
+            )}
 
             <div className="popover-divider"></div>
 
@@ -73,7 +112,19 @@ const AddItemPopover: React.FC<AddItemPopoverProps> = ({
                         />
                         <button onClick={() => setQuantity(q => q + 0.5)}><Plus size={14} /></button>
                     </div>
-                    <span className="unit-text">{unit.toUpperCase()}</span>
+                    {isOther ? (
+                        <select
+                            className="popover-unit-select"
+                            value={selectedUnit}
+                            onChange={(e) => setSelectedUnit(e.target.value)}
+                        >
+                            {unitOptions.map(u => (
+                                <option key={u} value={u}>{u.toUpperCase()}</option>
+                            ))}
+                        </select>
+                    ) : (
+                        <span className="unit-text">{selectedUnit.toUpperCase()}</span>
+                    )}
                 </div>
             </div>
 
@@ -90,11 +141,7 @@ const AddItemPopover: React.FC<AddItemPopoverProps> = ({
             {/* Actions */}
             <div className="popover-footer">
                 <button className="popover-btn-cancel" onClick={onCancel}>Hủy</button>
-                <button className="popover-btn-confirm" onClick={() => onConfirm({
-                    quantity,
-                    assignedTo: assigneeId === '' ? null : assigneeId,
-                    note
-                })}>
+                <button className="popover-btn-confirm" onClick={handleConfirm}>
                     <Check size={18} /> Xác nhận
                 </button>
             </div>

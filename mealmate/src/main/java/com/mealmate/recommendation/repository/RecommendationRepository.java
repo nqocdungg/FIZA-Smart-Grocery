@@ -13,12 +13,12 @@ public interface RecommendationRepository extends Repository<com.mealmate.catalo
     @Query(value = """
             select
                 fi.food_id as foodId,
-                f.name as foodName,
+                COALESCE(min(fi.custom_name), f.name) as foodName,
                 sum(fi.quantity) as availableQuantity,
-                f.unit as unit,
+                COALESCE(f.unit, 'kg') as unit,
                 min(fi.expiry_date) as nearestExpiryDate
             from fridge_items fi
-            join foods f on f.id = fi.food_id
+            left join foods f on f.id = fi.food_id
             where fi.family_id = :familyId
               and fi.status = 'STORED'
               and (fi.expiry_date is null or fi.expiry_date >= :forDate)

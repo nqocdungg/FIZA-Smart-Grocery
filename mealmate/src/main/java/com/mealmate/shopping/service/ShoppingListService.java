@@ -159,13 +159,24 @@ public class ShoppingListService {
             list.setCreatedBy(1L); // neu k tim thay, cho la admin tao
         }
 
-        ShoppingList savedList = repository.save(list);
+        List<ShoppingListItem> existingItems = new ArrayList<>(list.getItems());
+        list.getItems().clear();
 
-        itemRepository.deleteByShoppingListId(savedList.getId());
         if (request.getItems() != null) {
-            List<ShoppingListItem> newItems = request.getItems().stream().map(dto -> {
-                ShoppingListItem item = new ShoppingListItem();
-                item.setShoppingList(savedList);
+            for (var dto : request.getItems()) {
+                ShoppingListItem item = null;
+                if (dto.getId() != null && dto.getId() < 1000000000000L) {
+                    item = existingItems.stream()
+                            .filter(ei -> ei.getId().equals(dto.getId()))
+                            .findFirst()
+                            .orElse(null);
+                }
+
+                if (item == null) {
+                    item = new ShoppingListItem();
+                    item.setShoppingList(list);
+                    item.setIsPurchased(false);
+                }
 
                 var food = foodRepository.findById(dto.getFoodId())
                         .orElseThrow(() -> new RuntimeException("Thực phẩm không tồn tại"));
@@ -174,19 +185,27 @@ public class ShoppingListService {
                 item.setQuantity(dto.getQuantity());
                 item.setUnit(dto.getUnit());
                 item.setNote(dto.getNote());
+                
+                item.setCustomName(dto.getCustomName());
 
-                // Tìm Người phụ trách
+                if (food.getName().toLowerCase().contains("khác")) {
+                    if (dto.getCustomName() == null || dto.getCustomName().trim().isEmpty()) {
+                        throw new IllegalArgumentException("Thực phẩm loại '" + food.getName() + "' bắt buộc phải có tên gợi nhớ (customName).");
+                    }
+                }
+
                 if (dto.getAssignedTo() != null) {
                     item.setAssignedTo(dto.getAssignedTo());
+                } else {
+                    item.setAssignedTo((Long) null);
                 }
 
                 item.setIsPurchased(dto.getIsPurchased() != null ? dto.getIsPurchased() : false);
-                return item;
-            }).collect(Collectors.toList());
-
-            itemRepository.saveAll(newItems);
+                list.getItems().add(item);
+            }
         }
-        // return savedList;
+        repository.save(list);
+        // return list;
     }
 
     @Transactional

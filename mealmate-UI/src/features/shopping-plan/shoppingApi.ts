@@ -254,6 +254,10 @@ export const importToFridge = async (listId: number): Promise<void> => {
   }
 };
 
+export const importFromShopping = async (items: any[]): Promise<void> => {
+  await api.post("/api/fridge-items/import-from-shopping", { items });
+};
+
 export const updateShoppingListNote = async (
   listId: number,
   note: string,

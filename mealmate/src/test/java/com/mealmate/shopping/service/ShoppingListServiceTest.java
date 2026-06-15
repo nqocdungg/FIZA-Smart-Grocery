@@ -157,7 +157,6 @@ class ShoppingListServiceTest {
 
         // then
         verify(repository).save(any(ShoppingList.class));
-        verify(itemRepository).deleteByShoppingListId(10L);
     }
 
     @Test

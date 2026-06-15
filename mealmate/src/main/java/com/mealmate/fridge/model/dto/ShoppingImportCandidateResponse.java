@@ -35,4 +35,6 @@ public class ShoppingImportCandidateResponse {
     private String unit;
 
     private String note;
+
+    private java.time.LocalDateTime importedToFridgeAt;
 }

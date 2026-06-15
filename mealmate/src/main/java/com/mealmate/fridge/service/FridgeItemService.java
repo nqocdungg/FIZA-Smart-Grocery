@@ -429,6 +429,7 @@ public class FridgeItemService {
         response.setQuantity(projection.getQuantity());
         response.setUnit(projection.getUnit());
         response.setNote(projection.getNote());
+        response.setImportedToFridgeAt(projection.getImportedToFridgeAt());
 
         return response;
     }

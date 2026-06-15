@@ -6,6 +6,7 @@ import lombok.Data;
 public class ShoppingItemRequestDTO {
     private Long id; // Có ID thì là Update, không có là Create mới
     private Long foodId;
+    private String customName;
     private Double quantity;
     private String unit;
     private Long assignedTo;
