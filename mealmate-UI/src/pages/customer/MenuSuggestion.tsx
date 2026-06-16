@@ -1111,8 +1111,8 @@ const MenuSuggestion: React.FC = () => {
               <section className="menu-side-card">
                 <h2>{family?.name || "Gia đình"}</h2>
                 <p>
-                  Thực đơn ngày {formatDisplayDate(selectedDate)} được đọc từ meal plan đã lưu. Tạo tự động sẽ gọi thuật toán
-                  recommendation cho từng slot bữa ăn.
+                  Thực đơn ngày {formatDisplayDate(selectedDate)} được người dùng tự động chỉnh sửa. Tạo tự động sẽ gọi thuật toán
+                  gợi ý cho từng slot bữa ăn.
                 </p>
                 <div className="menu-side-stat">
                   <div>

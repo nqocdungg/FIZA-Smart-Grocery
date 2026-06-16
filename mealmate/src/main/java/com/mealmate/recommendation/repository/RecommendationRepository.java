@@ -43,6 +43,19 @@ public interface RecommendationRepository extends Repository<com.mealmate.catalo
             """, nativeQuery = true)
     List<RecipeCandidateProjection> findCandidateRecipesByFoodIds(@Param("foodIds") List<Long> foodIds);
 
+        @Query(value = """
+                        select
+                                r.id as recipeId,
+                                r.name as recipeName,
+                                r.image_url as imageUrl,
+                                r.preferred_meal_time as preferredMealTime,
+                                r.difficulty as difficulty
+                        from recipes r
+                        order by r.id desc
+                        limit :limit
+                        """, nativeQuery = true)
+        List<RecipeCandidateProjection> findTopRecipes(@Param("limit") int limit);
+
     @Query(value = """
             select
                 ri.recipe_id as recipeId,

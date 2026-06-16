@@ -118,7 +118,24 @@ public class RecommendationService {
                     .build();
         }
 
-        List<Long> recipeIds = candidates.stream().map(RecipeCandidateProjection::getRecipeId).toList();
+        // Thực hiện lọc cứng: Chỉ giữ lại các công thức linh hoạt (null/trống) hoặc trùng khớp chính xác với bữa ăn đang yêu cầu
+        List<RecipeCandidateProjection> strictCandidates = candidates.stream()
+                .filter(recipe -> recipe.getPreferredMealTime() == null || 
+                                  recipe.getPreferredMealTime().isBlank() || 
+                                  recipe.getPreferredMealTime().equalsIgnoreCase(normalizedMealType))
+                .toList();
+
+        if (strictCandidates.isEmpty()) {
+            return RecommendationResponse.builder()
+                    .familyId(familyId)
+                    .userId(userId)
+                    .mealType(normalizedMealType)
+                    .date(targetDate)
+                    .recommendations(List.of())
+                    .build();
+        }
+
+        List<Long> recipeIds = strictCandidates.stream().map(RecipeCandidateProjection::getRecipeId).toList();
         Map<Long, List<RecipeIngredientNeedProjection>> ingredientsByRecipe = groupIngredientsByRecipe(recipeIds);
 
         Map<Long, Integer> familyFavoriteCounts = loadFamilyFavoriteCounts(familyId, recipeIds);
@@ -126,7 +143,7 @@ public class RecommendationService {
 
         List<RecipeRecommendationResponse> recommendations = new ArrayList<>();
 
-        for (RecipeCandidateProjection recipe : candidates) {
+        for (RecipeCandidateProjection recipe : strictCandidates) {
             List<RecipeIngredientNeedProjection> ingredients = ingredientsByRecipe.get(recipe.getRecipeId());
             if (ingredients == null || ingredients.isEmpty()) {
                 continue;
@@ -195,9 +212,17 @@ public class RecommendationService {
 
     public List<RecipeCandidateProjection> getCandidateRecipes(String mealType, Set<Long> availableFoodIds) {
         if (availableFoodIds == null || availableFoodIds.isEmpty()) {
-            return List.of();
+            // No fridge ingredients available — fallback to top recent recipes so new dishes can surface
+            return recommendationRepository.findTopRecipes(20);
         }
-        return recommendationRepository.findCandidateRecipesByFoodIds(new ArrayList<>(availableFoodIds));
+
+        List<RecipeCandidateProjection> candidates = recommendationRepository.findCandidateRecipesByFoodIds(new ArrayList<>(availableFoodIds));
+        if (candidates == null || candidates.isEmpty()) {
+            // If ingredient-based query returns nothing, also fallback to top recipes
+            return recommendationRepository.findTopRecipes(20);
+        }
+
+        return candidates;
     }
 
     public IngredientMatchResult calculateIngredientMatch(
@@ -347,6 +372,18 @@ public class RecommendationService {
 
         Map<Long, List<LocalDate>> selectedRecipeDates = new HashMap<>();
         Map<LocalDate, Set<String>> selectedRecipeNamesByDate = new HashMap<>();
+
+        // Load already-saved menu items in the requested range so we can penalize saved recipes more strongly
+        Map<Long, List<LocalDate>> savedRecipeDates = new HashMap<>();
+        List<MenuPlanItemProjection> existingItems = recommendationRepository.findMenuPlanItems(
+                request.getFamilyId(), startDate, startDate.plusDays(dayCount - 1)
+        );
+        for (MenuPlanItemProjection item : existingItems) {
+            if (item.getRecipeId() != null) {
+                savedRecipeDates.computeIfAbsent(item.getRecipeId(), k -> new ArrayList<>()).add(item.getMealDate());
+                selectedRecipeNamesByDate.computeIfAbsent(item.getMealDate(), k -> new HashSet<>()).add(normalizeRecipeNameKey(item.getRecipeName()));
+            }
+        }
         List<MenuDraftDayDto> days = new ArrayList<>();
 
         for (int dayIndex = 0; dayIndex < dayCount; dayIndex++) {
@@ -363,10 +400,11 @@ public class RecommendationService {
                 );
 
                 RecipeRecommendationResponse selected = selectWeightedDraftCandidate(
-                        candidates.getRecommendations(),
-                        selectedRecipeDates,
-                        selectedRecipeNamesByDate,
-                        date
+                    candidates.getRecommendations(),
+                    selectedRecipeDates,
+                    savedRecipeDates,
+                    selectedRecipeNamesByDate,
+                    date
                 );
 
                 if (selected != null) {
@@ -396,21 +434,25 @@ public class RecommendationService {
                 .build();
     }
 
-    private RecipeRecommendationResponse selectWeightedDraftCandidate(
+        private RecipeRecommendationResponse selectWeightedDraftCandidate(
             List<RecipeRecommendationResponse> candidates,
             Map<Long, List<LocalDate>> selectedRecipeDates,
+            Map<Long, List<LocalDate>> savedRecipeDates,
             Map<LocalDate, Set<String>> selectedRecipeNamesByDate,
             LocalDate date
-    ) {
+        ) {
         if (candidates == null || candidates.isEmpty()) {
             return null;
         }
 
         List<RecipeRecommendationResponse> rankedCandidates = candidates.stream()
-                .map(candidate -> applyInDraftPenalty(candidate, selectedRecipeDates.getOrDefault(candidate.getRecipeId(), List.of()), date))
-                .filter(candidate -> selectedRecipeDates.getOrDefault(candidate.getRecipeId(), List.of()).stream()
-                        .noneMatch(date::equals))
-                .filter(candidate -> !selectedRecipeNamesByDate.getOrDefault(date, Set.of()).contains(normalizeRecipeNameKey(candidate.getRecipeName())))
+            // always include candidates, but apply penalty when the recipe already exists in saved plan or in the draft selections
+            .map(candidate -> applyInDraftPenalty(
+                candidate,
+                selectedRecipeDates.getOrDefault(candidate.getRecipeId(), List.of()),
+                savedRecipeDates.getOrDefault(candidate.getRecipeId(), List.of()),
+                date
+            ))
                 .sorted(Comparator.comparing(RecipeRecommendationResponse::getMatchPercent, Comparator.reverseOrder())
                         .thenComparing(RecipeRecommendationResponse::getExpiryPriorityScore, Comparator.reverseOrder())
                         .thenComparingInt(response -> difficultyRank(response.getDifficulty()))
@@ -466,30 +508,40 @@ public class RecommendationService {
 
     private RecipeRecommendationResponse applyInDraftPenalty(
             RecipeRecommendationResponse candidate,
-            List<LocalDate> selectedDates,
+            List<LocalDate> draftSelectedDates,
+            List<LocalDate> savedDates,
             LocalDate date
     ) {
-        int penalty = calculateInDraftPenalty(selectedDates, date);
+        int draftPenalty = calculateInDraftPenalty(draftSelectedDates, date);
+        int savedPenalty = calculateInDraftPenalty(savedDates, date);
+
+        // Saved occurrences should be penalized more strongly
+        int penalty = Math.max(draftPenalty, savedPenalty * 2);
         if (penalty <= 0) {
             return candidate;
         }
 
         List<String> reasons = new ArrayList<>(candidate.getReasons() == null ? List.of() : candidate.getReasons());
-        reasons.add("Tru " + penalty + " diem vi mon da xuat hien trong ban nhap thuc don tuan");
+        if (savedPenalty > 0) {
+            reasons.add("Tru " + (savedPenalty * 2) + " diem vi mon da xuat hien trong thuc don da luu");
+        }
+        if (draftPenalty > 0) {
+            reasons.add("Tru " + draftPenalty + " diem vi mon da xuat hien trong ban nhap thuc don tuan");
+        }
 
         return copyRecommendationWithReasons(
                 RecipeRecommendationResponse.builder()
-                .recipeId(candidate.getRecipeId())
-                .recipeName(candidate.getRecipeName())
-                .imageUrl(candidate.getImageUrl())
-                .difficulty(candidate.getDifficulty())
-                .score(candidate.getScore() - penalty)
-                .matchPercent(candidate.getMatchPercent())
-                .expiryPriorityScore(candidate.getExpiryPriorityScore())
-                .availableIngredients(candidate.getAvailableIngredients())
-                .missingIngredients(candidate.getMissingIngredients())
-                .reasons(candidate.getReasons())
-                .build(),
+                        .recipeId(candidate.getRecipeId())
+                        .recipeName(candidate.getRecipeName())
+                        .imageUrl(candidate.getImageUrl())
+                        .difficulty(candidate.getDifficulty())
+                        .score(candidate.getScore() - penalty)
+                        .matchPercent(candidate.getMatchPercent())
+                        .expiryPriorityScore(candidate.getExpiryPriorityScore())
+                        .availableIngredients(candidate.getAvailableIngredients())
+                        .missingIngredients(candidate.getMissingIngredients())
+                        .reasons(candidate.getReasons())
+                        .build(),
                 reasons
         );
     }
@@ -824,14 +876,18 @@ public class RecommendationService {
     }
 
     private Map<Long, LocalDate> loadRecentRecipeDates(Long familyId, LocalDate date) {
+        // Quét lịch sử ngược về quá khứ 7 ngày trước để tìm các món đã ăn (CONFIRMED)
         LocalDate fromDate = date.minusDays(7);
-        LocalDate toDate = date.minusDays(1);
+        
+        // Quét tiến lên phía trước 7 ngày để tóm gọn toàn bộ các món nằm chờ trong bản nháp tuần (SUGGESTED)
+        LocalDate toDate = date.plusDays(7);
 
         if (toDate.isBefore(fromDate)) {
             return Map.of();
         }
 
         Map<Long, LocalDate> recentRecipeMap = new HashMap<>();
+        // Hàm này giờ trả về cả ngày gần nhất của món đã ăn lẫn món chuẩn bị lên lịch
         for (RecentRecipeProjection recent : recommendationRepository.findRecentRecipes(familyId, fromDate, toDate)) {
             recentRecipeMap.put(recent.getRecipeId(), recent.getLatestMealDate());
         }
