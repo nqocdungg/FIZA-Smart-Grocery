@@ -3,6 +3,7 @@ package com.mealmate.fridge.service;
 import com.mealmate.catalog.repository.RecipeIngredientRepository;
 import com.mealmate.catalog.repository.RecipeSuggestionProjection;
 import com.mealmate.catalog.repository.UserFavoriteRecipeRepository;
+import com.mealmate.catalog.repository.FoodRepository;
 import com.mealmate.fridge.mapper.FridgeItemMapper;
 import com.mealmate.fridge.model.FridgeItem;
 import com.mealmate.fridge.model.FridgeItemStatus;
@@ -57,6 +58,7 @@ public class FridgeItemService {
     private final ShoppingListItemRepository shoppingListItemRepository;
     private final RecipeIngredientRepository recipeIngredientRepository;
     private final UserFavoriteRecipeRepository userFavoriteRecipeRepository;
+    private final FoodRepository foodRepository;
     private final NotificationService notificationService;
     private final UserRepository userRepository;
 
@@ -66,6 +68,7 @@ public class FridgeItemService {
             ShoppingListItemRepository shoppingListItemRepository,
             RecipeIngredientRepository recipeIngredientRepository,
             UserFavoriteRecipeRepository userFavoriteRecipeRepository,
+            FoodRepository foodRepository,
             NotificationService notificationService,
             UserRepository userRepository
     ) {
@@ -74,6 +77,7 @@ public class FridgeItemService {
         this.shoppingListItemRepository = shoppingListItemRepository;
         this.recipeIngredientRepository = recipeIngredientRepository;
         this.userFavoriteRecipeRepository = userFavoriteRecipeRepository;
+        this.foodRepository = foodRepository;
         this.notificationService = notificationService;
         this.userRepository = userRepository;
     }
@@ -132,6 +136,7 @@ public class FridgeItemService {
         FridgeItem item = fridgeItemMapper.toEntity(request);
         item.setFamilyId(familyId);
         item.setStatus(FridgeItemStatus.STORED);
+        item.setUnit(resolveFridgeUnit(request.getFoodId(), request.getUnit()));
 
         FridgeItem saved = fridgeItemRepository.save(item);
 
@@ -379,6 +384,21 @@ public class FridgeItemService {
         if (request.getQuantity() == null || request.getQuantity().signum() <= 0) {
             throw new IllegalArgumentException("quantity must be greater than 0");
         }
+    }
+
+    private String resolveFridgeUnit(Long foodId, String requestedUnit) {
+        String normalizedRequestedUnit = normalizeBlank(requestedUnit);
+        if (normalizedRequestedUnit != null) {
+            return normalizedRequestedUnit;
+        }
+
+        if (foodId == null) {
+            return null;
+        }
+
+        return foodRepository.findById(foodId)
+                .map(food -> normalizeBlank(food.getUnit()))
+                .orElse(null);
     }
 
     private FridgeItemResponse importSingleShoppingItem(Long familyId, ImportShoppingItemRequest request) {

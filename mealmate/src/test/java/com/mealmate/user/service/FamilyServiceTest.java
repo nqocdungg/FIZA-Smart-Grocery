@@ -165,4 +165,26 @@ class FamilyServiceTest {
         verify(notificationService, times(2)).push(any(), any(), any(), any(), any());
         verify(invitationRepository).saveAndFlush(any(Invitation.class));
     }
+
+    @Test
+    void should_BlockInvite_When_TargetUserIsAdmin() {
+        Long familyId = 1L;
+        Long userId = 2L;
+
+        com.mealmate.auth.model.Role adminRole = new com.mealmate.auth.model.Role();
+        adminRole.setId(1L);
+        adminRole.setName("ADMIN");
+
+        User admin = new User();
+        admin.setId(userId);
+        admin.setRole(adminRole);
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(admin));
+        when(repository.findById(familyId)).thenReturn(Optional.of(new Family()));
+
+        boolean success = service.inviteMemberToFamily(familyId, userId);
+
+        assertThat(success).isFalse();
+        verifyNoInteractions(invitationRepository);
+    }
 }

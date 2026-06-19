@@ -154,6 +154,7 @@ public class UserController {
             cleanUserMap.put("gender", user.getGender() != null ? user.getGender() : "OTHER");
             cleanUserMap.put("avatarUrl", user.getAvatarUrl() != null ? user.getAvatarUrl() : "");
             cleanUserMap.put("familyId", user.getFamilyId());
+            cleanUserMap.put("roleName", user.getRole() != null ? user.getRole().getName() : "");
 
             return ResponseEntity.ok(new ApiResponse<>(true, "Success", cleanUserMap));
         } catch (Exception e) {
@@ -175,6 +176,10 @@ public class UserController {
             
             if (currentUser == null || currentUser.getId() == null) {
                 return ResponseEntity.ok(new ApiResponse<>(false, "Không tìm thấy thông tin cơ bản người dùng", new java.util.HashMap<>()));
+            }
+            if (isAdminRole(currentUser)) {
+                return ResponseEntity.ok(new ApiResponse<>(false,
+                        "Tài khoản quản trị viên không nhận lời mời gia đình", new java.util.HashMap<>()));
             }
 
             Optional<Invitation> inviteOpt = invitationRepository
@@ -225,6 +230,10 @@ public class UserController {
             User currentUser = userRepository.findByEmail(currentEmail).orElse(null);
             if (currentUser == null) {
                 return ResponseEntity.status(404).body(new ApiResponse<>(false, "Không tìm thấy người dùng", null));
+            }
+            if (isAdminRole(currentUser)) {
+                return ResponseEntity.status(403).body(new ApiResponse<>(false,
+                        "Tài khoản quản trị viên không thể gia nhập gia đình", null));
             }
 
             Optional<Invitation> inviteOpt = invitationRepository
@@ -338,10 +347,8 @@ public class UserController {
 
             Long restoredFamilyId = userRepository.findActualFamilyIdByHousekeeperId(targetUserId);
             if (restoredFamilyId == null || restoredFamilyId.equals(currentFamilyId)) {
-                Family personalFamily = new Family();
-                personalFamily.setName("Gia đình " + targetUser.getFullName());
-                personalFamily.setHousekeeperId(targetUserId);
-                restoredFamilyId = familyService.save(personalFamily).getId();
+                return ResponseEntity.status(400).body(new ApiResponse<>(false,
+                        "Không tìm thấy gia đình gốc để khôi phục cho người dùng này", null));
             }
 
             userRepository.updateFamilyAndRoleDirectlyNative(targetUserId, restoredFamilyId, 3L);
@@ -470,6 +477,17 @@ public class UserController {
                 .avatarUrl(user.getAvatarUrl())
                 .build();
     }
+
+    private boolean isAdminRole(User user) {
+        if (user == null || user.getRole() == null) {
+            return false;
+        }
+
+        Long roleId = user.getRole().getId();
+        String roleName = user.getRole().getName();
+        return Long.valueOf(1L).equals(roleId) || "ADMIN".equalsIgnoreCase(roleName);
+    }
+
     @PostMapping("/forgot-password/request")
     public ResponseEntity<ApiResponse<Void>> requestTemporaryPassword(@RequestBody Map<String, String> body) {
         try {

@@ -62,6 +62,11 @@ public class FamilyService {
         Long roleId = user.getRole() != null ? user.getRole().getId() : null;
         Long invitedUserFamilyId = user.getFamilyId();
 
+        if (isAdminRole(user)) {
+            System.out.println("Blocked invite: admin users cannot be invited to a family.");
+            return false;
+        }
+
         String finalStatus = "PENDING";
         boolean isBlocked = false;
 
@@ -145,5 +150,15 @@ public class FamilyService {
         
         System.out.println("🔥 [HOÀN THÀNH SERVICE] Đã lưu bản ghi với trạng thái: " + finalStatus);
         return !isBlocked; 
+    }
+
+    private boolean isAdminRole(User user) {
+        if (user == null || user.getRole() == null) {
+            return false;
+        }
+
+        Long roleId = user.getRole().getId();
+        String roleName = user.getRole().getName();
+        return Long.valueOf(1L).equals(roleId) || "ADMIN".equalsIgnoreCase(roleName);
     }
 }

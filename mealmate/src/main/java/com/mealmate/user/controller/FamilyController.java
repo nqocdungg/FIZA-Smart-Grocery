@@ -113,6 +113,12 @@ public class FamilyController {
         }
         
         Long userId = Long.valueOf(rawUserId.toString());
+        User invitedUser = userRepository.findById(userId).orElse(null);
+        if (isAdminRole(invitedUser)) {
+            return ResponseEntity.badRequest().body(new ApiResponse<>(false,
+                    "Không thể mời tài khoản quản trị viên vào gia đình.", null));
+        }
+
         boolean isSuccess = service.inviteMemberToFamily(familyId, userId);
 
         if (isSuccess) {
@@ -150,5 +156,15 @@ public class FamilyController {
         } catch (Exception e) {
             return ResponseEntity.status(500).body(new ApiResponse<>(false, e.getMessage(), null));
         }
+    }
+
+    private boolean isAdminRole(User user) {
+        if (user == null || user.getRole() == null) {
+            return false;
+        }
+
+        Long roleId = user.getRole().getId();
+        String roleName = user.getRole().getName();
+        return Long.valueOf(1L).equals(roleId) || "ADMIN".equalsIgnoreCase(roleName);
     }
 }

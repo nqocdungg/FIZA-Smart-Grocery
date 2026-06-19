@@ -2,6 +2,8 @@ package com.mealmate.fridge.service;
 
 import com.mealmate.catalog.repository.RecipeIngredientRepository;
 import com.mealmate.catalog.repository.UserFavoriteRecipeRepository;
+import com.mealmate.catalog.repository.FoodRepository;
+import com.mealmate.catalog.model.Food;
 import com.mealmate.fridge.mapper.FridgeItemMapper;
 import com.mealmate.fridge.model.FridgeItem;
 import com.mealmate.fridge.model.FridgeItemStatus;
@@ -54,6 +56,8 @@ class FridgeItemServiceTest {
     @Mock
     private UserFavoriteRecipeRepository userFavoriteRecipeRepository;
     @Mock
+    private FoodRepository foodRepository;
+    @Mock
     private NotificationService notificationService;
     @Mock
     private UserRepository userRepository;
@@ -98,6 +102,9 @@ class FridgeItemServiceTest {
         item.setQuantity(BigDecimal.valueOf(2.5));
         item.setCustomName("Sữa tươi");
 
+        Food food = new Food();
+        food.setUnit("hộp");
+
         FridgeItem savedItem = new FridgeItem();
         savedItem.setId(123L);
         savedItem.setFamilyId(10L);
@@ -113,6 +120,7 @@ class FridgeItemServiceTest {
         responseDto.setDisplayName("Sữa tươi");
 
         when(fridgeItemMapper.toEntity(request)).thenReturn(item);
+        when(foodRepository.findById(100L)).thenReturn(Optional.of(food));
         when(fridgeItemRepository.save(item)).thenReturn(savedItem);
         when(userRepository.findByFamily_IdOrderByIdAsc(10L)).thenReturn(List.of());
         when(fridgeItemRepository.findDetailedById(123L)).thenReturn(Optional.empty());
@@ -125,6 +133,7 @@ class FridgeItemServiceTest {
         assertThat(result).isNotNull();
         assertThat(result.getId()).isEqualTo(123L);
         assertThat(result.getDisplayName()).isEqualTo("Sữa tươi");
+        assertThat(item.getUnit()).isEqualTo("hộp");
         verify(fridgeItemRepository).save(item);
     }
 
