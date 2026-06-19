@@ -9,6 +9,9 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.mealmate.catalog.repository.CategoryRepository;
 import com.mealmate.catalog.repository.FoodRepository;
@@ -23,6 +26,7 @@ import com.mealmate.shopping.model.ShoppingListItem;
 import com.mealmate.shopping.repository.ShoppingListItemRepository;
 import com.mealmate.shopping.repository.ShoppingListRepository;
 import com.mealmate.user.repository.FamilyRepository;
+import com.mealmate.user.model.User;
 import com.mealmate.user.repository.UserRepository;
 import com.mealmate.fridge.model.FridgeItem;
 import com.mealmate.fridge.model.FridgeItemStatus;
@@ -31,6 +35,9 @@ import java.time.LocalDateTime;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+
+import static org.springframework.http.HttpStatus.FORBIDDEN;
+import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
 @Service
 @RequiredArgsConstructor
@@ -147,6 +154,12 @@ public class ShoppingListService {
 
     @Transactional
     public void savePlan(ShoppingListRequestDTO request) { // lưu kế hoạch đi chợ
+        User currentUser = getCurrentUserOrThrow();
+        Long currentFamilyId = currentUser.getFamilyId();
+        if (currentFamilyId == null || !currentFamilyId.equals(request.getFamilyId())) {
+            throw new ResponseStatusException(FORBIDDEN, "Không thể lưu kế hoạch cho gia đình khác");
+        }
+
         ShoppingList list = repository.findByFamilyIdAndPlannedDate(request.getFamilyId(), request.getPlannedDate())
                 .orElse(new ShoppingList());
 
@@ -158,7 +171,7 @@ public class ShoppingListService {
         list.setNote(request.getNote());
 
         if (list.getCreatedBy() == null) {
-            list.setCreatedBy(1L); // neu k tim thay, cho la admin tao
+            list.setCreatedBy(currentUser);
         }
 
         List<ShoppingListItem> existingItems = new ArrayList<>(list.getItems());
@@ -208,6 +221,17 @@ public class ShoppingListService {
         }
         repository.save(list);
         // return list;
+    }
+
+    private User getCurrentUserOrThrow() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()
+                || !(authentication.getPrincipal() instanceof User principal)) {
+            throw new ResponseStatusException(UNAUTHORIZED, "User is not authenticated");
+        }
+
+        return userRepository.findById(principal.getId())
+                .orElseThrow(() -> new ResponseStatusException(UNAUTHORIZED, "Authenticated user no longer exists"));
     }
 
     @Transactional

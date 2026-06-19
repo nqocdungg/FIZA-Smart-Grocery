@@ -22,6 +22,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -145,18 +147,29 @@ class ShoppingListServiceTest {
         Family family = new Family();
         family.setId(1L);
 
+        User currentUser = new User();
+        currentUser.setId(2L);
+        currentUser.setFamilyId(1L);
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(currentUser, null, currentUser.getAuthorities()));
+
         ShoppingList shoppingList = new ShoppingList();
         shoppingList.setId(10L);
 
         when(repository.findByFamilyIdAndPlannedDate(1L, LocalDate.of(2026, 6, 1))).thenReturn(Optional.empty());
         when(familyRepository.findById(1L)).thenReturn(Optional.of(family));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(currentUser));
         when(repository.save(any(ShoppingList.class))).thenReturn(shoppingList);
 
         // when
-        service.savePlan(request);
+        try {
+            service.savePlan(request);
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
 
         // then
-        verify(repository).save(any(ShoppingList.class));
+        verify(repository).save(argThat(saved -> saved.getCreatedBy() == currentUser));
     }
 
     @Test
