@@ -109,6 +109,21 @@ const isOtherFood = (food: FoodFromApi) => {
 
 const isOtherSelection = (food: FoodFromApi | null) => Boolean(food && isOtherFood(food));
 
+const highlightMatch = (text: string, keyword: string): React.ReactNode => {
+  if (!keyword.trim()) return text;
+  const normalizedKeyword = normalizeSearchText(keyword);
+  const normalizedText = normalizeSearchText(text);
+  const idx = normalizedText.indexOf(normalizedKeyword);
+  if (idx === -1) return text;
+  return (
+    <>
+      {text.slice(0, idx)}
+      <mark className="search-highlight">{text.slice(idx, idx + normalizedKeyword.length)}</mark>
+      {text.slice(idx + normalizedKeyword.length)}
+    </>
+  );
+};
+
 const getFoodUnitOptions = (food: FoodFromApi | null) =>
   Array.from(
     new Set(
@@ -137,8 +152,7 @@ const createDraft = (candidate: ShoppingImportCandidateFromApi): ShoppingDraft =
 const AddFoodToFridgeScreen: React.FC<AddFoodToFridgeScreenProps> = ({ onCancel, onAdded }) => {
   const [mode, setMode] = useState<AddFoodMode>("SHOPPING_PLAN");
   const [allFoods, setAllFoods] = useState<FoodFromApi[]>([]);
-  const [foodSuggestions, setFoodSuggestions] = useState<FoodFromApi[]>([]);
-  const [isSearchingFoods, setIsSearchingFoods] = useState(false);
+  const [isLoadingFoods, setIsLoadingFoods] = useState(false);
   const [isSubmittingManual, setIsSubmittingManual] = useState(false);
   const [manualError, setManualError] = useState("");
   const [shoppingCandidates, setShoppingCandidates] = useState<ShoppingImportCandidateFromApi[]>([]);
@@ -162,7 +176,52 @@ const AddFoodToFridgeScreen: React.FC<AddFoodToFridgeScreenProps> = ({ onCancel,
 
   const selectedManualFood = manualForm.selectedFood;
   const hasTypedFoodName = manualForm.foodName.trim().length > 0;
-  const showOtherFoodChoices = hasTypedFoodName && !isSearchingFoods && foodSuggestions.length === 0;
+
+  const foodSuggestions = useMemo(() => {
+    const keyword = manualForm.foodName.trim();
+    if (!keyword || isLoadingFoods) return [];
+    const normalizedKeyword = normalizeSearchText(keyword);
+
+    return allFoods
+      .filter((food) => {
+        const nameMatch = normalizeSearchText(food.name).includes(normalizedKeyword);
+        const synonymMatch = food.synonyms
+          ? normalizeSearchText(food.synonyms).includes(normalizedKeyword)
+          : false;
+        return nameMatch || synonymMatch;
+      })
+      .map((food) => {
+        const normalizedName = normalizeSearchText(food.name);
+        const nameIdx = normalizedName.indexOf(normalizedKeyword);
+        const nameMatch = nameIdx !== -1;
+        const synonymMatch = food.synonyms
+          ? normalizeSearchText(food.synonyms).includes(normalizedKeyword)
+          : false;
+        const isOther = isOtherFood(food);
+        // Tier thấp hơn = xếp trên đầu
+        // 0: tên bắt đầu bằng keyword  (không phải Khác)
+        // 1: tên chứa keyword          (không phải Khác)
+        // 2: chỉ synonym khớp          (không phải Khác)
+        // 3: tên chứa keyword          (Khác)
+        // 4: chỉ synonym khớp          (Khác)
+        let tier: number;
+        if (!isOther && nameMatch && nameIdx === 0) tier = 0;
+        else if (!isOther && nameMatch) tier = 1;
+        else if (!isOther && synonymMatch) tier = 2;
+        else if (isOther && nameMatch) tier = 3;
+        else tier = 4;
+        return { food, tier, nameIdx };
+      })
+      .sort((a, b) => {
+        if (a.tier !== b.tier) return a.tier - b.tier;
+        // Cùng tier: vị trí khớp sớm hơn xếp trên
+        if (a.nameIdx !== -1 && b.nameIdx !== -1) return a.nameIdx - b.nameIdx;
+        return 0;
+      })
+      .map(({ food }) => food);
+  }, [allFoods, manualForm.foodName, isLoadingFoods]);
+
+  const showOtherFoodChoices = hasTypedFoodName && !isLoadingFoods && foodSuggestions.length === 0;
   const shouldShowCustomName = isOtherSelection(selectedManualFood);
 
   const selectedShoppingDrafts = Object.values(shoppingDrafts).filter((draft) => draft.status === "selected");
@@ -199,11 +258,14 @@ const AddFoodToFridgeScreen: React.FC<AddFoodToFridgeScreenProps> = ({ onCancel,
 
   useEffect(() => {
     const loadFoods = async () => {
+      setIsLoadingFoods(true);
       try {
         const response = await api.get<FoodFromApi[]>("/api/foods");
         setAllFoods(response.data);
       } catch {
         setAllFoods([]);
+      } finally {
+        setIsLoadingFoods(false);
       }
     };
 
@@ -238,33 +300,6 @@ const AddFoodToFridgeScreen: React.FC<AddFoodToFridgeScreenProps> = ({ onCancel,
       loadShoppingCandidates();
     }
   }, [mode]);
-
-  useEffect(() => {
-    const keyword = manualForm.foodName.trim();
-
-    if (!keyword) {
-      setFoodSuggestions([]);
-      setIsSearchingFoods(false);
-      return;
-    }
-
-    const timeoutId = window.setTimeout(async () => {
-      setIsSearchingFoods(true);
-
-      try {
-        const response = await api.get<FoodFromApi[]>("/api/foods", {
-          params: { keyword },
-        });
-        setFoodSuggestions(response.data.filter((food) => !isOtherFood(food)));
-      } catch {
-        setFoodSuggestions([]);
-      } finally {
-        setIsSearchingFoods(false);
-      }
-    }, 250);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [manualForm.foodName]);
 
   const updateShoppingDraft = (shoppingListItemId: number, nextValues: Partial<ShoppingDraft>) => {
     setShoppingDrafts((current) => ({
@@ -325,7 +360,6 @@ const AddFoodToFridgeScreen: React.FC<AddFoodToFridgeScreenProps> = ({ onCancel,
       customName: isOtherFood(food) ? manualForm.foodName.trim() : "",
       unit: foodUnitOptions[0] || "",
     });
-    setFoodSuggestions([]);
   };
 
   const validateManualForm = () => {
@@ -665,18 +699,44 @@ const AddFoodToFridgeScreen: React.FC<AddFoodToFridgeScreenProps> = ({ onCancel,
 
               {hasTypedFoodName && !selectedManualFood && (
                 <div className="manual-food-suggestions">
-                  {isSearchingFoods && <p className="manual-suggestion-state">Đang tìm thực phẩm...</p>}
+                  {isLoadingFoods && <p className="manual-suggestion-state">Đang tải dữ liệu thực phẩm...</p>}
 
-                  {!isSearchingFoods &&
-                    foodSuggestions.map((food) => (
-                      <button type="button" key={food.id} onClick={() => handleSelectFood(food)}>
-                        <strong>{food.name}</strong>
-                        <span>
-                          {food.categoryName || "Chưa có danh mục"}
-                          {food.unit ? ` · ${food.unit}` : ""}
-                        </span>
-                      </button>
-                    ))}
+                  {!isLoadingFoods &&
+                    foodSuggestions.map((food) => {
+                      const keyword = manualForm.foodName.trim();
+                      const normalizedKeyword = normalizeSearchText(keyword);
+                      const synonymParts =
+                        food.synonyms
+                          ?.split(",")
+                          .map((s) => s.trim())
+                          .filter(Boolean) || [];
+                      // Synonyms khớp lên đầu để luôn hiển thị và được highlight;
+                      // CSS ellipsis xử lý nếu tổng quá dài.
+                      const displaySynonyms = [
+                        ...synonymParts.filter((s) => normalizeSearchText(s).includes(normalizedKeyword)),
+                        ...synonymParts.filter((s) => !normalizeSearchText(s).includes(normalizedKeyword)),
+                      ];
+                      return (
+                        <button type="button" key={food.id} onClick={() => handleSelectFood(food)}>
+                          <strong>{highlightMatch(food.name, keyword)}</strong>
+                          <span>
+                            {food.categoryName || "Chưa có danh mục"}
+                            {food.unit ? ` · ${food.unit}` : ""}
+                            {displaySynonyms.length > 0 && (
+                              <em className="suggestion-synonyms">
+                                {" · "}
+                                {displaySynonyms.map((s, i) => (
+                                  <React.Fragment key={i}>
+                                    {i > 0 && ", "}
+                                    {highlightMatch(s, keyword)}
+                                  </React.Fragment>
+                                ))}
+                              </em>
+                            )}
+                          </span>
+                        </button>
+                      );
+                    })}
 
                   {showOtherFoodChoices && (
                     <div className="manual-other-foods">
