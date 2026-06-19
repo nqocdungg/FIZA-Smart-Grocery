@@ -46,7 +46,7 @@ const NoteSection: React.FC<NoteSectionProps> = ({ note = '', listId, onSaveSucc
     };
 
     const noteLines = tempNote.trim() !== '' ? tempNote.split('\n') : (listId && ['(Chưa có ghi chú)']);
-    const formatDate = (dateStr) => {
+    const formatDate = (dateStr?: string) => {
         if (!dateStr) return '';
         const d = new Date(dateStr);
         if (isNaN(d.getTime())) return dateStr;
