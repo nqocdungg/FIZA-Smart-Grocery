@@ -10,6 +10,7 @@ interface AddItemPopoverProps {
     onConfirm: (data: { quantity: number; assignedTo: number | null; note: string; customName?: string; unit?: string }) => void;
     onCancel: () => void;
     members?: any[];
+    commonUnits?: string[];
 }
 
 const AddItemPopover: React.FC<AddItemPopoverProps> = ({
@@ -18,13 +19,16 @@ const AddItemPopover: React.FC<AddItemPopoverProps> = ({
     unit,
     members = [],
     onConfirm,
-    onCancel
+    onCancel,
+    commonUnits = []
 }) => {
     const [quantity, setQuantity] = useState(1);
     const [assigneeId, setAssigneeId] = useState<number | ''>('');
     const [note, setNote] = useState('');
     const [customName, setCustomName] = useState('');
-    const [selectedUnit, setSelectedUnit] = useState(unit);
+    const parsedUnits = unit.split(',').map(u => u.trim().toLowerCase()).filter(Boolean);
+    const defaultUnit = parsedUnits[0] || 'kg';
+    const [selectedUnit, setSelectedUnit] = useState(defaultUnit);
 
     const isOther = foodName.toLowerCase().includes("khác");
 
@@ -49,11 +53,11 @@ const AddItemPopover: React.FC<AddItemPopoverProps> = ({
     };
 
     React.useEffect(() => {
-        setSelectedUnit(unit);
+        const parsed = unit.split(',').map(u => u.trim().toLowerCase()).filter(Boolean);
+        setSelectedUnit(parsed[0] || 'kg');
     }, [unit]);
 
-    const commonUnits = ["kg", "g", "quả", "hộp", "bó", "chai", "túi", "lít", "ml", "phần"];
-    const unitOptions = commonUnits.includes(unit.toLowerCase()) ? commonUnits : [unit, ...commonUnits];
+    const finalCommonUnits = commonUnits.includes(defaultUnit) ? commonUnits : [defaultUnit, ...commonUnits];
 
     return (
         <div className="add-item-popover">
@@ -118,7 +122,17 @@ const AddItemPopover: React.FC<AddItemPopoverProps> = ({
                             value={selectedUnit}
                             onChange={(e) => setSelectedUnit(e.target.value)}
                         >
-                            {unitOptions.map(u => (
+                            {finalCommonUnits.map(u => (
+                                <option key={u} value={u}>{u.toUpperCase()}</option>
+                            ))}
+                        </select>
+                    ) : parsedUnits.length > 1 ? (
+                        <select
+                            className="popover-unit-select"
+                            value={selectedUnit}
+                            onChange={(e) => setSelectedUnit(e.target.value)}
+                        >
+                            {parsedUnits.map(u => (
                                 <option key={u} value={u}>{u.toUpperCase()}</option>
                             ))}
                         </select>
