@@ -44,6 +44,7 @@ public class ShoppingListService {
     private final FamilyRepository familyRepository;
     private final FridgeItemRepository fridgeItemRepository;
 
+    @Transactional
     public List<ShoppingItemDTO> getPlanDetail(Long familyId, LocalDate date) {
         ShoppingList list = repository.findByFamilyIdAndPlannedDate(familyId, date).orElse(null);
         if (list == null)
@@ -74,6 +75,7 @@ public class ShoppingListService {
         return repository.findAll();
     }
 
+    @Transactional
     public List<DailyPlanSummaryDTO> getWeeklySummary(Long familyId, LocalDate selectedDate) {
         LocalDate monday = selectedDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         LocalDate sunday = monday.plusDays(6);
@@ -232,6 +234,7 @@ public class ShoppingListService {
         itemRepository.save(item);
     }
 
+    @Transactional
     public List<WeeklyShoppingAggregateDTO> getWeeklyAggregation(Long familyId, LocalDate startDate) {
         LocalDate monday = startDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         LocalDate sunday = monday.plusDays(6);
