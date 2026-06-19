@@ -4,15 +4,14 @@ FIZA là hệ thống hỗ trợ gia đình quản lý thực phẩm, tủ lạn
 
 ## Chức năng chính
 
-- Đăng ký, đăng nhập, quên mật khẩu và xác thực bằng JWT.
-- Quản lý người dùng, vai trò và thành viên gia đình.
-- Quản lý danh mục, thực phẩm, phương pháp bảo quản và công thức.
-- Theo dõi thực phẩm trong tủ lạnh, số lượng, vị trí và hạn sử dụng.
-- Gợi ý công thức và thực đơn dựa trên nguyên liệu hiện có.
-- Lập kế hoạch đi chợ theo ngày hoặc tuần, phân công người mua và đánh dấu trạng thái.
-- Nhập thực phẩm đã mua từ kế hoạch đi chợ vào tủ lạnh.
-- Thông báo, báo cáo và dashboard quản trị.
-- Upload ảnh lên Cloudinary và xuất nội dung PDF ở frontend.
+- **Quản lý tài khoản & phân quyền**: Quản lý tài khoản, vai trò (Admin, Người nội trợ, Thành viên) và phân quyền chi tiết
+- **Quản lý gia đình**: Tạo và quản lý gia đình, thêm thành viên, phân quyền theo vai trò
+- **Quản lý danh mục & thực phẩm**: Quản lý danh mục thực phẩm, loại thực phẩm, cách bảo quản
+- **Quản lý tủ lạnh**: Theo dõi thực phẩm trong tủ lạnh (số lượng, vị trí, hạn sử dụng, trạng thái)
+- **Lập danh sách mua sắm**: Tạo danh sách mua hàng, phân công người mua, cập nhật trạng thái
+- **Quản lý công thức nấu ăn**: Quản lý công thức, nguyên liệu, lưu món yêu thích
+- **Lên kế hoạch bữa ăn**: Lên kế hoạch bữa ăn theo ngày/tuần, gợi ý món ăn từ nguyên liệu sẵn có
+- **Báo cáo & thống kê**: Thống kê hoạt động mua sắm và sử dụng thực phẩm
 
 ### Phân quyền kế hoạch đi chợ
 
