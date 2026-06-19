@@ -4,6 +4,7 @@ import com.mealmate.catalog.model.Category;
 import com.mealmate.catalog.model.Food;
 import com.mealmate.catalog.repository.CategoryRepository;
 import com.mealmate.catalog.repository.FoodRepository;
+import com.mealmate.auth.model.Role;
 import com.mealmate.fridge.repository.FridgeItemRepository;
 import com.mealmate.shopping.dto.DailyPlanSummaryDTO;
 import com.mealmate.shopping.dto.ShoppingItemDTO;
@@ -18,12 +19,14 @@ import com.mealmate.user.model.User;
 import com.mealmate.user.repository.FamilyRepository;
 import com.mealmate.user.repository.UserRepository;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -58,6 +61,11 @@ class ShoppingListServiceTest {
 
     @InjectMocks
     private ShoppingListService service;
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
 
     @Test
     void should_GetPlanDetail_When_PlanExists() {
@@ -150,6 +158,9 @@ class ShoppingListServiceTest {
         User currentUser = new User();
         currentUser.setId(2L);
         currentUser.setFamilyId(1L);
+        Role housekeeperRole = new Role();
+        housekeeperRole.setName("HOUSEKEEPER");
+        currentUser.setRole(housekeeperRole);
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(currentUser, null, currentUser.getAuthorities()));
 
@@ -162,14 +173,36 @@ class ShoppingListServiceTest {
         when(repository.save(any(ShoppingList.class))).thenReturn(shoppingList);
 
         // when
-        try {
-            service.savePlan(request);
-        } finally {
-            SecurityContextHolder.clearContext();
-        }
+        service.savePlan(request);
 
         // then
         verify(repository).save(argThat(saved -> saved.getCreatedBy() == currentUser));
+    }
+
+    @Test
+    void should_RejectNewPlan_When_CurrentUserIsNotHousekeeper() {
+        ShoppingListRequestDTO request = new ShoppingListRequestDTO();
+        request.setFamilyId(1L);
+        request.setPlannedDate(LocalDate.of(2026, 6, 2));
+        request.setItems(new ArrayList<>());
+
+        User currentUser = new User();
+        currentUser.setId(3L);
+        currentUser.setFamilyId(1L);
+        Role customerRole = new Role();
+        customerRole.setName("CUSTOMER");
+        currentUser.setRole(customerRole);
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(currentUser, null, currentUser.getAuthorities()));
+
+        when(userRepository.findById(3L)).thenReturn(Optional.of(currentUser));
+        when(repository.findByFamilyIdAndPlannedDate(1L, LocalDate.of(2026, 6, 2)))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.savePlan(request))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("403 FORBIDDEN");
+        verify(repository, never()).save(any(ShoppingList.class));
     }
 
     @Test

@@ -160,8 +160,11 @@ public class ShoppingListService {
             throw new ResponseStatusException(FORBIDDEN, "Không thể lưu kế hoạch cho gia đình khác");
         }
 
-        ShoppingList list = repository.findByFamilyIdAndPlannedDate(request.getFamilyId(), request.getPlannedDate())
-                .orElse(new ShoppingList());
+        var existingPlan = repository.findByFamilyIdAndPlannedDate(request.getFamilyId(), request.getPlannedDate());
+        if (existingPlan.isEmpty() && !isHousekeeper(currentUser)) {
+            throw new ResponseStatusException(FORBIDDEN, "Chỉ người nội trợ mới có thể lập kế hoạch mới");
+        }
+        ShoppingList list = existingPlan.orElseGet(ShoppingList::new);
 
         var family = familyRepository.findById(request.getFamilyId())
                 .orElseThrow(() -> new RuntimeException("Family không tồn tại"));
@@ -232,6 +235,10 @@ public class ShoppingListService {
 
         return userRepository.findById(principal.getId())
                 .orElseThrow(() -> new ResponseStatusException(UNAUTHORIZED, "Authenticated user no longer exists"));
+    }
+
+    private boolean isHousekeeper(User user) {
+        return user.getRole() != null && "HOUSEKEEPER".equalsIgnoreCase(user.getRole().getName());
     }
 
     @Transactional

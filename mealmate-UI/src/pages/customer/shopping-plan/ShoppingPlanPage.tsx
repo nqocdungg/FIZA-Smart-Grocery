@@ -111,7 +111,7 @@ const ShoppingPlanPage: React.FC = () => {
     }
 
     const handleOpenCreateModal = async (date: string) => {
-        if (!familyId) return;
+        if (!familyId || !canCreatePlan) return;
         setModalDefaultFilter('ALL');
         const existingPlan = plans.find(p => p.plannedDate === date);
         try {
@@ -250,7 +250,11 @@ const ShoppingPlanPage: React.FC = () => {
                 plans={plans}
                 defaultFilter={modalDefaultFilter}
                 onSuccess={fetchSummary}
-                onModeChange={(newMode) => setModalMode(newMode)}
+                onModeChange={(newMode) => {
+                    if (newMode !== 'CREATE' || canCreatePlan) {
+                        setModalMode(newMode);
+                    }
+                }}
                 onClose={() => setIsModalOpen(false)}
             />
         </>

@@ -486,6 +486,10 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
     };
 
     const handleConfirmSave = async () => {
+        if (mode === 'CREATE' && !isHousekeeper) {
+            toast.error("Chỉ người nội trợ mới có thể lập kế hoạch mới.");
+            return;
+        }
         if (!familyId) {
             toast.error("Lỗi: Không xác định được gia đình để lưu!");
             return;
