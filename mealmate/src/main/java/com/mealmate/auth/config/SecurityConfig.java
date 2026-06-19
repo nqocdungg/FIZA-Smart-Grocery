@@ -43,6 +43,8 @@ public class SecurityConfig {
                 // );
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
+                                "/health",
+                                "/api/health",
                                 "/api/auth/**",
                                 "/api/v1/users/users/forgot-password/**", // 🎯 CHÈN ĐÚNG DÒNG NÀY VÀO ĐÂY: Mở khóa công cộng cho luồng quên mật khẩu
                                 "/swagger-ui/**",

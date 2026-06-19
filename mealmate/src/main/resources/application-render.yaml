@@ -1,0 +1,34 @@
+spring:
+  main:
+    banner-mode: off
+    lazy-initialization: true
+  jmx:
+    enabled: false
+  datasource:
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:5}
+      minimum-idle: ${DB_POOL_MIN_IDLE:1}
+      connection-timeout: ${DB_CONNECTION_TIMEOUT:10000}
+      idle-timeout: ${DB_IDLE_TIMEOUT:30000}
+      max-lifetime: ${DB_MAX_LIFETIME:600000}
+  sql:
+    init:
+      mode: never
+  jpa:
+    open-in-view: false
+    properties:
+      hibernate:
+        temp:
+          use_jdbc_metadata_defaults: false
+
+app:
+  database-migration:
+    enabled: ${DATABASE_MIGRATION_ENABLED:false}
+
+logging:
+  level:
+    root: INFO
+    org.springframework: WARN
+    org.hibernate: WARN
+    com.zaxxer.hikari: WARN
+    com.mealmate: INFO

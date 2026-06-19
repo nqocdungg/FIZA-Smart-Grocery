@@ -1,10 +1,12 @@
 package com.mealmate.common.config;
 
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 @Component
+@ConditionalOnProperty(prefix = "app.database-migration", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class DatabaseMigrationRunner implements CommandLineRunner {
 
     private final JdbcTemplate jdbcTemplate;
