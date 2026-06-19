@@ -59,6 +59,7 @@ export type UpdateFridgeItemPayload = {
   foodId?: number;
   customName?: string | null;
   quantity?: number;
+  unit?: string | null;
   storageLocation?: StorageLocation | "";
   specificLocation?: string | null;
   addedDate?: string | null;
