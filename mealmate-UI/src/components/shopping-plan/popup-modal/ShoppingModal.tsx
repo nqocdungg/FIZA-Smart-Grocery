@@ -74,6 +74,7 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
     const [toggledPendingIds, setToggledPendingIds] = useState<Record<number, boolean>>({});
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [genericFoods, setGenericFoods] = useState<any[]>([]);
+    const [systemUnits, setSystemUnits] = useState<string[]>([]);
     const [showImportReview, setShowImportReview] = useState(false);
 
     interface ImportDraft {
@@ -171,14 +172,12 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
 
     const placeholderText = showSearchCue
         ? `Nhập thực phẩm muốn thêm cho hôm nay...`
-        : (isHousekeeper ? "Tìm để thêm món mới..." : "Tìm món trong danh sách...");
+        : (mode === 'DETAIL' ? "Tìm món trong danh sách..." : "Tìm để thêm món mới...");
 
     const handleTriggerAddFood = () => {
         if (searchInputRef.current) {
             searchInputRef.current.focus();
             setShowSearchCue(true);
-
-            // Tự động ẩn cue sau 3 giây để không làm phiền user
             setTimeout(() => setShowSearchCue(false), 3000);
         }
     };
@@ -205,23 +204,37 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
             getFamilyMembers().then(data => setMembers(data));
             setFilterStatus(defaultFilter);
             setToggledPendingIds({});
-            // Tự mở bảng Gợi ý nếu có nguyên liệu vừa được gửi sang từ trang khác.
-            if (getPendingShoppingItems().length > 0) {
+            if (mode === 'CREATE' || getPendingShoppingItems().length > 0) {
                 setShowSuggestions(true);
             }
 
-            // Fetch generic foods to append to search fallback
+            // Fetch generic foods to append to search fallback and extract system units
             api.get('/api/foods')
                 .then(res => {
                     const list = Array.isArray(res.data) ? res.data : (res.data?.data || []);
                     const filtered = list.filter((f: any) => f.name.toLowerCase().includes('khác'));
                     setGenericFoods(filtered);
+
+                    // Extract distinct units
+                    const unitsSet = new Set<string>();
+                    list.forEach((f: any) => {
+                        if (f.unit) {
+                            f.unit.split(',').forEach((u: string) => {
+                                const trimmed = u.trim().toLowerCase();
+                                if (trimmed) {
+                                    unitsSet.add(trimmed);
+                                }
+                            });
+                        }
+                    });
+                    setSystemUnits(Array.from(unitsSet));
                 })
                 .catch(err => {
                     console.error("Lỗi lấy generic foods:", err);
                 });
         }
     }, [isOpen, defaultFilter]);
+
 
     const categoryIconMap: Record<string, string> = {
         'vegetable': '🥦',
@@ -235,7 +248,7 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
     };
 
     useEffect(() => {
-        if (!isHousekeeper) return;
+        if (mode === 'DETAIL') return;
         const delayDebounceFn = setTimeout(async () => {
             if (searchTerm.trim().length > 1) {
                 try {
@@ -248,12 +261,11 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
                 }
             } else {
                 setSearchResults([]);
-                setShowResults(false);
             }
         }, 300);
 
         return () => clearTimeout(delayDebounceFn);
-    }, [searchTerm, isHousekeeper]);
+    }, [searchTerm, mode]);
 
     const getFilteredLocalItems = () => {
         let items = localItems;
@@ -349,8 +361,13 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
                 setShowFilterMenu(false);
             }
         };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
+        const timer = setTimeout(() => {
+            document.addEventListener("mousedown", handleClickOutside);
+        }, 0);
+        return () => {
+            clearTimeout(timer);
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
     }, []);
 
     const handleAddClick = (food: any) => {
@@ -629,8 +646,11 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
                                     value={searchTerm}
                                     onChange={handleSearchChange}
                                     onFocus={() => {
-                                        if (isHousekeeper && searchTerm.length > 1) setShowResults(true);
+                                        if (mode === 'CREATE') setShowResults(true);
                                         setShowSearchCue(false);
+                                    }}
+                                    onClick={() => {
+                                        if (mode === 'CREATE') setShowResults(true);
                                     }}
                                 />
                                 {showSearchCue && (
@@ -642,7 +662,7 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
                             </div>
 
                             {/* 3. RENDER SEARCH RESULTS (Dropdown nổi) */}
-                            {isHousekeeper && showResults && (
+                            {mode === 'CREATE' && showResults && (
                                 <div className="search-results-dropdown">
                                     {searchResults.map(food => {
                                         const catInfo = getCategoryInfo(food.category || food.categoryName);
@@ -664,7 +684,11 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
                                     })}
                                     {searchResults.length === 0 && (
                                         <>
-                                            <div className="no-result">Không tìm thấy thực phẩm. Bạn có thể chọn loại khác bên dưới:</div>
+                                            {searchTerm.trim().length > 1 ? (
+                                                <div className="no-result">Không tìm thấy thực phẩm. Bạn có thể chọn loại khác bên dưới:</div>
+                                            ) : (
+                                                <div className="no-result" style={{ fontWeight: 600, color: '#4D9A80' }}>Chọn loại thực phẩm bên dưới để tự nhập:</div>
+                                            )}
                                             {genericFoods.map(food => {
                                                 const catInfo = getCategoryInfo(food.category || food.categoryName || food.name);
                                                 return (
@@ -689,7 +713,7 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
                             )}
 
                             {/* 4. HIỂN THỊ POPOVER KHI CÓ ACTIVE FOOD */}
-                            {isHousekeeper && activeFood && (
+                            {mode === 'CREATE' && activeFood && (
                                 <div className="popover-anchor">
                                     <AddItemPopover
                                         foodName={activeFood.name || activeFood.foodName}
@@ -698,6 +722,7 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
                                         members={members}
                                         onConfirm={handleConfirmAddItem}
                                         onCancel={() => setActiveFood(null)}
+                                        commonUnits={systemUnits}
                                     />
                                 </div>
                             )}

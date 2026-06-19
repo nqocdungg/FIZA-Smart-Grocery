@@ -12,9 +12,12 @@ import com.mealmate.fridge.model.dto.CreateFridgeItemRequest;
 import com.mealmate.fridge.model.dto.FridgeItemResponse;
 import com.mealmate.fridge.model.dto.FridgeOverviewResponse;
 import com.mealmate.fridge.model.dto.RemoveFridgeItemRequest;
+import com.mealmate.fridge.model.dto.ShoppingImportCandidateResponse;
+import com.mealmate.fridge.model.dto.UpdateFridgeItemRequest;
 import com.mealmate.fridge.repository.FridgeItemProjection;
 import com.mealmate.fridge.repository.FridgeItemRepository;
 import com.mealmate.notification.service.NotificationService;
+import com.mealmate.shopping.repository.ShoppingImportCandidateProjection;
 import com.mealmate.shopping.repository.ShoppingListItemRepository;
 import com.mealmate.user.model.User;
 import com.mealmate.user.repository.UserRepository;
@@ -96,6 +99,7 @@ class FridgeItemServiceTest {
         request.setFoodId(100L);
         request.setQuantity(BigDecimal.valueOf(2.5));
         request.setCustomName("Sữa tươi");
+        request.setUnit("kg");
 
         FridgeItem item = new FridgeItem();
         item.setFoodId(100L);
@@ -103,7 +107,7 @@ class FridgeItemServiceTest {
         item.setCustomName("Sữa tươi");
 
         Food food = new Food();
-        food.setUnit("hộp");
+        food.setUnit("g, kg");
 
         FridgeItem savedItem = new FridgeItem();
         savedItem.setId(123L);
@@ -133,8 +137,78 @@ class FridgeItemServiceTest {
         assertThat(result).isNotNull();
         assertThat(result.getId()).isEqualTo(123L);
         assertThat(result.getDisplayName()).isEqualTo("Sữa tươi");
-        assertThat(item.getUnit()).isEqualTo("hộp");
+        assertThat(item.getUnit()).isEqualTo("kg");
         verify(fridgeItemRepository).save(item);
+    }
+
+    @Test
+    void should_RejectUnit_When_NotConfiguredForSelectedFood() {
+        mockCurrentUser(1L, 10L, "John Doe");
+
+        CreateFridgeItemRequest request = new CreateFridgeItemRequest();
+        request.setFoodId(100L);
+        request.setQuantity(BigDecimal.ONE);
+        request.setUnit("lít");
+
+        FridgeItem item = new FridgeItem();
+        Food food = new Food();
+        food.setUnit("g, kg");
+
+        when(fridgeItemMapper.toEntity(request)).thenReturn(item);
+        when(foodRepository.findById(100L)).thenReturn(Optional.of(food));
+
+        assertThatThrownBy(() -> fridgeItemService.create(request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("unit is not configured for the selected food");
+    }
+
+    @Test
+    void should_UseFirstConfiguredUnit_When_ShoppingCandidateFallsBackToFoodUnitList() {
+        mockCurrentUser(1L, 10L, "John Doe");
+
+        ShoppingImportCandidateProjection projection = Mockito.mock(ShoppingImportCandidateProjection.class);
+        when(projection.getFoodId()).thenReturn(100L);
+        when(projection.getUnit()).thenReturn("g, kg");
+
+        when(fridgeItemRepository.findShoppingImportCandidates(10L)).thenReturn(List.of(projection));
+
+        List<ShoppingImportCandidateResponse> result = fridgeItemService.getShoppingImportCandidates();
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getUnit()).isEqualTo("g");
+    }
+
+    @Test
+    void should_UpdateFridgeItemUnit_When_UnitIsConfiguredForFood() {
+        mockCurrentUser(1L, 10L, "John Doe");
+
+        FridgeItem item = new FridgeItem();
+        item.setId(123L);
+        item.setFamilyId(10L);
+        item.setFoodId(100L);
+        item.setUnit("g");
+        item.setStatus(FridgeItemStatus.STORED);
+
+        Food food = new Food();
+        food.setUnit("g, kg");
+
+        UpdateFridgeItemRequest request = new UpdateFridgeItemRequest();
+        request.setUnit("kg");
+
+        FridgeItemResponse response = new FridgeItemResponse();
+        response.setId(123L);
+        response.setUnit("kg");
+
+        when(fridgeItemRepository.findById(123L)).thenReturn(Optional.of(item));
+        when(foodRepository.findById(100L)).thenReturn(Optional.of(food));
+        when(fridgeItemRepository.save(item)).thenReturn(item);
+        when(fridgeItemRepository.findDetailedById(123L)).thenReturn(Optional.empty());
+        when(fridgeItemMapper.toResponse(item)).thenReturn(response);
+
+        FridgeItemResponse result = fridgeItemService.update(123L, request);
+
+        assertThat(item.getUnit()).isEqualTo("kg");
+        assertThat(result.getUnit()).isEqualTo("kg");
     }
 
     @Test

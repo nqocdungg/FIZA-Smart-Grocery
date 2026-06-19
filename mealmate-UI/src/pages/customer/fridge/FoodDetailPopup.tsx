@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { PencilLine } from "lucide-react";
 import api from "@/services/api";
 import "./FoodDetailPopup.css";
+import UnitDropdown from "./UnitDropdown";
 
 import type { FridgeItemFromApi, RemoveReasonCode, UpdateFridgeItemPayload } from "./MyFridge";
 
@@ -33,6 +34,7 @@ type EditFormState = {
   selectedFood: FoodFromApi | null;
   customName: string;
   quantity: string;
+  unit: string;
   storageLocation: StorageLocation | "";
   specificLocation: string;
   addedDate: string;
@@ -133,6 +135,16 @@ const isOtherFoodName = (foodName?: string, categoryName?: string) => {
 
 const isOtherFood = (food: Pick<FoodFromApi, "name" | "categoryName"> | null) =>
   Boolean(food && isOtherFoodName(food.name, food.categoryName));
+
+const getFoodUnitOptions = (food: FoodFromApi | null) =>
+  Array.from(
+    new Set(
+      (food?.unit || "")
+        .split(",")
+        .map((unit) => unit.trim())
+        .filter(Boolean)
+    )
+  );
 
 const getFoodName = (food: FridgeItemFromApi) => {
   const isOther = isOtherFoodName(food.standardFoodName, food.categoryName);
@@ -279,6 +291,7 @@ const createInitialEditForm = (food: FridgeItemFromApi): EditFormState => {
     selectedFood,
     customName: getInitialCustomName(food),
     quantity: formatQuantityInput(Number(food.quantity)),
+    unit: food.unit || "",
     storageLocation: food.storageLocation || "COOL",
     specificLocation: food.specificLocation || "",
     addedDate: food.addedDate || "",
@@ -313,7 +326,16 @@ const FoodDetailPopup: React.FC<FoodDetailPopupProps> = ({
   const expiryStatusClass = getExpiryStatusClass(daysLeft);
   const quantityValue = Number(editForm.quantity);
   const quantityIsValid = Number.isFinite(quantityValue) && quantityValue > 0;
-  const activeUnit = selectedEditFood?.unit || food.unit || "";
+  const configuredEditFood = allFoods.find((item) => item.id === selectedEditFood?.id) || selectedEditFood;
+  const configuredUnitOptions = useMemo(() => getFoodUnitOptions(configuredEditFood), [configuredEditFood]);
+  const unitOptions = useMemo(
+    () =>
+      editForm.unit && !configuredUnitOptions.some((unit) => unit.toLowerCase() === editForm.unit.toLowerCase())
+        ? [editForm.unit, ...configuredUnitOptions]
+        : configuredUnitOptions,
+    [configuredUnitOptions, editForm.unit]
+  );
+  const activeUnit = editForm.unit;
   const step = activeUnit === "g" ? 50 : 1;
   const minQuantity = step === 50 ? 0 : 1;
   const isConfirmDisabled = !removeReason || (removeReason === "OTHER" && !customRemoveReason.trim());
@@ -387,14 +409,18 @@ const FoodDetailPopup: React.FC<FoodDetailPopupProps> = ({
       foodName: value,
       selectedFood: null,
       customName: "",
+      unit: "",
     });
   };
 
   const handleSelectFood = (nextFood: FoodFromApi) => {
+    const nextUnitOptions = getFoodUnitOptions(nextFood);
+
     updateEditForm({
       foodName: nextFood.name,
       selectedFood: nextFood,
       customName: isOtherFood(nextFood) ? editForm.foodName.trim() : "",
+      unit: nextUnitOptions[0] || "",
     });
     setFoodSuggestions([]);
   };
@@ -443,6 +469,10 @@ const FoodDetailPopup: React.FC<FoodDetailPopupProps> = ({
       return "Số lượng phải lớn hơn 0.";
     }
 
+    if (!editForm.unit.trim()) {
+      return "Vui lòng chọn đơn vị.";
+    }
+
     if (!editForm.storageLocation) {
       return "Vui lòng chọn vị trí chính.";
     }
@@ -472,6 +502,7 @@ const FoodDetailPopup: React.FC<FoodDetailPopupProps> = ({
         foodId: selectedEditFood.id,
         customName: shouldShowCustomName ? editForm.customName.trim() : "",
         quantity: quantityValue,
+        unit: editForm.unit,
         storageLocation: editForm.storageLocation,
         specificLocation: editForm.specificLocation || "",
         addedDate: editForm.addedDate || null,
@@ -665,9 +696,20 @@ const FoodDetailPopup: React.FC<FoodDetailPopupProps> = ({
                       disabled={isSaving}
                     />
 
-                    <div className="food-detail-unit" aria-label="Đơn vị">
-                      {activeUnit || "Đơn vị"}
-                    </div>
+                    {unitOptions.length > 1 ? (
+                      <UnitDropdown
+                        compact
+                        placement="top"
+                        options={unitOptions}
+                        value={editForm.unit}
+                        onChange={(value) => updateEditForm({ unit: value })}
+                        disabled={isSaving}
+                      />
+                    ) : (
+                      <div className="food-detail-unit" aria-label="Đơn vị">
+                        {activeUnit || "Đơn vị"}
+                      </div>
+                    )}
 
                     <button onClick={handleIncrease} aria-label="Tăng số lượng" disabled={isSaving}>
                       <img src={iconPlus} alt="" className="food-detail-quantity-icon" />

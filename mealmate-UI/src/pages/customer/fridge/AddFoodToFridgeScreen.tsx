@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import api from "@/services/api";
 import "./AddFoodToFridgeScreen.css";
+import UnitDropdown from "./UnitDropdown";
 
 type AddFoodMode = "SHOPPING_PLAN" | "MANUAL";
 type ItemStatus = "idle" | "selected";
@@ -108,6 +109,16 @@ const isOtherFood = (food: FoodFromApi) => {
 
 const isOtherSelection = (food: FoodFromApi | null) => Boolean(food && isOtherFood(food));
 
+const getFoodUnitOptions = (food: FoodFromApi | null) =>
+  Array.from(
+    new Set(
+      (food?.unit || "")
+        .split(",")
+        .map((unit) => unit.trim())
+        .filter(Boolean)
+    )
+  );
+
 const getCandidateDisplayName = (candidate: ShoppingImportCandidateFromApi) =>
   candidate.customName || candidate.foodName || "Thực phẩm";
 
@@ -184,17 +195,7 @@ const AddFoodToFridgeScreen: React.FC<AddFoodToFridgeScreenProps> = ({ onCancel,
     return Array.from(grouped.entries());
   }, [allFoods]);
 
-  const unitOptions = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          allFoods
-            .map((food) => food.unit?.trim())
-            .filter((unit): unit is string => Boolean(unit))
-        )
-      ).sort((first, second) => first.localeCompare(second, "vi")),
-    [allFoods]
-  );
+  const unitOptions = useMemo(() => getFoodUnitOptions(selectedManualFood), [selectedManualFood]);
 
   useEffect(() => {
     const loadFoods = async () => {
@@ -316,11 +317,13 @@ const AddFoodToFridgeScreen: React.FC<AddFoodToFridgeScreenProps> = ({ onCancel,
   };
 
   const handleSelectFood = (food: FoodFromApi) => {
+    const foodUnitOptions = getFoodUnitOptions(food);
+
     updateManualForm({
       foodName: food.name,
       selectedFood: food,
       customName: isOtherFood(food) ? manualForm.foodName.trim() : "",
-      unit: food.unit || "",
+      unit: foodUnitOptions[0] || "",
     });
     setFoodSuggestions([]);
   };
@@ -716,16 +719,26 @@ const AddFoodToFridgeScreen: React.FC<AddFoodToFridgeScreenProps> = ({ onCancel,
               placeholder="Nhập số lượng"
               type="number"
             />
-            <Field
-              label="Đơn vị"
-              required
-              as="select"
-              options={unitOptions}
-              value={manualForm.unit}
-              onChange={(value) => updateManualForm({ unit: value })}
-              placeholder={selectedManualFood ? "Chọn đơn vị" : "Chọn thực phẩm trước"}
-              disabled={!selectedManualFood}
-            />
+            {unitOptions.length > 1 ? (
+              <label className="add-fridge-field">
+                <span>
+                  Đơn vị <strong>*</strong>
+                </span>
+                <UnitDropdown
+                  options={unitOptions}
+                  value={manualForm.unit}
+                  onChange={(value) => updateManualForm({ unit: value })}
+                />
+              </label>
+            ) : (
+              <Field
+                label="Đơn vị"
+                required
+                value={manualForm.unit}
+                placeholder={selectedManualFood ? "Chưa cấu hình đơn vị" : "Chọn thực phẩm trước"}
+                disabled
+              />
+            )}
             <Field
               label="Ngày nhập"
               type="date"

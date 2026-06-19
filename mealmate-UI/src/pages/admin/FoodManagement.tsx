@@ -389,7 +389,7 @@ const FoodManagement: React.FC = () => {
                           {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                       </div>
-                      <FormGroup label="Đơn vị" value={editData.unit} onChange={(e: any) => setEditData({ ...editData, unit: e.target.value })} />
+                      <FormGroup label="Đơn vị (nhiều đơn vị cách nhau bằng dấu phẩy)" value={editData.unit} onChange={(e: any) => setEditData({ ...editData, unit: e.target.value })} />
                       
                       {/* CHẾ ĐỘ SỬA: CHỈNH SỬA PHƯƠNG PHÁP BẢO QUẢN THỜI GIAN THỰC */}
                       <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -501,7 +501,7 @@ const FoodManagement: React.FC = () => {
                       {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   </div>
-                  <FormGroup label="Đơn vị (kg, g, cái...)" name="unit" required />
+                  <FormGroup label="Đơn vị (kg, g, cái,...)" name="unit" required />
                   <FormGroup label="Tên gọi khác (Cách bằng dấu phẩy)" name="synonyms" placeholder="VD: Heo, Thịt heo..." />
                   
                   <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>

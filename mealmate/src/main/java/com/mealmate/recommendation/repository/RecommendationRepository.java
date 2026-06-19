@@ -15,14 +15,14 @@ public interface RecommendationRepository extends Repository<com.mealmate.catalo
                 fi.food_id as foodId,
                 COALESCE(min(fi.custom_name), f.name) as foodName,
                 sum(fi.quantity) as availableQuantity,
-                COALESCE(f.unit, 'kg') as unit,
+                fi.unit as unit,
                 min(fi.expiry_date) as nearestExpiryDate
             from fridge_items fi
             left join foods f on f.id = fi.food_id
             where fi.family_id = :familyId
               and fi.status = 'STORED'
               and (fi.expiry_date is null or fi.expiry_date >= :forDate)
-            group by fi.food_id, f.name, f.unit
+            group by fi.food_id, f.name, fi.unit
             having sum(fi.quantity) > 0
             """, nativeQuery = true)
     List<FridgeStockProjection> findAvailableFridgeStocks(

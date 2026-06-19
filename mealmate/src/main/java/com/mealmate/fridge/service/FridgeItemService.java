@@ -42,12 +42,14 @@ import java.math.MathContext;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 @Service
@@ -160,8 +162,9 @@ public class FridgeItemService {
             throw new IllegalStateException("Removed fridge item cannot be updated");
         }
 
+        Long updatedFoodId = request.getFoodId() != null ? request.getFoodId() : item.getFoodId();
         if (request.getFoodId() != null) {
-            item.setFoodId(request.getFoodId());
+            item.setFoodId(updatedFoodId);
         }
         if (request.getCustomName() != null) {
             item.setCustomName(normalizeBlank(request.getCustomName()));
@@ -187,8 +190,11 @@ public class FridgeItemService {
         if (request.getNote() != null) {
             item.setNote(normalizeBlank(request.getNote()));
         }
-        if (request.getUnit() != null) {
-            item.setUnit(normalizeBlank(request.getUnit()));
+        if (request.getUnit() != null || request.getFoodId() != null) {
+            item.setUnit(resolveFridgeUnit(
+                    updatedFoodId,
+                    request.getUnit() != null ? request.getUnit() : item.getUnit()
+            ));
         }
 
         FridgeItem saved = fridgeItemRepository.save(item);
@@ -264,7 +270,7 @@ public class FridgeItemService {
     public List<ShoppingImportCandidateResponse> getShoppingImportCandidates() {
         Long familyId = getCurrentFamilyIdOrThrow();
 
-        return shoppingListItemRepository.findFridgeImportCandidates(familyId)
+        return fridgeItemRepository.findShoppingImportCandidates(familyId)
                 .stream()
                 .map(this::toShoppingImportCandidateResponse)
                 .toList();
@@ -387,18 +393,41 @@ public class FridgeItemService {
     }
 
     private String resolveFridgeUnit(Long foodId, String requestedUnit) {
-        String normalizedRequestedUnit = normalizeBlank(requestedUnit);
-        if (normalizedRequestedUnit != null) {
-            return normalizedRequestedUnit;
-        }
-
         if (foodId == null) {
             return null;
         }
 
-        return foodRepository.findById(foodId)
+        String configuredUnits = foodRepository.findById(foodId)
                 .map(food -> normalizeBlank(food.getUnit()))
                 .orElse(null);
+        if (configuredUnits == null) {
+            return null;
+        }
+
+        List<String> unitOptions = Arrays.stream(configuredUnits.split(","))
+                .map(this::normalizeBlank)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (unitOptions.isEmpty()) {
+            return null;
+        }
+
+        String normalizedRequestedUnit = normalizeBlank(requestedUnit);
+        if (normalizedRequestedUnit == null) {
+            return unitOptions.get(0);
+        }
+        if (normalizedRequestedUnit.contains(",")) {
+            normalizedRequestedUnit = normalizeBlank(normalizedRequestedUnit.split(",")[0]);
+        }
+
+        String requestedUnitOption = normalizedRequestedUnit;
+        return unitOptions.stream()
+                .filter(unit -> unit.equalsIgnoreCase(requestedUnitOption))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "unit is not configured for the selected food"
+                ));
     }
 
     private FridgeItemResponse importSingleShoppingItem(Long familyId, ImportShoppingItemRequest request) {
@@ -433,7 +462,13 @@ public class FridgeItemService {
         fridgeItem.setExpiryDate(request.getExpiryDate());
         fridgeItem.setStatus(FridgeItemStatus.STORED);
         fridgeItem.setNote(normalizeBlank(request.getNote()));
-        fridgeItem.setUnit(normalizeBlank(request.getUnit() != null ? request.getUnit() : shoppingItem.getUnit()));
+        String importUnit = resolveShoppingImportUnit(
+                request.getUnit() != null ? request.getUnit() : shoppingItem.getUnit()
+        );
+        if (importUnit == null) {
+            throw new IllegalArgumentException("unit is required");
+        }
+        fridgeItem.setUnit(importUnit);
 
         FridgeItem savedFridgeItem = fridgeItemRepository.save(fridgeItem);
 
@@ -474,11 +509,22 @@ public class FridgeItemService {
         response.setCategoryIconKey(projection.getCategoryIconKey());
         response.setCategoryColorCode(projection.getCategoryColorCode());
         response.setQuantity(projection.getQuantity());
-        response.setUnit(projection.getUnit());
+        response.setUnit(resolveShoppingImportUnit(projection.getUnit()));
         response.setNote(projection.getNote());
         response.setImportedToFridgeAt(projection.getImportedToFridgeAt());
 
         return response;
+    }
+
+    private String resolveShoppingImportUnit(String unit) {
+        String normalizedUnit = normalizeBlank(unit);
+        if (normalizedUnit == null) {
+            return null;
+        }
+        if (!normalizedUnit.contains(",")) {
+            return normalizedUnit;
+        }
+        return normalizeBlank(normalizedUnit.split(",")[0]);
     }
 
     private Map<Long, IngredientStock> buildStockByFoodId(List<FridgeItemProjection> items, LocalDate today) {
