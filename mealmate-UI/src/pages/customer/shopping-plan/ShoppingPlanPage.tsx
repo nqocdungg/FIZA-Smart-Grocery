@@ -174,13 +174,13 @@ const ShoppingPlanPage: React.FC = () => {
                     <div className="shopping-page-body">
                         {/* 3. Toolbar: DatePicker và Nút lập kế hoạch */}
                         <div className="plan-toolbar">
+                            <div className="toolbar-center">
+                                <ToggleSwitch value={type} onChange={(val) => setType(val)} />
+                            </div>
                             <DatePicker
                                 value={selectedDate}
                                 onChange={(date) => setSelectedDate(date)}
                             />
-                            <div className="toolbar-center">
-                                <ToggleSwitch value={type} onChange={(val) => setType(val)} />
-                            </div>
                             {canCreatePlan &&
                                 (
                                     <button className="btn-create-plan"
@@ -228,11 +228,13 @@ const ShoppingPlanPage: React.FC = () => {
                                     note={plans.find(p => p.plannedDate === selectedDate)?.note || ''}
                                     listId={plans.find(p => p.plannedDate === selectedDate)?.listId}
                                     onSaveSuccess={fetchSummary}
+                                    date={selectedDate}
                                 />
                                 <FrequentItems
                                     familyId={familyId}
                                     plans={plans}
                                     onAddSuccess={fetchSummary}
+                                    canCreatePlan={canCreatePlan}
                                 />
 
                             </div>

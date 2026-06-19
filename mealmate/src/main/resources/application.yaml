@@ -6,7 +6,7 @@ spring:
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/mealmate}
     username: postgres
-    password: admin
+    password: 123456
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:

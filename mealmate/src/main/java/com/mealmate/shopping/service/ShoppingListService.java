@@ -237,19 +237,22 @@ public class ShoppingListService {
         LocalDate sunday = monday.plusDays(6);
         List<ShoppingList> lists = repository.findByFamilyIdAndPlannedDateBetween(familyId, monday, sunday);
 
-        // Map foodId to list of items to aggregate
-        java.util.Map<Long, List<ShoppingListItem>> groupedByFood = lists.stream()
+        // Group by foodId and customName (case-insensitive, trimmed)
+        java.util.Map<String, List<ShoppingListItem>> groupedByFood = lists.stream()
                 .flatMap(list -> list.getItems().stream())
-                .collect(Collectors.groupingBy(item -> item.getFood().getId()));
+                .collect(Collectors.groupingBy(item -> {
+                    String custom = item.getCustomName() != null ? item.getCustomName().trim().toLowerCase() : "";
+                    return item.getFood().getId() + "_" + custom;
+                }));
 
         List<WeeklyShoppingAggregateDTO> result = new ArrayList<>();
 
-        for (java.util.Map.Entry<Long, List<ShoppingListItem>> entry : groupedByFood.entrySet()) {
-            Long foodId = entry.getKey();
+        for (java.util.Map.Entry<String, List<ShoppingListItem>> entry : groupedByFood.entrySet()) {
             List<ShoppingListItem> items = entry.getValue();
 
             ShoppingListItem firstItem = items.get(0);
-            String foodName = firstItem.getFood().getName();
+            Long foodId = firstItem.getFood().getId();
+            String foodName = firstItem.getCustomName() != null ? firstItem.getCustomName() : firstItem.getFood().getName();
             String unit = firstItem.getUnit();
 
             // Find Category
@@ -277,6 +280,7 @@ public class ShoppingListService {
             result.add(WeeklyShoppingAggregateDTO.builder()
                     .foodId(foodId)
                     .foodName(foodName)
+                    .customName(firstItem.getCustomName())
                     .categoryName(categoryName[0])
                     .foodIcon(foodIcon[0])
                     .totalQuantity(totalQuantity)
@@ -291,7 +295,7 @@ public class ShoppingListService {
     }
 
     @Transactional
-    public void toggleWeeklyItemStatus(Long familyId, Long foodId, LocalDate startDate, boolean isPurchased) {
+    public void toggleWeeklyItemStatus(Long familyId, Long foodId, LocalDate startDate, boolean isPurchased, String customName) {
         LocalDate monday = startDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         LocalDate sunday = monday.plusDays(6);
         List<ShoppingList> lists = repository.findByFamilyIdAndPlannedDateBetween(familyId, monday, sunday);
@@ -299,6 +303,12 @@ public class ShoppingListService {
         List<ShoppingListItem> itemsToUpdate = lists.stream()
                 .flatMap(list -> list.getItems().stream())
                 .filter(item -> item.getFood().getId().equals(foodId))
+                .filter(item -> {
+                    if (customName == null || customName.trim().isEmpty()) {
+                        return item.getCustomName() == null;
+                    }
+                    return customName.equalsIgnoreCase(item.getCustomName());
+                })
                 .collect(Collectors.toList());
 
         for (ShoppingListItem item : itemsToUpdate) {

@@ -1,8 +1,8 @@
 import DatePicker from "@/components/common/DatePicker";
 import { useAuth } from "@/context/AuthContext";
-import api from "@/services/api";
-import { deleteShoppingList, getFamilyMembers, getPlanDetail, importToFridge, importFromShopping, saveShoppingPlan, searchFoods, toggleItemStatus } from "@/features/shopping-plan/shoppingApi";
+import { deleteShoppingList, getFamilyMembers, getPlanDetail, importFromShopping, importToFridge, saveShoppingPlan, searchFoods, toggleItemStatus } from "@/features/shopping-plan/shoppingApi";
 import { getPendingShoppingItems, type PendingShoppingItem } from "@/features/shopping-plan/shoppingSuggestions";
+import api from "@/services/api";
 import { Edit3, Filter, Plus, Search, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
@@ -392,10 +392,14 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
             return;
         }
 
+        const isGeneric = genericFoods.some(gf => gf.id === item.id);
+
         const newItem: any = {
             id: Date.now(),
             foodId: item.id,
             foodName: item.foodName,
+            customName: isGeneric ? item.foodName : null,
+            custom_name: isGeneric ? item.foodName : null,
             quantity: 1,
             unit: item.unit || 'kg',
             categoryName: 'Khác',
@@ -415,10 +419,14 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
             return;
         }
 
+        const isGeneric = genericFoods.some(gf => gf.id === item.foodId);
+
         const newItem: any = {
             id: Date.now(),
             foodId: item.foodId,
             foodName: item.foodName,
+            customName: isGeneric ? item.foodName : null,
+            custom_name: isGeneric ? item.foodName : null,
             quantity: item.quantity || 1,
             unit: item.unit || 'kg',
             categoryName: 'Khác',
@@ -742,6 +750,7 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
                                 familyId={familyId}
                                 plans={plans}
                                 onItemAdd={handleAddFromSuggestions}
+                                canCreatePlan={isHousekeeper}
                             />
                         </div>
                     )}

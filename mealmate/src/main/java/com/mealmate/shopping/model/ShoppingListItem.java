@@ -1,5 +1,7 @@
 package com.mealmate.shopping.model;
 
+import java.time.LocalDateTime;
+
 import com.mealmate.catalog.model.Food;
 import com.mealmate.common.base.BaseEntity;
 import com.mealmate.fridge.model.FridgeItem;
@@ -17,8 +19,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
-
 @Entity
 @Table(name = "shopping_list_items")
 @Getter
@@ -28,8 +28,7 @@ import java.time.LocalDateTime;
 public class ShoppingListItem extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "shopping_list_id", nullable = false)
-    private ShoppingList shoppingList; // Thuộc danh sách
-
+    private ShoppingList shoppingList;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "food_id", nullable = false)
     private Food food;

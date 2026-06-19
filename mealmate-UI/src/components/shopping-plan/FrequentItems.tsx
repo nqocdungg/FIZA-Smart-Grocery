@@ -1,5 +1,6 @@
 import type { DailyPlanCardData } from '@/features/shopping-plan/shopping';
 import { getFrequentItems, getPlanDetail, saveShoppingPlan } from '@/features/shopping-plan/shoppingApi';
+import api from '@/services/api';
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import './FrequentItems.css';
@@ -14,6 +15,7 @@ interface FrequentItemsProps {
 
 const FrequentItems: React.FC<FrequentItemsProps> = ({ familyId, plans, onAddSuccess, onItemAdd, canCreatePlan }) => {
     const [frequentItems, setFrequentItems] = useState<any[]>([]);
+    const [genericFoodIds, setGenericFoodIds] = useState<Set<number>>(new Set());
 
     useEffect(() => {
         if (familyId) {
@@ -24,6 +26,20 @@ const FrequentItems: React.FC<FrequentItemsProps> = ({ familyId, plans, onAddSuc
                 });
         }
     }, [familyId]);
+
+    useEffect(() => {
+        api.get('/api/foods')
+            .then(res => {
+                const list = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+                const ids = list
+                    .filter((f: any) => f.name.toLowerCase().includes('khác'))
+                    .map((f: any) => Number(f.id));
+                setGenericFoodIds(new Set(ids));
+            })
+            .catch(err => {
+                console.error("Lỗi lấy generic foods trong FrequentItems:", err);
+            });
+    }, []);
 
     const getTodayDateString = () => {
         const today = new Date();
@@ -63,7 +79,9 @@ const FrequentItems: React.FC<FrequentItemsProps> = ({ familyId, plans, onAddSuc
             }
 
             const formattedExisting = existingItems.map((ex: any) => ({
+                id: (ex.id && ex.id < 1000000000000) ? ex.id : null,
                 foodId: Number(ex.foodId || ex.food?.id),
+                customName: ex.customName || ex.custom_name || null,
                 quantity: Number(ex.quantity),
                 unit: ex.unit || "kg",
                 assignedTo: ex.assignedTo || ex.assignee?.id || null,
@@ -72,8 +90,11 @@ const FrequentItems: React.FC<FrequentItemsProps> = ({ familyId, plans, onAddSuc
             }));
 
             // Thêm thực phẩm thường mua
+            const isGeneric = genericFoodIds.has(Number(item.id));
             const newItem = {
+                id: null,
                 foodId: Number(item.id),
+                customName: isGeneric ? item.foodName : (item.customName || item.custom_name || null),
                 quantity: 1,
                 unit: item.unit || "kg",
                 assignedTo: null,
@@ -99,7 +120,6 @@ const FrequentItems: React.FC<FrequentItemsProps> = ({ familyId, plans, onAddSuc
         }
     };
 
-    // Fallback data nếu danh sách trống hoặc API chưa có dữ liệu
     const displayItems = frequentItems.length > 0 ? frequentItems : [
     ];
 

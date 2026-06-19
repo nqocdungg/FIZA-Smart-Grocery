@@ -59,6 +59,15 @@
     letter-spacing: 1.5px;
     margin: 0;
 }
+.note-subtitle{
+    font-size: 14px;      
+    color: #3f8a52;    
+    font-weight: 500;     
+    margin-left: 4px;
+    background: #f3f3f5;  
+    padding: 2px 8px;
+    border-radius: 99px;
+}
 
 .note-body {
     flex: 1;

@@ -14,6 +14,7 @@ import java.util.List;
 public class WeeklyShoppingAggregateDTO {
     private Long foodId;
     private String foodName;
+    private String customName;
     private String categoryName;
     private String foodIcon;
     private Double totalQuantity;

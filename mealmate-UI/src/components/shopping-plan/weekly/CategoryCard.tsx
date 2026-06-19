@@ -6,14 +6,15 @@ interface CategoryCardProps {
     icon: string;
     itemCount: number;
     children: React.ReactNode;
+    iconBgColor?: string;
 }
 
-const CategoryCard: React.FC<CategoryCardProps> = ({ title, icon, itemCount, children }) => {
+const CategoryCard: React.FC<CategoryCardProps> = ({ title, icon, itemCount, children, iconBgColor }) => {
     return (
         <div className="weekly-category-card">
             <div className="card-header">
                 <div className="header-left">
-                    <div className="category-icon-wrap">{icon}</div>
+                    <div className="category-icon-wrap" style={iconBgColor ? { backgroundColor: iconBgColor } : undefined}>{icon}</div>
                     <h3 className="category-title">{title}</h3>
                 </div>
                 <span className="item-count-label">{itemCount} MỤC</span>

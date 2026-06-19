@@ -118,8 +118,9 @@ public class ShoppingController {
             @RequestParam Long familyId,
             @RequestParam Long foodId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam boolean isPurchased) {
-        service.toggleWeeklyItemStatus(familyId, foodId, startDate, isPurchased);
+            @RequestParam boolean isPurchased,
+            @RequestParam(required = false) String customName) {
+        service.toggleWeeklyItemStatus(familyId, foodId, startDate, isPurchased, customName);
         return ResponseEntity.ok(new ApiResponse<>(true, "Cập nhật trạng thái thành công", null));
     }
 }

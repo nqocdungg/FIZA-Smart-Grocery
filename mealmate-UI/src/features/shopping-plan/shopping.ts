@@ -107,6 +107,7 @@ export interface ShoppingProgressStats {
 export interface WeeklyShoppingAggregate {
   foodId: number;
   foodName: string;
+  customName?: string;
   categoryName: string;
   foodIcon: string;
   totalQuantity: number;

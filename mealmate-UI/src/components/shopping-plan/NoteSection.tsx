@@ -8,9 +8,10 @@ interface NoteSectionProps {
     note?: string;
     listId?: number;
     onSaveSuccess?: () => void;
+    date?: string;
 }
 
-const NoteSection: React.FC<NoteSectionProps> = ({ note = '', listId, onSaveSuccess }) => {
+const NoteSection: React.FC<NoteSectionProps> = ({ note = '', listId, onSaveSuccess, date }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [tempNote, setTempNote] = useState(note);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -44,17 +45,20 @@ const NoteSection: React.FC<NoteSectionProps> = ({ note = '', listId, onSaveSucc
         }
     };
 
-    const noteLines = tempNote.trim() !== '' ? tempNote.split('\n') : (listId ? ['(Chưa có ghi chú)'] : [
-        'Nhớ hoàn thành trước thứ Sáu',
-        'Mua thịt về để ngăn đông tủ lạnh'
-    ]);
-
+    const noteLines = tempNote.trim() !== '' ? tempNote.split('\n') : (listId && ['(Chưa có ghi chú)']);
+    const formatDate = (dateStr) => {
+        if (!dateStr) return '';
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return dateStr;
+        return new Intl.DateTimeFormat('vi-VN', { day: 'numeric', month: 'short' }).format(d);
+    };
     return (
         <div className={`note-container ${isEditing ? 'is-editing' : ''}`}>
             <div className="note-header">
                 <div className="note-title-group">
                     <div className="note-accent-dot"></div>
                     <h3 className="note-title">Ghi chú</h3>
+                    <div className="note-subtitle">{formatDate(date)}</div>
                 </div>
                 <div className="note-actions">
                     {isEditing ? (

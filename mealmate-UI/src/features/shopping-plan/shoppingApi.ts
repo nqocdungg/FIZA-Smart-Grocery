@@ -336,12 +336,13 @@ export const toggleWeeklyItemStatus = async (
   foodId: number,
   startDate: string,
   isPurchased: boolean,
+  customName?: string,
 ): Promise<void> => {
   const response = await api.patch<ApiResponse<void>>(
     "/api/v1/shopping/weekly/toggle",
     null,
     {
-      params: { familyId, foodId, startDate, isPurchased },
+      params: { familyId, foodId, startDate, isPurchased, customName },
     },
   );
 
