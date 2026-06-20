@@ -5,9 +5,12 @@ import jakarta.mail.internet.MimeMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+
+import com.mealmate.auth.exception.EmailDeliveryException;
 
 @Service
 @Slf4j
@@ -64,8 +67,9 @@ public class EmailService {
     }
     public void sendTemporaryPasswordEmail(String toEmail, String tempPassword) {
         if (mailSender == null) {
-            log.warn("JavaMailSender chưa được cấu hình. Bỏ qua gửi email tới: {}", toEmail);
-            return;
+            log.error("JavaMailSender chưa được cấu hình. Không thể gửi email tới: {}", toEmail);
+            throw new EmailDeliveryException(
+                    "Dịch vụ gửi email chưa được cấu hình. Mật khẩu hiện tại chưa bị thay đổi.");
         }
         try {
             MimeMessage message = mailSender.createMimeMessage();
@@ -98,9 +102,11 @@ public class EmailService {
             mailSender.send(message);
 
             log.info("📧 [FIZA SUCCESS] Đã gửi thành công mật khẩu tạm về Gmail: {}", toEmail);
-        } catch (MessagingException e) {
-            log.error("❌ Lỗi gửi email mật khẩu tạm tới: {}", toEmail, e);
-            throw new RuntimeException("Không thể gửi email khôi phục mật khẩu. Vui lòng thử lại sau.");
+        } catch (MessagingException | MailException e) {
+            log.error("Không thể gửi email mật khẩu tạm tới: {}", toEmail, e);
+            throw new EmailDeliveryException(
+                    "Không thể gửi email khôi phục mật khẩu. Mật khẩu hiện tại chưa bị thay đổi.",
+                    e);
         }
     }
 }

@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import com.mealmate.auth.service.EmailService;
+import com.mealmate.auth.service.PasswordResetService;
 
 
 @RestController
@@ -38,7 +38,7 @@ public class UserController {
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
-    private final com.mealmate.auth.service.EmailService emailService;
+    private final PasswordResetService passwordResetService;
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -496,50 +496,10 @@ public class UserController {
 
     @PostMapping("/forgot-password/request")
     public ResponseEntity<ApiResponse<Void>> requestTemporaryPassword(@RequestBody Map<String, String> body) {
-        try {
-            String keyword = body.get("keyword");
-            if (keyword == null || keyword.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body(new ApiResponse<>(false, "Vui lòng nhập Email hoặc Số điện thoại!", null));
-            }
-
-            // Tìm kiếm tài khoản (đã hỗ trợ cả Email lẫn SĐT và chống trùng dữ liệu rác)
-            User user = userRepository.findByEmailOrPhone(keyword.trim()).orElse(null);
-            if (user == null) {
-                return ResponseEntity.status(404).body(new ApiResponse<>(false, "Tài khoản không tồn tại trên hệ thống Fiza!", null));
-            }
-
-            // 1. Tự động sinh chuỗi mật khẩu ngẫu nhiên gồm 8 ký tự (gồm chữ cái và số)
-            String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-            StringBuilder tempPasswordBuilder = new StringBuilder();
-            java.util.Random rnd = new java.util.Random();
-            while (tempPasswordBuilder.length() < 8) { 
-                tempPasswordBuilder.append(chars.charAt(rnd.nextInt(chars.length())));
-            }
-            String temporaryPassword = tempPasswordBuilder.toString();
-
-            // 2. Mã hóa mật khẩu tạm bằng bộ mã hóa BCryptEncoder của dự án và lưu đè xuống CSDL
-            user.setPasswordHash(passwordEncoder.encode(temporaryPassword));
-            userRepository.save(user);
-
-            // 3. Tiến hành bắn Email chứa mật khẩu tạm về tài khoản Gmail thật của người dùng
-            try {
-                // Luôn lấy email thật từ database (user.getEmail()) đề phòng trường hợp họ gõ SĐT ở Front-end
-                emailService.sendTemporaryPasswordEmail(user.getEmail(), temporaryPassword);
-            } catch (Exception e) {
-                System.err.println("⚠️ Cảnh báo lỗi gửi mail SMTP: " + e.getMessage());
-            }
-
-            // 4. In backup ra console đen phòng trường hợp bạn chưa cấu hình thông số SMTP trong file properties
-            System.out.println("=========================================================");
-            System.out.println("🎟️ [FIZA SMART KITCHEN] RESET MẬT KHẨU TỰ ĐỘNG CÔNG CỘNG");
-            System.out.println("👉 Tài khoản: " + user.getEmail());
-            System.out.println("🔥 MẬT KHẨU TẠM THỜI MỚI SINH: " + temporaryPassword);
-            System.out.println("=========================================================");
-
-            return ResponseEntity.ok(new ApiResponse<>(true, "Mật khẩu tạm thời đã được gửi thành công về Gmail của bạn!", null));
-
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body(new ApiResponse<>(false, "Lỗi hệ thống khôi phục mật khẩu: " + e.getMessage(), null));
-        }
+        passwordResetService.resetPasswordAndSendEmail(body.get("keyword"));
+        return ResponseEntity.ok(new ApiResponse<>(
+                true,
+                "Mật khẩu tạm thời đã được gửi thành công về Gmail của bạn!",
+                null));
     }
 }

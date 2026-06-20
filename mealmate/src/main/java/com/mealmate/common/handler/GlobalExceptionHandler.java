@@ -1,5 +1,6 @@
 package com.mealmate.common.handler;
 
+import com.mealmate.auth.exception.EmailDeliveryException;
 import com.mealmate.common.dto.ApiResponse;
 import com.mealmate.common.exception.ResourceNotFoundException;
 import org.springframework.http.HttpStatus;
@@ -50,6 +51,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ApiResponse<Void>> handleResponseStatus(ResponseStatusException ex) {
         return new ResponseEntity<>(new ApiResponse<>(false, ex.getReason(), null), ex.getStatusCode());
+    }
+
+    @ExceptionHandler(EmailDeliveryException.class)
+    public ResponseEntity<ApiResponse<Void>> handleEmailDelivery(EmailDeliveryException ex) {
+        return new ResponseEntity<>(
+                new ApiResponse<>(false, ex.getMessage(), null),
+                HttpStatus.SERVICE_UNAVAILABLE);
     }
 
     @ExceptionHandler(Exception.class)

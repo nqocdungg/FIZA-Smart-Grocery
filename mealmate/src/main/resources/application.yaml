@@ -18,11 +18,14 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: duongducduy825@gmail.com
-    password: twdn oduj mvwq gkeu
+    username: ${MAIL_USERNAME:duongducduy825@gmail.com}
+    password: ${MAIL_PASSWORD:twdn oduj mvwq gkeu}
     properties:
       mail.smtp.auth: true
       mail.smtp.starttls.enable: true
+      mail.smtp.connectiontimeout: ${MAIL_CONNECTION_TIMEOUT:5000}
+      mail.smtp.timeout: ${MAIL_READ_TIMEOUT:5000}
+      mail.smtp.writetimeout: ${MAIL_WRITE_TIMEOUT:5000}
 logging:
   level:
     org.hibernate.SQL: WARN
