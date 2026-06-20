@@ -1,6 +1,7 @@
 package com.mealmate.shopping.repository;
 
 import com.mealmate.shopping.model.ShoppingList;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -13,6 +14,7 @@ import java.util.Optional;
 @Repository
 public interface ShoppingListRepository extends JpaRepository<ShoppingList, Long> {
 
+    @EntityGraph(attributePaths = {"items", "items.food", "items.fridgeItem"})
     @Query("""
             SELECT shoppingList
             FROM ShoppingList shoppingList
@@ -24,6 +26,7 @@ public interface ShoppingListRepository extends JpaRepository<ShoppingList, Long
             @Param("start") LocalDate start,
             @Param("end") LocalDate end);
 
+    @EntityGraph(attributePaths = {"items", "items.food", "items.fridgeItem"})
     @Query("""
             SELECT shoppingList
             FROM ShoppingList shoppingList

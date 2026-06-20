@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -86,6 +87,7 @@ class ShoppingListServiceTest {
         shoppingList.setItems(List.of(item));
 
         Category category = new Category();
+        category.setId(2L);
         category.setName("Rau củ");
         category.setIconKey("vegetable_icon");
 
@@ -97,16 +99,18 @@ class ShoppingListServiceTest {
 
         when(repository.findByFamilyIdAndPlannedDate(familyId, date)).thenReturn(Optional.of(shoppingList));
         when(mapper.toItemDto(item)).thenReturn(dto);
-        when(categoryRepository.findById(2L)).thenReturn(Optional.of(category));
-        when(userRepository.findById(3L)).thenReturn(Optional.of(user));
+        when(categoryRepository.findAllById(List.of(2L))).thenReturn(List.of(category));
+        when(userRepository.findAllById(List.of(3L))).thenReturn(List.of(user));
 
         // when
         List<ShoppingItemDTO> result = service.getPlanDetail(familyId, date);
 
         // then
         assertThat(result).hasSize(1);
-        verify(categoryRepository).findById(2L);
-        verify(userRepository).findById(3L);
+        assertThat(result.get(0).getCategoryName()).isEqualTo("Rau củ");
+        assertThat(result.get(0).getAssigneeName()).isEqualTo("Nguyễn Văn A");
+        verify(categoryRepository).findAllById(List.of(2L));
+        verify(userRepository).findAllById(List.of(3L));
     }
 
     @Test
@@ -215,7 +219,9 @@ class ShoppingListServiceTest {
         service.deletePlan(listId);
 
         // then
-        verify(repository).deleteById(listId);
+        InOrder deleteOrder = inOrder(itemRepository, repository);
+        deleteOrder.verify(itemRepository).deleteByShoppingListId(listId);
+        deleteOrder.verify(repository).deleteById(listId);
     }
 
     @Test

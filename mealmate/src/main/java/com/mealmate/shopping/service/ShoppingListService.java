@@ -6,6 +6,9 @@ import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -56,19 +59,42 @@ public class ShoppingListService {
         ShoppingList list = repository.findByFamilyIdAndPlannedDate(familyId, date).orElse(null);
         if (list == null)
             return Collections.emptyList();
+
+        Map<Long, com.mealmate.catalog.model.Category> categoriesById = categoryRepository.findAllById(
+                        list.getItems().stream()
+                                .map(ShoppingListItem::getFood)
+                                .filter(Objects::nonNull)
+                                .map(food -> food.getCategoryId())
+                                .filter(Objects::nonNull)
+                                .distinct()
+                                .toList())
+                .stream()
+                .collect(Collectors.toMap(com.mealmate.catalog.model.Category::getId, Function.identity()));
+
+        Map<Long, User> usersById = userRepository.findAllById(
+                        list.getItems().stream()
+                                .map(ShoppingListItem::getAssignedTo)
+                                .filter(Objects::nonNull)
+                                .distinct()
+                                .toList())
+                .stream()
+                .collect(Collectors.toMap(User::getId, Function.identity()));
+
         return list.getItems().stream().map(item -> {
             ShoppingItemDTO dto = mapper.toItemDto(item);
-            // Tìm tên Category từ categoryId trong Food
-            Long catId = item.getFood().getCategoryId();
-            categoryRepository.findById(catId).ifPresent(cat -> {
-                dto.setCategoryName(cat.getName());
-                dto.setFoodIcon(cat.getIconKey());
-            });
+            Long catId = item.getFood() == null ? null : item.getFood().getCategoryId();
+            var category = catId == null ? null : categoriesById.get(catId);
+            if (category != null) {
+                dto.setCategoryName(category.getName());
+                dto.setFoodIcon(category.getIconKey());
+                dto.setColorCode(category.getColorCode());
+            }
 
             if (item.getAssignedTo() != null) {
-                userRepository.findById(item.getAssignedTo()).ifPresent(u -> {
-                    dto.setAssigneeName(u.getFullName());
-                });
+                var assignee = usersById.get(item.getAssignedTo());
+                if (assignee != null) {
+                    dto.setAssigneeName(assignee.getFullName());
+                }
             }
             if (item.getNote() != null) {
                 dto.setNote(item.getNote());
@@ -87,6 +113,15 @@ public class ShoppingListService {
         LocalDate monday = selectedDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         LocalDate sunday = monday.plusDays(6);
         List<ShoppingList> lists = repository.findByFamilyIdAndPlannedDateBetween(familyId, monday, sunday);
+        Map<Long, User> usersById = userRepository.findAllById(
+                        lists.stream()
+                                .flatMap(list -> list.getItems().stream())
+                                .map(ShoppingListItem::getAssignedTo)
+                                .filter(Objects::nonNull)
+                                .distinct()
+                                .toList())
+                .stream()
+                .collect(Collectors.toMap(User::getId, Function.identity()));
 
         List<DailyPlanSummaryDTO> summary = new ArrayList<>();
 
@@ -108,16 +143,13 @@ public class ShoppingListService {
                     .note(null);
 
             if (listOnDate != null) {
-                List<Long> assigneeIds = listOnDate.getItems().stream()
+                List<String> names = listOnDate.getItems().stream()
                         .map(ShoppingListItem::getAssignedTo)
-                        .filter(java.util.Objects::nonNull)
+                        .filter(Objects::nonNull)
                         .distinct()
-                        .collect(Collectors.toList());
-
-                List<String> names = assigneeIds.stream()
-                        .map(id -> userRepository.findById(id)
-                                .map(com.mealmate.user.model.User::getFullName)
-                                .orElse("Ẩn danh"))
+                        .map(usersById::get)
+                        .filter(Objects::nonNull)
+                        .map(User::getFullName)
                         .collect(Collectors.toList());
 
                 long purchased = listOnDate.getItems().stream().filter(ShoppingListItem::getIsPurchased).count();
@@ -246,6 +278,7 @@ public class ShoppingListService {
         if (!repository.existsById(listId)) {
             throw new RuntimeException("Không tìm thấy danh sách cần xóa.");
         }
+        itemRepository.deleteByShoppingListId(listId);
         repository.deleteById(listId);
     }
 

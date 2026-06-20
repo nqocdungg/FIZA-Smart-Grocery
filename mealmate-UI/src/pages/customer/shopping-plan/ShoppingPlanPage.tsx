@@ -18,6 +18,17 @@ import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import './ShoppingPlanPage.css';
 
+const getWeekStart = (date: string) => {
+    const parsedDate = new Date(`${date}T00:00:00`);
+    const day = parsedDate.getDay();
+    parsedDate.setDate(parsedDate.getDate() + (day === 0 ? -6 : 1 - day));
+
+    const year = parsedDate.getFullYear();
+    const month = String(parsedDate.getMonth() + 1).padStart(2, '0');
+    const dateOfMonth = String(parsedDate.getDate()).padStart(2, '0');
+    return `${year}-${month}-${dateOfMonth}`;
+};
+
 const ShoppingPlanPage: React.FC = () => {
     const { user } = useAuth();
     const [selectedDate, setSelectedDate] = useState(() => {
@@ -31,10 +42,14 @@ const ShoppingPlanPage: React.FC = () => {
     const [selectedListData, setSelectedListData] = useState<any>(null);
     const canCreatePlan = user?.role === 'HOUSEKEEPER'; // Thay đổi sau để pbiet với ng nội trợ
     const [, setLoading] = useState(false);
-    const [familyId, setFamilyId] = useState<number | null>(null);
+    const [familyId, setFamilyId] = useState<number | null>(() => {
+        const sessionFamilyId = Number(user?.familyId);
+        return Number.isFinite(sessionFamilyId) && sessionFamilyId > 0 ? sessionFamilyId : null;
+    });
     const [plans, setPlans] = useState<DailyPlanCardData[]>([]);
     const [type, setType] = useState<'DAY' | 'WEEK'>('DAY');
     const [modalDefaultFilter, setModalDefaultFilter] = useState<'ALL' | 'PENDING' | 'DONE'>('ALL');
+    const selectedWeekStart = getWeekStart(selectedDate);
 
 
     // For progress section
@@ -90,13 +105,15 @@ const ShoppingPlanPage: React.FC = () => {
         }
     };
     useEffect(() => {
-        fetchFamilyInfo();
-    }, []);
+        if (!familyId) {
+            fetchFamilyInfo();
+        }
+    }, [familyId]);
     useEffect(() => {
         if (familyId) {
             fetchSummary();
         }
-    }, [familyId, selectedDate]);
+    }, [familyId, selectedWeekStart]);
     const fetchPlanDetail = async (date: string) => {
         if (!familyId) return;
         try {
