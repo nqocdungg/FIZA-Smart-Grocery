@@ -29,6 +29,7 @@ const AddItemPopover: React.FC<AddItemPopoverProps> = ({
     const parsedUnits = unit.split(',').map(u => u.trim().toLowerCase()).filter(Boolean);
     const defaultUnit = parsedUnits[0] || 'kg';
     const [selectedUnit, setSelectedUnit] = useState(defaultUnit);
+    const popoverRef = React.useRef<HTMLDivElement>(null);
 
     const isOther = foodName.toLowerCase().includes("khác");
 
@@ -57,10 +58,25 @@ const AddItemPopover: React.FC<AddItemPopoverProps> = ({
         setSelectedUnit(parsed[0] || 'kg');
     }, [unit]);
 
+    React.useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
+                onCancel();
+            }
+        };
+        const timer = setTimeout(() => {
+            document.addEventListener('mousedown', handleClickOutside);
+        }, 0);
+        return () => {
+            clearTimeout(timer);
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [onCancel]);
+
     const finalCommonUnits = commonUnits.includes(defaultUnit) ? commonUnits : [defaultUnit, ...commonUnits];
 
     return (
-        <div className="add-item-popover">
+        <div className="add-item-popover" ref={popoverRef}>
             {/*Tên thực phẩm */}
             <div className="popover-food-header">
                 <span className="popover-food-icon">{foodIcon}</span>
@@ -117,25 +133,31 @@ const AddItemPopover: React.FC<AddItemPopoverProps> = ({
                         <button onClick={() => setQuantity(q => q + 0.5)}><Plus size={14} /></button>
                     </div>
                     {isOther ? (
-                        <select
-                            className="popover-unit-select"
-                            value={selectedUnit}
-                            onChange={(e) => setSelectedUnit(e.target.value)}
-                        >
-                            {finalCommonUnits.map(u => (
-                                <option key={u} value={u}>{u.toUpperCase()}</option>
-                            ))}
-                        </select>
+                        <div className="popover-unit-select-wrapper">
+                            <select
+                                className="popover-unit-select"
+                                value={selectedUnit}
+                                onChange={(e) => setSelectedUnit(e.target.value)}
+                            >
+                                {finalCommonUnits.map(u => (
+                                    <option key={u} value={u}>{u.toUpperCase()}</option>
+                                ))}
+                            </select>
+                            <ChevronDown size={14} className="unit-select-chevron" />
+                        </div>
                     ) : parsedUnits.length > 1 ? (
-                        <select
-                            className="popover-unit-select"
-                            value={selectedUnit}
-                            onChange={(e) => setSelectedUnit(e.target.value)}
-                        >
-                            {parsedUnits.map(u => (
-                                <option key={u} value={u}>{u.toUpperCase()}</option>
-                            ))}
-                        </select>
+                        <div className="popover-unit-select-wrapper">
+                            <select
+                                className="popover-unit-select"
+                                value={selectedUnit}
+                                onChange={(e) => setSelectedUnit(e.target.value)}
+                            >
+                                {parsedUnits.map(u => (
+                                    <option key={u} value={u}>{u.toUpperCase()}</option>
+                                ))}
+                            </select>
+                            <ChevronDown size={14} className="unit-select-chevron" />
+                        </div>
                     ) : (
                         <span className="unit-text">{selectedUnit.toUpperCase()}</span>
                     )}

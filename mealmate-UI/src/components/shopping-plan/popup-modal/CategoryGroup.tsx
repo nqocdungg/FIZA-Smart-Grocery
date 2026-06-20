@@ -1,7 +1,7 @@
 import './CategoryGroup.css';
 import ShoppingItemRow from "./ShoppingItemRow";
 
-const CategoryGroup = ({ categoryName, items, icon, categoryColor, mode, onUpdate, onDelete, onToggleStatus, members, filterStatus }: any) => {
+const CategoryGroup = ({ categoryName, items, icon, categoryColor, mode, onUpdate, onDelete, onToggleStatus, members, filterStatus, foodUnitsMap, systemUnits }: any) => {
   if (!items || items.length === 0) return null;
 
   return (
@@ -24,6 +24,8 @@ const CategoryGroup = ({ categoryName, items, icon, categoryColor, mode, onUpdat
             onDelete={onDelete}
             onToggleStatus={onToggleStatus}
             isFadingOut={item.isPurchased && filterStatus === 'PENDING'}
+            foodUnitsMap={foodUnitsMap}
+            systemUnits={systemUnits}
           />
         ))}
       </div>
