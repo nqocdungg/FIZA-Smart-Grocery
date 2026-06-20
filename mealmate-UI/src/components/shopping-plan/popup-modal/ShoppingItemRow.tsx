@@ -13,9 +13,11 @@ interface RowProps {
     onDelete?: (id: number) => void;
     onToggleStatus?: (id: number) => void;
     isFadingOut?: boolean;
+    foodUnitsMap?: Record<number, string>;
+    systemUnits?: string[];
 }
 
-const ShoppingItemRow: React.FC<RowProps> = ({ item, mode, members = [], onUpdate, onDelete, onToggleStatus, isFadingOut }) => {
+const ShoppingItemRow: React.FC<RowProps> = ({ item, mode, members = [], onUpdate, onDelete, onToggleStatus, isFadingOut, foodUnitsMap = {}, systemUnits = [] }) => {
     const [localNote, setLocalNote] = useState(item.note || '');
     const [assigneeId, setAssigneeId] = useState<number | ''>('');
     const getAssigneeName = () => {
@@ -23,6 +25,27 @@ const ShoppingItemRow: React.FC<RowProps> = ({ item, mode, members = [], onUpdat
         const found = members.find(m => m.id === assigneeId);
         return found ? found.fullName : 'Chọn người phụ trách';
     };
+
+    const getAvailableUnits = () => {
+        const dbUnitStr = item.foodId ? foodUnitsMap[item.foodId] : '';
+        let units = dbUnitStr 
+            ? dbUnitStr.split(',').map((u: string) => u.trim().toLowerCase()) 
+            : [];
+        
+        const isGeneric = item.foodName?.toLowerCase().includes('khác') || !item.foodId;
+        if (isGeneric && systemUnits && systemUnits.length > 0) {
+            units = systemUnits;
+        }
+
+        const currentUnit = (item.unit || '').trim().toLowerCase();
+        if (currentUnit && !units.includes(currentUnit)) {
+            units = [currentUnit, ...units];
+        }
+        
+        return units.filter(Boolean);
+    };
+
+    const availableUnits = getAvailableUnits();
 
     useEffect(() => {
         setLocalNote(item.note || '');
@@ -64,7 +87,19 @@ const ShoppingItemRow: React.FC<RowProps> = ({ item, mode, members = [], onUpdat
                         value={item.quantity}
                         onChange={(e) => onUpdate?.(item.id, { quantity: Number(e.target.value) })}
                     />
-                    <span className="unit-label">{item.unit}</span>
+                    {availableUnits.length > 1 ? (
+                        <select
+                            className="row-unit-select"
+                            value={item.unit}
+                            onChange={(e) => onUpdate?.(item.id, { unit: e.target.value })}
+                        >
+                            {availableUnits.map((u: string) => (
+                                <option key={u} value={u}>{u}</option>
+                            ))}
+                        </select>
+                    ) : (
+                        <span className="unit-label">{item.unit}</span>
+                    )}
                 </div>
 
                 <div className="assignee-select-wrapper">

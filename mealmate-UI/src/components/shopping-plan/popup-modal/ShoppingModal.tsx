@@ -53,6 +53,12 @@ const getCategoryInfo = (categoryName?: string) => {
     return { icon: '📦', color: '#F1F5F9', key: 'other' };
 };
 
+const getFirstUnit = (unitStr?: string) => {
+    if (!unitStr) return 'kg';
+    const parts = unitStr.split(',').map(u => u.trim()).filter(Boolean);
+    return parts[0] || 'kg';
+};
+
 const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, onSuccess, plans, defaultFilter = 'ALL' }: ShoppingModalProps) => {
     if (!isOpen) return null;
     const { user } = useAuth();
@@ -75,6 +81,7 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [genericFoods, setGenericFoods] = useState<any[]>([]);
     const [systemUnits, setSystemUnits] = useState<string[]>([]);
+    const [foodUnitsMap, setFoodUnitsMap] = useState<Record<number, string>>({});
     const [showImportReview, setShowImportReview] = useState(false);
 
     interface ImportDraft {
@@ -214,6 +221,15 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
                     const list = Array.isArray(res.data) ? res.data : (res.data?.data || []);
                     const filtered = list.filter((f: any) => f.name.toLowerCase().includes('khác'));
                     setGenericFoods(filtered);
+
+                    // Build food units map
+                    const unitMap: Record<number, string> = {};
+                    list.forEach((f: any) => {
+                        if (f.id) {
+                            unitMap[f.id] = f.unit || '';
+                        }
+                    });
+                    setFoodUnitsMap(unitMap);
 
                     // Extract distinct units
                     const unitsSet = new Set<string>();
@@ -388,7 +404,7 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
             customName: config.customName,
             custom_name: config.customName,
             quantity: config.quantity,
-            unit: config.unit || activeFood.unit || 'kg',
+            unit: config.unit || getFirstUnit(activeFood.unit),
             categoryName: category,
             foodIcon: catInfo.key,
             colorCode: catInfo.color,
@@ -418,7 +434,7 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
             customName: isGeneric ? item.foodName : null,
             custom_name: isGeneric ? item.foodName : null,
             quantity: 1,
-            unit: item.unit || 'kg',
+            unit: getFirstUnit(item.unit),
             categoryName: 'Khác',
             note: 'Gợi ý thường mua',
             assignedTo: null,
@@ -445,7 +461,7 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
             customName: isGeneric ? item.foodName : null,
             custom_name: isGeneric ? item.foodName : null,
             quantity: item.quantity || 1,
-            unit: item.unit || 'kg',
+            unit: getFirstUnit(item.unit),
             categoryName: 'Khác',
             note: item.note || 'Bổ sung từ gợi ý',
             assignedTo: null,
@@ -801,6 +817,8 @@ const ShoppingModal = ({ isOpen, mode, data, onModeChange, onClose, familyId, on
                                         onDelete={handleDeleteItem}
                                         onToggleStatus={handleToggleItemStatus}
                                         filterStatus={filterStatus}
+                                        foodUnitsMap={foodUnitsMap}
+                                        systemUnits={systemUnits}
                                     />
                                 )
                             }
