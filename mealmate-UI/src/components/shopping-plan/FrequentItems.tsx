@@ -5,6 +5,12 @@ import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import './FrequentItems.css';
 
+const getFirstUnit = (unitStr?: string) => {
+    if (!unitStr) return 'kg';
+    const parts = unitStr.split(',').map(u => u.trim()).filter(Boolean);
+    return parts[0] || 'kg';
+};
+
 interface FrequentItemsProps {
     familyId: number | null;
     plans: DailyPlanCardData[];
@@ -96,7 +102,7 @@ const FrequentItems: React.FC<FrequentItemsProps> = ({ familyId, plans, onAddSuc
                 foodId: Number(item.id),
                 customName: isGeneric ? item.foodName : (item.customName || item.custom_name || null),
                 quantity: 1,
-                unit: item.unit || "kg",
+                unit: getFirstUnit(item.unit),
                 assignedTo: null,
                 note: "Thêm nhanh từ thực phẩm thường mua",
                 isPurchased: false
@@ -141,7 +147,7 @@ const FrequentItems: React.FC<FrequentItemsProps> = ({ familyId, plans, onAddSuc
                             <div className="check-dot"></div>
                         </div>
                         <span className="frequent-item-name">{item.foodName}</span>
-                        <span className="frequent-item-unit">{item.unit}</span>
+                        <span className="frequent-item-unit">{getFirstUnit(item.unit)}</span>
                         {canCreatePlan && (<button
                             className="frequent-add-btn"
                             onClick={() => handleAddClick(item)}

@@ -216,3 +216,15 @@
     font-weight: 700;
     white-space: nowrap;
 }
+
+.row-unit-select {
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    font-weight: 600;
+    color: #475569;
+    outline: none;
+    cursor: pointer;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    padding-right: 4px;
+}
